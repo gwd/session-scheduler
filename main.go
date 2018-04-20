@@ -17,6 +17,7 @@ func main() {
 	router.Handle("POST", "/login", HandleSessionCreate)
 	
 	router.GET("/discussion/notfound", HandleDiscussionNotFound)
+	router.GET("/discussion/list", HandleDiscussionList)
 
 	router.GET("/discussion/by-id/:discid/view", HandleDiscussionView)
 

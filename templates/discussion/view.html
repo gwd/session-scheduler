@@ -1,8 +1,35 @@
+{{define "discussion/item"}}
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title"><a href="/discussion/by-id/{{.ID}}/view">{{.Title}}</a></h5>
+    <p class="card-text">{{.Description}}</p>
+    <a href="#" class="btn btn-primary">Attend</a>
+    {{if .IsMe}}
+    <a href="#" class="btn">Edit</a>
+    {{end}}
+    <span>{{.Owner.Username}}</span>
+  </div>
+</div>
+{{end}}
+
 {{define "discussion/view"}}
 <div class="row">
   <div class="col-md-6 col-md-offset-3">
-    <h1>{{.Discussion.Title}}</h1>
-    <p>{{.Discussion.Description}}</p>
+      {{template "discussion/item" .Discussion}}
+  </div>
+</div>
+{{end}}
+
+{{define "discussion/list"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <ul class="list-group">
+    {{range .List}}
+      <li class="list-group-item">{{template "discussion/item" .}}</li>
+    {{else}}
+      <p>No discussions registered yet</p>
+    {{end}}
+    </ul> 
   </div>
 </div>
 {{end}}

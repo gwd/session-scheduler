@@ -38,6 +38,8 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 }
 
 func HandleDiscussionView(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	cur := RequestUser(r)
+
 	disc, _ := DiscussionFindById(ps.ByName("discid"))
 
 	if disc == nil {
@@ -46,6 +48,16 @@ func HandleDiscussionView(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 	
 	RenderTemplate(w, r, "discussion/view", map[string]interface{}{
-		"Discussion": disc,
+		"Discussion": disc.GetDisplay(cur),
+	})
+}
+
+func HandleDiscussionList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	cur := RequestUser(r)
+
+	dlist := DiscussionGetList(cur)
+
+	RenderTemplate(w, r, "discussion/list", map[string]interface{}{
+		"List": dlist,
 	})
 }
