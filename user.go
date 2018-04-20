@@ -21,8 +21,8 @@ type User struct {
 	Username       string
 }
 
-func NewUser(username, email, password string) (User, error) {
-	user := User{
+func NewUser(username, email, password string) (*User, error) {
+	user := &User{
 		Email:    email,
 		Username: username,
 	}
@@ -43,7 +43,7 @@ func NewUser(username, email, password string) (User, error) {
 	}
 
 	// Check if the username exists
-	existingUser, err := globalUserStore.FindByUsername(username)
+	existingUser, err := Schedule.Users.FindByUsername(username)
 	if err != nil {
 		return user, err
 	}
@@ -52,7 +52,7 @@ func NewUser(username, email, password string) (User, error) {
 	}
 
 	// Check if the email exists
-	existingUser, err = globalUserStore.FindByEmail(email)
+	existingUser, err = Schedule.Users.FindByEmail(email)
 	if err != nil {
 		return user, err
 	}
@@ -63,6 +63,9 @@ func NewUser(username, email, password string) (User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost)
 	user.HashedPassword = string(hashedPassword)
 	user.ID.generate()
+
+	Schedule.Users.Save(user)
+
 	return user, err
 }
 
@@ -71,7 +74,7 @@ func FindUser(username, password string) (*User, error) {
 		Username: username,
 	}
 
-	existingUser, err := globalUserStore.FindByUsername(username)
+	existingUser, err := Schedule.Users.FindByUsername(username)
 	if err != nil {
 		return out, err
 	}
@@ -79,10 +82,12 @@ func FindUser(username, password string) (*User, error) {
 		return out, errCredentialsIncorrect
 	}
 
-	if bcrypt.CompareHashAndPassword(
-		[]byte(existingUser.HashedPassword),
-		[]byte(password),
-	) != nil {
+	// Don't bother checking the password if it's empty
+	if password == "" ||
+		bcrypt.CompareHashAndPassword(
+			[]byte(existingUser.HashedPassword),
+			[]byte(password),
+		) != nil {
 		return out, errCredentialsIncorrect
 	}
 
@@ -94,7 +99,7 @@ func UpdateUser(user *User, email, currentPassword, newPassword string) (User, e
 	out.Email = email
 
 	// Check if the email exists
-	existingUser, err := globalUserStore.FindByEmail(email)
+	existingUser, err := Schedule.Users.FindByEmail(email)
 	if err != nil {
 		return out, err
 	}
@@ -127,5 +132,8 @@ func UpdateUser(user *User, email, currentPassword, newPassword string) (User, e
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
 	user.HashedPassword = string(hashedPassword)
+
+	Schedule.Users.Save(user)
+
 	return out, err
 }

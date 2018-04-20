@@ -1,8 +1,8 @@
 package main
 
 import (
-	"net/http"
 	"github.com/julienschmidt/httprouter"
+	"net/http"
 )
 
 func HandleDiscussionNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -15,7 +15,7 @@ func HandleDiscussionNotFound(w http.ResponseWriter, r *http.Request, _ httprout
 
 func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	owner := RequestUser(r)
-	
+
 	disc, err := NewDiscussion(
 		owner.ID,
 		r.FormValue("title"),
@@ -25,15 +25,14 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 	if err != nil {
 		if IsValidationError(err) {
 			RenderTemplate(w, r, "discussion/new", map[string]interface{}{
-				"Error": err.Error(),
-				"Discussion":  disc,
+				"Error":      err.Error(),
+				"Discussion": disc,
 			})
 			return
 		}
 		panic(err)
 	}
 
-	
 	http.Redirect(w, r, disc.GetURL()+"?flash=Session+Created", http.StatusFound)
 }
 
@@ -46,7 +45,7 @@ func HandleDiscussionView(w http.ResponseWriter, r *http.Request, ps httprouter.
 		http.Redirect(w, r, "discussion/notfound", http.StatusFound)
 		return
 	}
-	
+
 	RenderTemplate(w, r, "discussion/view", map[string]interface{}{
 		"Discussion": disc.GetDisplay(cur),
 	})

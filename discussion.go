@@ -28,15 +28,14 @@ type Discussion struct {
 
 // Annotated for display to an individual user
 type DiscussionDisplay struct {
-	ID  DiscussionID
-	Title string
+	ID          DiscussionID
+	Title       string
 	Description string
-	Owner   *User
-	Attendees []*User
-	IsMe bool
+	Owner       *User
+	Attendees   []*User
+	IsMe        bool
 	AmAttending bool
 }
-
 
 func (d *Discussion) GetURL() string {
 	return "/discussion/by-id/" + string(d.ID) + "/view"
@@ -44,16 +43,16 @@ func (d *Discussion) GetURL() string {
 
 func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 	dd := &DiscussionDisplay{
-		ID: d.ID,
-		Title: d.Title,
+		ID:          d.ID,
+		Title:       d.Title,
 		Description: d.Description,
 	}
-	dd.Owner, _ = globalUserStore.Find(d.Owner)
+	dd.Owner, _ = Schedule.Users.Find(d.Owner)
 	if cur != nil && dd.Owner.ID == cur.ID {
 		dd.IsMe = true
 	}
 	for i := range d.Attendees {
-		a, _ := globalUserStore.Find(d.Attendees[i])
+		a, _ := Schedule.Users.Find(d.Attendees[i])
 		if a != nil {
 			dd.Attendees = append(dd.Attendees, a)
 			if cur != nil && a.ID == cur.ID {
@@ -66,8 +65,8 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 
 func NewDiscussion(owner UserID, title, description string) (*Discussion, error) {
 	disc := &Discussion{
-		Owner: owner,
-		Title: title,
+		Owner:       owner,
+		Title:       title,
 		Description: description,
 	}
 
@@ -83,26 +82,20 @@ func NewDiscussion(owner UserID, title, description string) (*Discussion, error)
 	if description == "" {
 		return disc, errNoDesc
 	}
-	
+
 	disc.ID.generate()
 
 	disc.Attendees = append(disc.Attendees, owner)
 
-	globalDiscussionStore.Save(disc)
-	
-	return disc, nil
+	err := Schedule.Discussions.Save(disc)
+
+	return disc, err
 }
 
 func DiscussionFindById(id string) (*Discussion, error) {
-	return globalDiscussionStore.Find(id)
+	return Schedule.Discussions.Find(id)
 }
 
 func DiscussionGetList(cur *User) (list []*DiscussionDisplay) {
-	for _, d := range globalDiscussionStore.Discussions {
-		dd := d.GetDisplay(cur)
-		if dd != nil {
-			list = append(list, dd)
-		}
-	}
-	return
+	return Schedule.Discussions.GetList(cur)
 }

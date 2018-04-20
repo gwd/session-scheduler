@@ -3,11 +3,22 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/julienschmidt/httprouter"
 )
 
 func main() {
+	err := Schedule.Load()
+	if err != nil {
+		log.Printf("Loading schedule data: %v", err)
+		os.Exit(1)
+	}
+
+	serve()
+}
+
+func serve() {
 	router := NewRouter()
 
 	router.GET("/", HandleHome)
@@ -15,7 +26,7 @@ func main() {
 	router.POST("/register", HandleUserCreate)
 	router.GET("/login", HandleSessionNew)
 	router.POST("/login", HandleSessionCreate)
-	
+
 	router.GET("/discussion/notfound", HandleDiscussionNotFound)
 	router.GET("/discussion/list", HandleDiscussionList)
 
@@ -32,7 +43,7 @@ func main() {
 	secureRouter.POST("/account", HandleUserUpdate)
 	secureRouter.GET("/discussion/new", HandleDiscussionNew)
 	secureRouter.POST("/discussion/new", HandleDiscussionCreate)
-	
+
 	middleware := Middleware{}
 	middleware.Add(router)
 	middleware.Add(http.HandlerFunc(RequireLogin))

@@ -29,7 +29,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		return
 	}
 
-	err = globalUserStore.Save(user)
+	err = Schedule.Users.Save(user)
 	if err != nil {
 		panic(err)
 		return
@@ -68,11 +68,6 @@ func HandleUserUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 			})
 			return
 		}
-		panic(err)
-	}
-
-	err = globalUserStore.Save(*currentUser)
-	if err != nil {
 		panic(err)
 	}
 
