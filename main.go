@@ -15,6 +15,10 @@ func main() {
 	router.Handle("POST", "/register", HandleUserCreate)
 	router.Handle("GET", "/login", HandleSessionNew)
 	router.Handle("POST", "/login", HandleSessionCreate)
+	
+	router.GET("/discussion/notfound", HandleDiscussionNotFound)
+
+	router.GET("/discussion/by-id/:discid/view", HandleDiscussionView)
 
 	router.ServeFiles(
 		"/assets/*filepath",
@@ -25,7 +29,9 @@ func main() {
 	secureRouter.Handle("GET", "/sign-out", HandleSessionDestroy)
 	secureRouter.Handle("GET", "/account", HandleUserEdit)
 	secureRouter.Handle("POST", "/account", HandleUserUpdate)
-
+	secureRouter.Handle("GET", "/discussion/new", HandleDiscussionNew)
+	secureRouter.Handle("POST", "/discussion/new", HandleDiscussionCreate)
+	
 	middleware := Middleware{}
 	middleware.Add(router)
 	middleware.Add(http.HandlerFunc(RequireLogin))

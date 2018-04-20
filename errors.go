@@ -13,6 +13,8 @@ var (
 	errUsernameExists       = ValidationError(errors.New("That username is taken"))
 	errEmailExists          = ValidationError(errors.New("That email address has an account"))
 	errCredentialsIncorrect = ValidationError(errors.New("We couldn’t find a user with the supplied username and password combination"))
+	errNoTitle              = ValidationError(errors.New("You must provide a title"))
+	errNoDesc               = ValidationError(errors.New("You must provide a description"))
 )
 
 func IsValidationError(err error) bool {
