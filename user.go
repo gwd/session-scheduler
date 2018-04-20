@@ -2,18 +2,24 @@ package main
 
 import "golang.org/x/crypto/bcrypt"
 
+const (
+	hashCost       = 10
+	passwordLength = 6
+	userIDLength   = 16
+)
+
+type UserID string
+
+func (uid *UserID) generate() {
+	*uid = UserID(GenerateID("usr", userIDLength))
+}
+
 type User struct {
-	ID             string
+	ID             UserID
 	Email          string
 	HashedPassword string
 	Username       string
 }
-
-const (
-	hashCost       = 10
-	passwordLength = 6
-	userIDLength = 16
-)
 
 func NewUser(username, email, password string) (User, error) {
 	user := User{
@@ -56,7 +62,7 @@ func NewUser(username, email, password string) (User, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost)
 	user.HashedPassword = string(hashedPassword)
-	user.ID = GenerateID("usr", userIDLength)
+	user.ID.generate()
 	return user, err
 }
 

@@ -8,14 +8,20 @@ import (
 
 const (
 	// Keep users logged in for 3 days
-	sessionLength      = 24 * 3 * time.Hour
-	sessionCookieName = "GophrSession"
-	sessionIDLength = 20
+	sessionLength     = 24 * 3 * time.Hour
+	sessionCookieName = "XenSummitWebSession"
+	sessionIDLength   = 20
 )
 
+type SessionID string
+
+func (sid *SessionID) generate() {
+	*sid = SessionID(GenerateID("sess", sessionIDLength))
+}
+
 type Session struct {
-	ID     string
-	UserID string
+	ID     SessionID
+	UserID UserID
 	Expiry time.Time
 }
 
@@ -27,13 +33,14 @@ func NewSession(w http.ResponseWriter) *Session {
 	expiry := time.Now().Add(sessionLength)
 
 	session := &Session{
-		ID:     GenerateID("sess", sessionIDLength),
 		Expiry: expiry,
 	}
 
+	session.ID.generate()
+
 	cookie := http.Cookie{
 		Name:    sessionCookieName,
-		Value:   session.ID,
+		Value:   string(session.ID),
 		Expires: session.Expiry,
 	}
 

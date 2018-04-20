@@ -60,7 +60,7 @@ func (s *FileSessionStore) Find(id string) (*Session, error) {
 }
 
 func (store *FileSessionStore) Save(session *Session) error {
-	store.Sessions[session.ID] = *session
+	store.Sessions[string(session.ID)] = *session
 	contents, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (store *FileSessionStore) Save(session *Session) error {
 }
 
 func (store *FileSessionStore) Delete(session *Session) error {
-	delete(store.Sessions, session.ID)
+	delete(store.Sessions, string(session.ID))
 	contents, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
 		return err

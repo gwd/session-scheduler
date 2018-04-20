@@ -9,7 +9,7 @@ import (
 )
 
 type UserStore interface {
-	Find(string) (*User, error)
+	Find(UserID) (*User, error)
 	FindByEmail(string) (*User, error)
 	FindByUsername(string) (*User, error)
 	Save(User) error
@@ -53,7 +53,7 @@ func NewFileUserStore(filename string) (*FileUserStore, error) {
 }
 
 func (store FileUserStore) Save(user User) error {
-	store.Users[user.ID] = user
+	store.Users[string(user.ID)] = user
 
 	contents, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
@@ -63,8 +63,8 @@ func (store FileUserStore) Save(user User) error {
 	return ioutil.WriteFile(store.filename, contents, 0660)
 }
 
-func (store FileUserStore) Find(id string) (*User, error) {
-	user, ok := store.Users[id]
+func (store FileUserStore) Find(id UserID) (*User, error) {
+	user, ok := store.Users[string(id)]
 	if ok {
 		return &user, nil
 	}
