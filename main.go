@@ -10,11 +10,11 @@ import (
 func main() {
 	router := NewRouter()
 
-	router.Handle("GET", "/", HandleHome)
-	router.Handle("GET", "/register", HandleUserNew)
-	router.Handle("POST", "/register", HandleUserCreate)
-	router.Handle("GET", "/login", HandleSessionNew)
-	router.Handle("POST", "/login", HandleSessionCreate)
+	router.GET("/", HandleHome)
+	router.GET("/register", HandleUserNew)
+	router.POST("/register", HandleUserCreate)
+	router.GET("/login", HandleSessionNew)
+	router.POST("/login", HandleSessionCreate)
 	
 	router.GET("/discussion/notfound", HandleDiscussionNotFound)
 	router.GET("/discussion/list", HandleDiscussionList)
@@ -27,11 +27,11 @@ func main() {
 	)
 
 	secureRouter := NewRouter()
-	secureRouter.Handle("GET", "/sign-out", HandleSessionDestroy)
-	secureRouter.Handle("GET", "/account", HandleUserEdit)
-	secureRouter.Handle("POST", "/account", HandleUserUpdate)
-	secureRouter.Handle("GET", "/discussion/new", HandleDiscussionNew)
-	secureRouter.Handle("POST", "/discussion/new", HandleDiscussionCreate)
+	secureRouter.GET("/sign-out", HandleSessionDestroy)
+	secureRouter.GET("/account", HandleUserEdit)
+	secureRouter.POST("/account", HandleUserUpdate)
+	secureRouter.GET("/discussion/new", HandleDiscussionNew)
+	secureRouter.POST("/discussion/new", HandleDiscussionCreate)
 	
 	middleware := Middleware{}
 	middleware.Add(router)
