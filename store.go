@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"strings"
 )
@@ -64,6 +66,26 @@ func (ustore UserStore) Find(id UserID) (*User, error) {
 		return user, nil
 	}
 	return nil, nil
+}
+
+func (ustore UserStore) FindRandom() (user * User, err error) {
+	l := len(ustore)
+
+	if l == 0 {
+		err = fmt.Errorf("No users!")
+		return
+	}
+
+	// Choose a random value from [0,l) and 
+	i := rand.Int31n(int32(l))
+	for _, user = range ustore {
+		if i == 0 {
+			return
+		}
+		i--
+	}
+	// We shouldn't be able to get here, but the compiler doesn't know that
+	return
 }
 
 func (ustore UserStore) FindByUsername(username string) (*User, error) {
