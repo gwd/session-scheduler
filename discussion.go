@@ -24,6 +24,9 @@ type Discussion struct {
 	// Things to add at some point:
 	// Session Length (30m, 1hr, &c)
 	// Invitees?
+
+	maxScore    int
+	maxScoreValid bool
 }
 
 // Annotated for display to an individual user
@@ -39,6 +42,31 @@ type DiscussionDisplay struct {
 
 func (d *Discussion) GetURL() string {
 	return "/discussion/by-id/" + string(d.ID) + "/view"
+}
+
+func (d *Discussion) GetMaxScore() int {
+	if !d.maxScoreValid {
+		d.maxScore = 0
+		for uid := range d.Interested {
+			if !d.Interested[uid] {
+				log.Fatalf("INTERNAL ERROR: Discussion %s Interested[%s] false!",
+					d.ID, uid)
+			}
+			user, err := Event.Users.Find(uid)
+			if err != nil {
+				log.Fatalf("Finding user %s: %v", uid, err)
+			}
+			interest, prs := user.Interest[d.ID]
+			if !prs {
+				log.Fatalf("INTERNAL ERROR: User %s has no interest in discussion %s",
+					user.ID, d.ID)
+			}
+			d.maxScore += interest
+		}
+		d.maxScoreValid = true
+	}
+
+	return d.maxScore
 }
 
 func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
@@ -95,7 +123,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 }
 
 func DiscussionFindById(id string) (*Discussion, error) {
-	return Event.Discussions.Find(id)
+	return Event.Discussions.Find(DiscussionID(id))
 }
 
 func DiscussionGetList(cur *User) (list []*DiscussionDisplay) {

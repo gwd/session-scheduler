@@ -66,10 +66,9 @@ func TestGenerateInterest() {
 	for _, user := range Event.Users {
 		for _, disc := range Event.Discussions {
 			r := rand.Intn(100)
-			// 50%: No interest 10%: 100 interest, 40%: Some other random interest
 			interest := 0
 			switch {
-			case r >= 60:
+			case r >= 40:
 				interest = rand.Intn(100)
 			case r >= 50:
 				interest = 100
@@ -85,12 +84,13 @@ func TestGenerateInterest() {
 }
 
 const (
-	TestUsers = 80
-	TestDisc = 20
+	TestUsers = 8
+	TestDisc = 6
+	TestSlots = 4
 )
 
 func TestPopulate() {
-	Event.Init()
+	Event.Init(TestSlots)
 	for i := 0; i < TestUsers ; i++ {
 		NewTestUser()
 	}

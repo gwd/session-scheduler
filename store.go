@@ -12,16 +12,23 @@ import (
 type EventStore struct {
 	Users       UserStore
 	Discussions DiscussionStore
+	Schedule    *Schedule
+	ScheduleSlots int
 	filename    string
 }
 
 var Event EventStore
 
-const StoreFilename = "data/event.json"
+const (
+	StoreFilename = "data/event.json"
+	DefaultSlots = 10
+)
 
-func (store *EventStore) Init() {
+func (store *EventStore) Init(slots int) {
 	store.Users.Init()
 	store.Discussions.Init()
+	store.ScheduleSlots = slots
+	store.Schedule = nil
 }
 
 func (store *EventStore) Load() error {
@@ -32,7 +39,7 @@ func (store *EventStore) Load() error {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			store.Init()
+			store.Init(DefaultSlots)
 			return nil
 		}
 		return err
@@ -124,8 +131,8 @@ func (dstore *DiscussionStore) Init() {
 	*dstore = DiscussionStore(make(map[DiscussionID]*Discussion))
 }
 
-func (dstore DiscussionStore) Find(id string) (*Discussion, error) {
-	discussion, exists := (dstore)[DiscussionID(id)]
+func (dstore DiscussionStore) Find(id DiscussionID) (*Discussion, error) {
+	discussion, exists := (dstore)[id]
 	if !exists {
 		return nil, nil
 	}

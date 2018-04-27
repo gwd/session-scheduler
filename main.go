@@ -50,6 +50,8 @@ func main() {
 		TestPopulate()
 	case "testinterest":
 		TestGenerateInterest()
+	case "schedule":
+		MakeSchedule()
 	}
 	
 }
