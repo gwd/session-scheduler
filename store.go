@@ -19,6 +19,11 @@ var Event EventStore
 
 const StoreFilename = "data/event.json"
 
+func (store *EventStore) Init() {
+	store.Users.Init()
+	store.Discussions.Init()
+}
+
 func (store *EventStore) Load() error {
 	if store.filename == "" {
 		store.filename = StoreFilename
@@ -27,8 +32,7 @@ func (store *EventStore) Load() error {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			store.Users.Init()
-			store.Discussions.Init()
+			store.Init()
 			return nil
 		}
 		return err

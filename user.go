@@ -6,6 +6,7 @@ const (
 	hashCost       = 10
 	passwordLength = 6
 	userIDLength   = 16
+	InterestMax = 100
 )
 
 type UserID string
@@ -19,6 +20,7 @@ type User struct {
 	Email          string
 	HashedPassword string
 	Username       string
+	Interest       map[DiscussionID]int
 }
 
 func NewUser(username, email, password string) (*User, error) {
@@ -64,6 +66,8 @@ func NewUser(username, email, password string) (*User, error) {
 	user.HashedPassword = string(hashedPassword)
 	user.ID.generate()
 
+	user.Interest = make(map[DiscussionID]int)
+
 	Event.Users.Save(user)
 
 	return user, err
@@ -92,6 +96,21 @@ func FindUser(username, password string) (*User, error) {
 	}
 
 	return existingUser, nil
+}
+
+func (user *User) SetInterest(disc *Discussion, interest int) (error) {
+	if interest > InterestMax || interest < 0 {
+		return errInvalidInterest
+	}
+	if interest > 0 {
+		user.Interest[disc.ID] = interest
+		disc.Interested[user.ID] = true
+	} else {
+		delete(user.Interest, disc.ID)
+		delete(disc.Interested, user.ID)
+	}
+	Event.Save()
+	return nil
 }
 
 func UpdateUser(user *User, email, currentPassword, newPassword string) (User, error) {

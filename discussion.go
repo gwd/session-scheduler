@@ -19,7 +19,7 @@ type Discussion struct {
 	Owner       UserID
 	Title       string
 	Description string
-	Attendees   []UserID
+	Interested   map[UserID]bool
 
 	// Things to add at some point:
 	// Session Length (30m, 1hr, &c)
@@ -32,7 +32,7 @@ type DiscussionDisplay struct {
 	Title       string
 	Description string
 	Owner       *User
-	Attendees   []*User
+	Interested  []*User
 	IsMe        bool
 	AmAttending bool
 }
@@ -51,10 +51,10 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 	if cur != nil && dd.Owner.ID == cur.ID {
 		dd.IsMe = true
 	}
-	for i := range d.Attendees {
-		a, _ := Event.Users.Find(d.Attendees[i])
+	for uid := range d.Interested {
+		a, _ := Event.Users.Find(uid)
 		if a != nil {
-			dd.Attendees = append(dd.Attendees, a)
+			dd.Interested = append(dd.Interested, a)
 			if cur != nil && a.ID == cur.ID {
 				dd.AmAttending = true
 			}
@@ -63,15 +63,15 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 	return dd
 }
 
-func NewDiscussion(owner UserID, title, description string) (*Discussion, error) {
+func NewDiscussion(owner *User, title, description string) (*Discussion, error) {
 	disc := &Discussion{
-		Owner:       owner,
+		Owner:       owner.ID,
 		Title:       title,
 		Description: description,
 	}
 
 	log.Printf("Got new discussion: '%s' '%s' '%s'",
-		string(owner), title, description)
+		string(owner.ID), title, description)
 
 	if title == "" {
 		return disc, errNoTitle
@@ -85,7 +85,9 @@ func NewDiscussion(owner UserID, title, description string) (*Discussion, error)
 
 	disc.ID.generate()
 
-	disc.Attendees = append(disc.Attendees, owner)
+	disc.Interested = make(map[UserID]bool)
+
+	owner.SetInterest(disc, 100)
 
 	err := Event.Discussions.Save(disc)
 

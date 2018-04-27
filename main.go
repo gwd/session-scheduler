@@ -41,8 +41,16 @@ func main() {
 		}
 	case "testdisc":
 		for ; *count > 0 ; *count-- {
-			NewTestDiscussion("")
+			NewTestDiscussion(nil)
 		}
+	case "testpopulate":
+		if *count != -500 {
+			log.Fatalf("WARNING: populate will erase the current database.  If you really want to do this, pass a count value of -500.")
+		}
+		TestPopulate()
+	case "testinterest":
+		TestGenerateInterest()
 	}
+	
 }
 

@@ -15,6 +15,7 @@ var (
 	errCredentialsIncorrect = ValidationError(errors.New("We couldn’t find a user with the supplied username and password combination"))
 	errNoTitle              = ValidationError(errors.New("You must provide a title"))
 	errNoDesc               = ValidationError(errors.New("You must provide a description"))
+	errInvalidInterest      = ValidationError(errors.New("Interest value out of range"))
 )
 
 func IsValidationError(err error) bool {

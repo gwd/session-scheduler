@@ -17,7 +17,7 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 	owner := RequestUser(r)
 
 	disc, err := NewDiscussion(
-		owner.ID,
+		owner,
 		r.FormValue("title"),
 		r.FormValue("description"),
 	)
