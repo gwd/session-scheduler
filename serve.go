@@ -7,7 +7,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-
 func serve() {
 	router := NewRouter()
 
@@ -19,6 +18,8 @@ func serve() {
 
 	router.GET("/discussion/notfound", HandleDiscussionNotFound)
 	router.GET("/discussion/list", HandleDiscussionList)
+
+	router.GET("/schedule", HandleScheduleView)
 
 	router.GET("/discussion/by-id/:discid/view", HandleDiscussionView)
 
