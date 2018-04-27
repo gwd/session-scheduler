@@ -47,12 +47,12 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		Title:       d.Title,
 		Description: d.Description,
 	}
-	dd.Owner, _ = Schedule.Users.Find(d.Owner)
+	dd.Owner, _ = Event.Users.Find(d.Owner)
 	if cur != nil && dd.Owner.ID == cur.ID {
 		dd.IsMe = true
 	}
 	for i := range d.Attendees {
-		a, _ := Schedule.Users.Find(d.Attendees[i])
+		a, _ := Event.Users.Find(d.Attendees[i])
 		if a != nil {
 			dd.Attendees = append(dd.Attendees, a)
 			if cur != nil && a.ID == cur.ID {
@@ -87,15 +87,15 @@ func NewDiscussion(owner UserID, title, description string) (*Discussion, error)
 
 	disc.Attendees = append(disc.Attendees, owner)
 
-	err := Schedule.Discussions.Save(disc)
+	err := Event.Discussions.Save(disc)
 
 	return disc, err
 }
 
 func DiscussionFindById(id string) (*Discussion, error) {
-	return Schedule.Discussions.Find(id)
+	return Event.Discussions.Find(id)
 }
 
 func DiscussionGetList(cur *User) (list []*DiscussionDisplay) {
-	return Schedule.Discussions.GetList(cur)
+	return Event.Discussions.GetList(cur)
 }

@@ -43,7 +43,7 @@ func NewUser(username, email, password string) (*User, error) {
 	}
 
 	// Check if the username exists
-	existingUser, err := Schedule.Users.FindByUsername(username)
+	existingUser, err := Event.Users.FindByUsername(username)
 	if err != nil {
 		return user, err
 	}
@@ -52,7 +52,7 @@ func NewUser(username, email, password string) (*User, error) {
 	}
 
 	// Check if the email exists
-	existingUser, err = Schedule.Users.FindByEmail(email)
+	existingUser, err = Event.Users.FindByEmail(email)
 	if err != nil {
 		return user, err
 	}
@@ -64,7 +64,7 @@ func NewUser(username, email, password string) (*User, error) {
 	user.HashedPassword = string(hashedPassword)
 	user.ID.generate()
 
-	Schedule.Users.Save(user)
+	Event.Users.Save(user)
 
 	return user, err
 }
@@ -74,7 +74,7 @@ func FindUser(username, password string) (*User, error) {
 		Username: username,
 	}
 
-	existingUser, err := Schedule.Users.FindByUsername(username)
+	existingUser, err := Event.Users.FindByUsername(username)
 	if err != nil {
 		return out, err
 	}
@@ -99,7 +99,7 @@ func UpdateUser(user *User, email, currentPassword, newPassword string) (User, e
 	out.Email = email
 
 	// Check if the email exists
-	existingUser, err := Schedule.Users.FindByEmail(email)
+	existingUser, err := Event.Users.FindByEmail(email)
 	if err != nil {
 		return out, err
 	}
@@ -133,7 +133,7 @@ func UpdateUser(user *User, email, currentPassword, newPassword string) (User, e
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
 	user.HashedPassword = string(hashedPassword)
 
-	Schedule.Users.Save(user)
+	Event.Users.Save(user)
 
 	return out, err
 }

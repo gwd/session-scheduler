@@ -7,17 +7,17 @@ import (
 	"strings"
 )
 
-type ScheduleStore struct {
+type EventStore struct {
 	Users       UserStore
 	Discussions DiscussionStore
 	filename    string
 }
 
-var Schedule ScheduleStore
+var Event EventStore
 
-const StoreFilename = "data/schedule.json"
+const StoreFilename = "data/event.json"
 
-func (store *ScheduleStore) Load() error {
+func (store *EventStore) Load() error {
 	if store.filename == "" {
 		store.filename = StoreFilename
 	}
@@ -38,7 +38,7 @@ func (store *ScheduleStore) Load() error {
 	return nil
 }
 
-func (store *ScheduleStore) Save() error {
+func (store *EventStore) Save() error {
 	contents, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (ustore *UserStore) Init() {
 
 func (ustore UserStore) Save(user *User) error {
 	ustore[user.ID] = user
-	return Schedule.Save()
+	return Event.Save()
 }
 
 func (ustore UserStore) Find(id UserID) (*User, error) {
@@ -109,12 +109,12 @@ func (dstore DiscussionStore) Find(id string) (*Discussion, error) {
 
 func (dstore DiscussionStore) Save(discussion *Discussion) error {
 	dstore[discussion.ID] = discussion
-	return Schedule.Save()
+	return Event.Save()
 }
 
 func (dstore DiscussionStore) Delete(discussion *Discussion) error {
 	delete(dstore, discussion.ID)
-	return Schedule.Save()
+	return Event.Save()
 }
 
 func (dstore DiscussionStore) GetList(cur *User) (list []*DiscussionDisplay) {

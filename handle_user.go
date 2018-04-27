@@ -29,7 +29,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		return
 	}
 
-	err = Schedule.Users.Save(user)
+	err = Event.Users.Save(user)
 	if err != nil {
 		panic(err)
 		return

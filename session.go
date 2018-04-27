@@ -76,7 +76,7 @@ func RequestUser(r *http.Request) *User {
 		return nil
 	}
 
-	user, err := Schedule.Users.Find(session.UserID)
+	user, err := Event.Users.Find(session.UserID)
 	if err != nil {
 		panic(err)
 	}
