@@ -17,14 +17,19 @@
 		<li class="nav-item">
 		<a class="nav-link" href="/schedule">Schedule</a></li>
 	      </ul>
-	      <p class="navbar-text navbar-right">
+	      <ul class="navbar-nav navbar-right">
 	      {{if .CurrentUser}}
-	      <a href="/account" class="navbar-link">Account</a> |
-	      <a href="/sign-out" class="navbar-link">Sign Out</a>
+		<li class="nav-item">
+		<a href="/account" class="nav-link">Account</a></li>
+		<li class="nav-item">
+		<a href="/sign-out" class="nav-link">Sign Out</a></li>
 	      {{else}}
-	      <a href="/register" class="navbar-link">Register</a> |
-	      <a href="/login" class="navbar-link">Login</a>
+		<li class="nav-item">
+		<a href="/register" class="nav-link">Register</a></li>
+		<li class="nav-item">
+		<a href="/login" class="nav-link">Login</a></li>
 	      {{end}}
+	      </ul>
 	      </p>
 	    </div>
 	    </div>
