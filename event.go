@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -17,18 +18,40 @@ type EventStore struct {
 	filename    string
 }
 
+type EventOptions struct {
+	Slots         int
+	AdminPassword string
+}
+
 var Event EventStore
 
 const (
 	StoreFilename = "data/event.json"
+	AdminUsername = "admin"
 	DefaultSlots = 10
 )
 
-func (store *EventStore) Init(slots int) {
+var OptAdminPassword string
+
+func (store *EventStore) Init(opt EventOptions) {
 	store.Users.Init()
 	store.Discussions.Init()
-	store.ScheduleSlots = slots
 	store.Schedule = nil
+
+	store.ScheduleSlots = opt.Slots
+
+	// Create the admin user
+	pwd := opt.AdminPassword
+	if pwd == "" {
+		pwd = GenerateID("pwd", 12)
+		log.Printf("Administrator account: admin %s", pwd)
+	}
+	admin, err := NewUser(AdminUsername, pwd, &UserProfile{ RealName: "Xen Schedule Administrator" })
+	if err != nil {
+		log.Fatalf("Error creating admin user: %v", err)
+	}
+	admin.IsAdmin = true
+	Event.Users.Save(admin)
 }
 
 func (store *EventStore) Load() error {
@@ -39,7 +62,9 @@ func (store *EventStore) Load() error {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			store.Init(DefaultSlots)
+			store.Init(EventOptions{
+				Slots: DefaultSlots,
+				AdminPassword: OptAdminPassword})
 			return nil
 		}
 		return err
@@ -80,7 +105,8 @@ func (ustore UserStore) Find(id UserID) (*User, error) {
 }
 
 func (ustore UserStore) FindRandom() (user * User, err error) {
-	l := len(ustore)
+	// Don't count the admin user
+	l := len(ustore) - 1
 
 	if l == 0 {
 		err = fmt.Errorf("No users!")
@@ -90,12 +116,25 @@ func (ustore UserStore) FindRandom() (user * User, err error) {
 	// Choose a random value from [0,l) and 
 	i := rand.Int31n(int32(l))
 	for _, user = range ustore {
+		if user.Username == AdminUsername {
+			continue
+		}
 		if i == 0 {
 			return
 		}
 		i--
 	}
 	// We shouldn't be able to get here, but the compiler doesn't know that
+	return
+}
+
+func (ustore UserStore) GetUsers() (users []*User) {
+	for _, u := range ustore {
+		if u.Username != AdminUsername {
+			users = append(users, u)
+		}
+	}
+	// FIXME: Sort?
 	return
 }
 

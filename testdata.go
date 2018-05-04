@@ -66,7 +66,7 @@ func NewTestDiscussion(owner *User) {
 // Loop over all users and discussions, 50% of the time generating no interest,
 // 50% of the time generating a random amount of interest between 1 and 100
 func TestGenerateInterest() {
-	for _, user := range Event.Users {
+	for _, user := range Event.Users.GetUsers() {
 		for _, disc := range Event.Discussions {
 			r := rand.Intn(100)
 			interest := 0
@@ -93,7 +93,9 @@ const (
 )
 
 func TestPopulate() {
-	Event.Init(TestSlots)
+	Event.Init(EventOptions{
+		Slots: TestSlots,
+		AdminPassword: "xenroot" })
 	for i := 0; i < TestUsers ; i++ {
 		NewTestUser()
 	}

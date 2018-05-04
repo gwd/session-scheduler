@@ -26,6 +26,7 @@ type User struct {
 	ID             UserID
 	HashedPassword string
 	Username       string
+	IsAdmin        bool
 	Interest       map[DiscussionID]int
 	// Profile: Informational only
 	Profile        UserProfile
