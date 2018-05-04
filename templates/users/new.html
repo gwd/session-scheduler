@@ -1,3 +1,33 @@
+{{define "users/profile/form"}}
+		<h4>Profile information (optional)</h4>
+		
+		<p><details class="text-muted"><summary>How is this used?</summary>The
+		following information is optional.  It will be
+		displayed publicly along with your username on the
+		website, to help people connect with you at the
+		conference.  It will be archived with the schedule for
+		future reference.</details></p>
+
+		<div class="form-group">
+		  <label for="newName">Name</label>
+		  <input type="text" name="RealName" id="newName" value ="{{.RealName}}" class="form-control" placeholder="e.g., John Smith">
+		</div>
+		<div class="form-group">
+			<label for="newCompany">Company</label>
+			<input type="text" name="Company" value="{{.Company}}" id="newCompany" class="form-control" placeholder="XYZ Corporation, Ltd">
+		</div>
+		<div class="form-group">
+			<label for="newEmail">Email</label>
+			<input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com">
+		</div>
+		<div class="form-group">
+			<label for="newDescription">Description</label>
+			<textarea name="Description" id="newProfile" class="form-control"
+		         placeholder="Breifly describe who you are, what you do, and what you're looking for from the conference">{{.Description}}</textarea>
+		</div>
+
+{{end}}
+
 {{define "users/new"}}
 <div class="col-md-6 col-md-offset-3">
 	<h1>Sign Up</h1>
@@ -8,17 +38,14 @@
 	{{end}}
 	<form action="/register" method="POST">
 		<div class="form-group">
-			<label for="newUsername">Username</label>
-			<input type="text" name="username" value="{{.User.Username}}" id="newUsername" class="form-control">
-		</div>
-		<div class="form-group">
-			<label for="newEmail">Email</label>
-			<input type="text" name="email" value="{{.User.Email}}" id="newEmail" class="form-control">
+			<label for="newUsername">Username</label> (Required)
+			<input type="text" name="Username" value="{{.User.Username}}" id="newUsername" class="form-control">
 		</div>
 		<div class="form-group">
 			<label for="newPassword">Password</label>
-			<input type="password" name="password" id="newPassword" class="form-control">
+			<input type="password" name="Password" id="newPassword" class="form-control">
 		</div>
+		{{template "users/profile/form" .User.Profile}}
 		<input type="submit" value="Register" class="btn btn-primary">
 	</form>
 </div>

@@ -10,11 +10,21 @@ func HandleUserNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	RenderTemplate(w, r, "users/new", nil)
 }
 
+func parseProfile(r *http.Request) (profile *UserProfile) {
+	profile = &UserProfile{
+		RealName: r.FormValue("RealName"),
+		Company: r.FormValue("Company"),
+		Email: r.FormValue("Email"),
+		Description: r.FormValue("Description"),
+	}
+	return
+}
+
 func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	user, err := NewUser(
-		r.FormValue("username"),
-		r.FormValue("email"),
-		r.FormValue("password"),
+		r.FormValue("Username"),
+		r.FormValue("Password"),
+		parseProfile(r),
 	)
 
 	if err != nil {
@@ -55,11 +65,11 @@ func HandleUserEdit(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 
 func HandleUserUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	currentUser := RequestUser(r)
-	email := r.FormValue("email")
 	currentPassword := r.FormValue("currentPassword")
 	newPassword := r.FormValue("newPassword")
+	profile := parseProfile(r)
 
-	user, err := UpdateUser(currentUser, email, currentPassword, newPassword)
+	user, err := UpdateUser(currentUser, currentPassword, newPassword, profile)
 	if err != nil {
 		if IsValidationError(err) {
 			RenderTemplate(w, r, "users/edit", map[string]interface{}{

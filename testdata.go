@@ -18,16 +18,19 @@ const TestPassword = "xenuser"
 
 func NewTestUser() {
 	username := fake.UserName()
-	email := fake.EmailAddress()
-	//username := randomdata.SillyName()
-	//email := randomdata.Email()
+	profile := &UserProfile {
+		RealName: fake.FullName(),
+		Company: fake.Company(),
+		Email: fake.EmailAddress(),
+		Description: fake.Paragraphs(),
+	}
 	
 	
-	log.Printf("Creating test user %s %s", username, email)
+	log.Printf("Creating test user %s %v", username, *profile)
 
-	for _, err := NewUser(username, email, TestPassword);
+	for _, err := NewUser(username, TestPassword, profile);
 	        err != nil;
-            _, err = NewUser(username, email, TestPassword) {
+            _, err = NewUser(username, TestPassword, profile) {
      	if err == errUsernameExists {
 			username = fake.UserName()
 			log.Printf(" User exists!  Trying username %s instead", username)

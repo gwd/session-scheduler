@@ -8,11 +8,7 @@
 		</div>
 		{{end}}
 		<form action="/account" method="POST">
-			<div class="form-group">
-				<label for="newEmail">Email</label>
-				<input type="text" name="email" value="{{.User.Email}}" id="newEmail" class="form-control">
-			</div>
-			<h2>Change Password <small>optional</small></h2>
+			<h4>Change Password <small>optional</small></h4>
 			<div class="form-group">
 				<label for="currentPassword">Current Password</label>
 				<input type="password" name="currentPassword" id="currentPassword" class="form-control">
@@ -21,6 +17,7 @@
 				<label for="newPassword">New Password</label>
 				<input type="password" name="newPassword" id="newPassword" class="form-control">
 			</div>
+			{{template "users/profile/form" .User.Profile}}
 			<input type="submit" value="Save" class="btn btn-primary">
 		</form>
 	</div>

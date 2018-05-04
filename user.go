@@ -15,25 +15,29 @@ func (uid *UserID) generate() {
 	*uid = UserID(GenerateID("usr", userIDLength))
 }
 
+type UserProfile struct {
+	RealName       string
+	Email          string
+	Company        string
+	Description    string
+}
+
 type User struct {
 	ID             UserID
-	Email          string
 	HashedPassword string
 	Username       string
 	Interest       map[DiscussionID]int
+	// Profile: Informational only
+	Profile        UserProfile
 }
 
-func NewUser(username, email, password string) (*User, error) {
+func NewUser(username, password string, profile *UserProfile) (*User, error) {
 	user := &User{
-		Email:    email,
 		Username: username,
+		Profile: *profile,
 	}
 	if username == "" {
 		return user, errNoUsername
-	}
-
-	if email == "" {
-		return user, errNoEmail
 	}
 
 	if password == "" {
@@ -51,15 +55,6 @@ func NewUser(username, email, password string) (*User, error) {
 	}
 	if existingUser != nil {
 		return user, errUsernameExists
-	}
-
-	// Check if the email exists
-	existingUser, err = Event.Users.FindByEmail(email)
-	if err != nil {
-		return user, err
-	}
-	if existingUser != nil {
-		return user, errEmailExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost)
@@ -114,21 +109,10 @@ func (user *User) SetInterest(disc *Discussion, interest int) (error) {
 	return nil
 }
 
-func UpdateUser(user *User, email, currentPassword, newPassword string) (User, error) {
+func UpdateUser(user *User, currentPassword, newPassword string,
+                 profile *UserProfile) (User, error) {
 	out := *user
-	out.Email = email
-
-	// Check if the email exists
-	existingUser, err := Event.Users.FindByEmail(email)
-	if err != nil {
-		return out, err
-	}
-	if existingUser != nil && existingUser.ID != user.ID {
-		return out, errEmailExists
-	}
-
-	// At this point, we can update the email address
-	user.Email = email
+	out.Profile = *profile
 
 	// No current password? Don't try update the password.
 	if currentPassword == "" {
@@ -152,6 +136,8 @@ func UpdateUser(user *User, email, currentPassword, newPassword string) (User, e
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
 	user.HashedPassword = string(hashedPassword)
+
+	user.Profile = *profile
 
 	Event.Users.Save(user)
 

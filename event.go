@@ -118,7 +118,7 @@ func (ustore UserStore) FindByEmail(email string) (*User, error) {
 	}
 
 	for _, user := range ustore {
-		if strings.ToLower(email) == strings.ToLower(user.Email) {
+		if strings.ToLower(email) == strings.ToLower(user.Profile.Email) {
 			return user, nil
 		}
 	}
