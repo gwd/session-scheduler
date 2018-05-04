@@ -52,6 +52,8 @@ func main() {
 		TestGenerateInterest()
 	case "schedule":
 		MakeSchedule()
+	default:
+		log.Fatalf("Unknown command: %s", cmd)
 	}
 	
 }

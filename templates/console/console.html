@@ -1,0 +1,23 @@
+{{define "admin/sidebar"}}
+<div class="col-2 sidebar bg-light">
+  <nav class="sidebar-sticky">
+    <ul class="nav flex-column">
+      <li class="nav-item">
+      <a class="nav-link" href="/admin/console">Console</a>
+      </li>
+      <li class="nav-item">
+      <a class="nav-link" href="/admin/test">Testing</a>
+      </li>
+    </ul>
+  </nav>
+</div>
+{{end}}
+
+{{define "admin/console"}}
+<div class="row">
+  {{template "admin/sidebar"}}
+  <div class="container">
+    <h2>Admin console</h2>
+  </div>
+</div>
+{{end}}

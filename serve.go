@@ -34,6 +34,7 @@ func serve() {
 	secureRouter.POST("/account", HandleUserUpdate)
 	secureRouter.GET("/discussion/new", HandleDiscussionNew)
 	secureRouter.POST("/discussion/new", HandleDiscussionCreate)
+	secureRouter.GET("/admin/console", HandleAdminConsole)
 
 	middleware := Middleware{}
 	middleware.Add(router)
