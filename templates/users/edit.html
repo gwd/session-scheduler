@@ -23,3 +23,34 @@
 	</div>
 </div>
 {{end}}
+
+{{define "user/link"}}
+<a href="/uid/user/{{.ID}}/view">{{.Username}}</a>
+{{end}}
+
+{{define "user/item"}}
+<div class="container flex-column">
+  <h5>{{template "user/link" .}}</h5>
+  {{if .Profile.RealName}}
+<div>Name: {{.Profile.RealName}}</div>
+{{end}}
+  {{if .Profile.Email}}
+<div>Email: {{.Profile.Email}}</div>
+{{end}}
+  {{if .Profile.Company}}
+<div>Company: {{.Profile.Company}}</div>
+{{end}}
+  {{if .Profile.Description}}
+<div>Description: {{.Profile.Description}}</div>
+{{end}}
+</div>
+{{end}}
+
+
+{{define "user/view"}}
+<div class="row">
+  <div class="col-9 col-offset-3">
+      {{template "user/item" .Display}}
+  </div>
+</div>
+{{end}}

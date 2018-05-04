@@ -36,18 +36,39 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 	http.Redirect(w, r, disc.GetURL()+"?flash=Session+Created", http.StatusFound)
 }
 
-func HandleDiscussionView(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cur := RequestUser(r)
 
-	disc, _ := DiscussionFindById(ps.ByName("discid"))
-
-	if disc == nil {
-		http.Redirect(w, r, "discussion/notfound", http.StatusFound)
+	uid := ps.ByName("uid")
+	
+	action := ps.ByName("action")
+	if action != "view" {
 		return
 	}
 
-	RenderTemplate(w, r, "discussion/view", map[string]interface{}{
-		"Discussion": disc.GetDisplay(cur),
+	utype := ps.ByName("type")
+	var display interface{}
+	switch utype {
+	case "discussion":
+		disc, _ := DiscussionFindById(uid)
+		if disc != nil {
+			display = disc.GetDisplay(cur)
+		}
+	case "user":
+		display, _ = Event.Users.Find(UserID(uid))
+	default:
+		return
+	}
+
+	if display == nil {
+		RenderTemplate(w, r, "uid/notfound", map[string]interface{}{
+			"Utype": utype,
+		})
+		return
+	}
+
+	RenderTemplate(w, r, utype+"/"+action, map[string]interface{}{
+		"Display": display,
 	})
 }
 

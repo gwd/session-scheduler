@@ -7,6 +7,17 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// URL scheme
+// /register
+// /login
+// /uid/{disc,usr}/$uid/{view,edit}
+// /new/discussion
+// /new/user
+// /list/discussions
+// /list/users
+// /admin/{console,test}
+// 
+
 func serve() {
 	router := NewRouter()
 
@@ -21,7 +32,7 @@ func serve() {
 
 	router.GET("/schedule", HandleScheduleView)
 
-	router.GET("/discussion/by-id/:discid/view", HandleDiscussionView)
+	router.GET("/uid/:type/:uid/:action", HandleUid)
 
 	router.ServeFiles(
 		"/assets/*filepath",
