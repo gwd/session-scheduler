@@ -15,6 +15,7 @@ type EventStore struct {
 	Discussions DiscussionStore
 	Schedule    *Schedule
 	ScheduleSlots int
+	TestMode    bool
 	filename    string
 }
 
@@ -51,6 +52,19 @@ func (store *EventStore) Init(opt EventOptions) {
 		log.Fatalf("Error creating admin user: %v", err)
 	}
 	admin.IsAdmin = true
+	Event.Users.Save(admin)
+}
+
+func (store *EventStore) Reset() {
+	admin, err := store.Users.FindByUsername(AdminUsername)
+	if err != nil || admin == nil {
+		log.Fatal("Can't find admin user: %v", err)
+	}
+
+	store.Users.Init()
+	store.Discussions.Init()
+	store.Schedule = nil
+
 	Event.Users.Save(admin)
 }
 

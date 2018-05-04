@@ -17,6 +17,9 @@
 		<li class="nav-item">
 		<a class="nav-link" href="/schedule">Schedule</a></li>
 	      </ul>
+		{{if .IsTestMode}}
+		<span class="badge badge-danger">Test Mode</span>
+		{{end}}
 	      <ul class="navbar-nav navbar-right">
 		{{if .CurrentUser}}
 		{{if .CurrentUser.IsAdmin}}
@@ -24,7 +27,7 @@
 		<a href="/admin/console" class="nav-link">Console</a><li>
 		{{end}}
 		<li class="nav-item">
-		<a href="/account" class="nav-link">Account</a></li>
+		<a href="/account" class="nav-link">{{.CurrentUser.Username}}</a></li>
 		<li class="nav-item">
 		<a href="/sign-out" class="nav-link">Sign Out</a></li>
 	      {{else}}

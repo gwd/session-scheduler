@@ -37,6 +37,7 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, name string, data ma
 
 	data["CurrentUser"] = RequestUser(r)
 	data["Flash"] = r.URL.Query().Get("flash")
+	data["IsTestMode"] = Event.TestMode
 
 	funcs := template.FuncMap{
 		"yield": func() (template.HTML, error) {

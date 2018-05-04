@@ -96,6 +96,7 @@ func TestPopulate() {
 	Event.Init(EventOptions{
 		Slots: TestSlots,
 		AdminPassword: "xenroot" })
+	Event.TestMode = true
 	for i := 0; i < TestUsers ; i++ {
 		NewTestUser()
 	}

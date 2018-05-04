@@ -34,9 +34,12 @@ func serve() {
 	secureRouter.POST("/account", HandleUserUpdate)
 	secureRouter.GET("/discussion/new", HandleDiscussionNew)
 	secureRouter.POST("/discussion/new", HandleDiscussionCreate)
-	secureRouter.GET("/admin/console", HandleAdminConsole)
+	secureRouter.GET("/admin/:template", HandleAdminConsole)
 	secureRouter.POST("/admin/runschedule", HandleAdminRunSchedule)
 
+	secureRouter.POST("/testaction/:action", HandleTestAction)
+
+	
 	middleware := Middleware{}
 	middleware.Add(router)
 	middleware.Add(http.HandlerFunc(RequireLogin))
