@@ -35,6 +35,7 @@ func serve() {
 	secureRouter.GET("/discussion/new", HandleDiscussionNew)
 	secureRouter.POST("/discussion/new", HandleDiscussionCreate)
 	secureRouter.GET("/admin/console", HandleAdminConsole)
+	secureRouter.POST("/admin/runschedule", HandleAdminRunSchedule)
 
 	middleware := Middleware{}
 	middleware.Add(router)

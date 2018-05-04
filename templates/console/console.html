@@ -18,6 +18,9 @@
   {{template "admin/sidebar"}}
   <div class="container">
     <h2>Admin console</h2>
+    <form action="/admin/runschedule" method="POST">
+    <input type="submit" value="Run Scheduler" class="btn btn-primary">
+    </form>
   </div>
 </div>
 {{end}}
