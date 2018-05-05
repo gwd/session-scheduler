@@ -33,6 +33,7 @@ func serve() {
 
 	router.GET("/list/:itype", HandleList)
 	router.GET("/uid/:itype/:uid/:action", HandleUid)
+	router.POST("/uid/:itype/:uid/:action", HandleUidPost)
 
 	router.ServeFiles(
 		"/assets/*filepath",

@@ -6,7 +6,7 @@
     {{range .Schedule.Slots}}
     <tr>
       {{range .Discussions}}
-      <td><h5><a href={{.Url}}>{{.Title}}</a></h5>
+      <td><h5>{{template "discussion/link" .}}</h5>
 	<p>{{.Description}}</p>
 	<h6>Attending</h6>
 	<ul class="list-group">

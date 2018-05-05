@@ -36,8 +36,10 @@ type DiscussionDisplay struct {
 	Description string
 	Owner       *User
 	Interested  []*User
-	IsMe        bool
-	AmAttending bool
+	IsUser      bool
+	IsAdmin     bool
+	IsMine      bool
+	Interest int
 }
 
 func (d *Discussion) GetURL() string {
@@ -76,16 +78,21 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		Description: d.Description,
 	}
 	dd.Owner, _ = Event.Users.Find(d.Owner)
-	if cur != nil && dd.Owner.ID == cur.ID {
-		dd.IsMe = true
+	if cur != nil {
+		if cur.Username != AdminUsername {
+			dd.IsUser = true
+			dd.Interest = cur.Interest[d.ID]
+			if dd.Owner.ID == cur.ID {
+				dd.IsMine = true
+			}
+		} else {
+			dd.IsAdmin = true
+		}
 	}
 	for uid := range d.Interested {
 		a, _ := Event.Users.Find(uid)
 		if a != nil {
 			dd.Interested = append(dd.Interested, a)
-			if cur != nil && a.ID == cur.ID {
-				dd.AmAttending = true
-			}
 		}
 	}
 	return dd

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/julienschmidt/httprouter"
 	"net/http"
+	"strconv"
 )
 
 func HandleDiscussionNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -70,6 +71,43 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	RenderTemplate(w, r, itype+"/"+action, map[string]interface{}{
 		"Display": display,
 	})
+}
+
+func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	cur := RequestUser(r)
+	if cur == nil || cur.Username == AdminUsername {
+		return
+	}
+
+	uid := ps.ByName("uid")
+	
+	action := ps.ByName("action")
+	if action != "setinterest" {
+		return
+	}
+
+	itype := ps.ByName("itype")
+	switch itype {
+	case "discussion":
+		disc, _ := DiscussionFindById(uid)
+		if disc == nil {
+			return
+		}
+		switch action {
+		case "setinterest":
+			interestString := r.FormValue("interest")
+			interest, err := strconv.Atoi(interestString)
+			if err != nil || !(interest >= 0){
+				return
+			}
+			cur.SetInterest(disc, interest)
+		}
+	default:
+		return
+	}
+
+	http.Redirect(w, r, "view", http.StatusFound)
+
 }
 
 func HandleList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

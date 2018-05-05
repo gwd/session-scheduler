@@ -109,6 +109,7 @@ type UserScheduleDisplay struct {
 }
 
 type DiscussionScheduleDisplay struct {
+	ID DiscussionID
 	Title string
 	Description string
 	Url string
@@ -130,6 +131,7 @@ func (slot *Slot) GetDisplay(cur *User) (sd SlotDisplay) {
 
 		log.Printf(" Packing display for discussion %s", disc.Title)
 
+		dsd.ID = disc.ID
 		dsd.Title = disc.Title
 		dsd.Description = disc.Description
 		dsd.Url = disc.GetURL()

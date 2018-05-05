@@ -2,16 +2,35 @@
 <a href="/uid/discussion/{{.ID}}/view">{{.Title}}</a>
 {{end}}
 
-{{define "discussion/item"}}
-<div class="card">
-  <div class="card-body">
+{{define "discussion/item-full"}}
+<div class="row">
+  <div class="col-9 col-offset-3">
     <h5 class="card-title">{{template "discussion/link" .}}</h5>
+    <span class="text-muted">Owner: {{template "user/link" .Owner}}</span>
     <p class="card-text">{{.Description}}</p>
-    <a href="#" class="btn btn-primary">Attend</a>
-    {{if .IsMe}}
-    <a href="#" class="btn">Edit</a>
+    {{if .IsUser}}
+  <div class="btn-group input-group" role="group">
+    <form action="setinterest" method="POST">
+    <label>Interested:</label>
+    <button type="submit" name="interest" class="btn {{if eq .Interest 0}}btn-primary{{else}}btn-secondary{{end}}" value="0">None</button>
+    <button type="submit" name="interest" class="btn {{if and (gt .Interest 0) (lt .Interest 26)}}btn-primary{{else}}btn-secondary{{end}}" value="25">A little</button>
+    <button type="submit" name="interest" class="btn {{if and (gt .Interest 25) (lt .Interest 76)}}btn-primary{{else}}btn-secondary{{end}}" value="75">Yes</button>
+    <button type="submit" name="interest" class="btn {{if and (gt .Interest 75) (lt .Interest 101)}}btn-primary{{else}}btn-secondary{{end}}" value="100">Very</button>
+    </form>
+  </div>
+    {{if .IsMine}}
+    <a href="edit" class="btn">Edit</a>
     {{end}}
-    <span>{{template "user/link" .Owner}}</span>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+{{define "discussion/item-short"}}
+<div class="row">
+  <div class="col-9 col-offset-3">
+    <h5>{{template "discussion/link" .}}</h5>
+    <span class="text-muted">Owner: {{template "user/link" .Owner}}</span>
   </div>
 </div>
 {{end}}
@@ -19,7 +38,7 @@
 {{define "discussion/view"}}
 <div class="row">
   <div class="col-md-6 col-md-offset-3">
-      {{template "discussion/item" .Display}}
+      {{template "discussion/item-full" .Display}}
   </div>
 </div>
 {{end}}
@@ -29,7 +48,7 @@
   <div class="col-md-6 col-md-offset-3">
     <ul class="list-group">
     {{range .List}}
-      <li class="list-group-item">{{template "discussion/item" .}}</li>
+      <li class="list-group-item">{{template "discussion/item-short" .}}</li>
     {{else}}
       <p>No discussions registered yet</p>
     {{end}}
