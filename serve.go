@@ -28,11 +28,11 @@ func serve() {
 	router.POST("/login", HandleSessionCreate)
 
 	router.GET("/discussion/notfound", HandleDiscussionNotFound)
-	router.GET("/discussion/list", HandleDiscussionList)
 
 	router.GET("/schedule", HandleScheduleView)
 
-	router.GET("/uid/:type/:uid/:action", HandleUid)
+	router.GET("/list/:itype", HandleList)
+	router.GET("/uid/:itype/:uid/:action", HandleUid)
 
 	router.ServeFiles(
 		"/assets/*filepath",

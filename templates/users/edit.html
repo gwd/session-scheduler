@@ -54,3 +54,17 @@
   </div>
 </div>
 {{end}}
+
+{{define "user/list"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <ul class="list-group">
+    {{range .List}}
+      <li class="list-group-item">{{template "user/item" .}}</li>
+    {{else}}
+      <p>No users registered yet</p>
+    {{end}}
+    </ul> 
+  </div>
+</div>
+{{end}}

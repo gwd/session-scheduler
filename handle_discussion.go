@@ -46,9 +46,9 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	utype := ps.ByName("type")
+	itype := ps.ByName("itype")
 	var display interface{}
-	switch utype {
+	switch itype {
 	case "discussion":
 		disc, _ := DiscussionFindById(uid)
 		if disc != nil {
@@ -62,22 +62,33 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	if display == nil {
 		RenderTemplate(w, r, "uid/notfound", map[string]interface{}{
-			"Utype": utype,
+			"Utype": itype,
 		})
 		return
 	}
 
-	RenderTemplate(w, r, utype+"/"+action, map[string]interface{}{
+	RenderTemplate(w, r, itype+"/"+action, map[string]interface{}{
 		"Display": display,
 	})
 }
 
-func HandleDiscussionList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func HandleList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cur := RequestUser(r)
 
-	dlist := DiscussionGetList(cur)
+	itype := ps.ByName("itype")
 
-	RenderTemplate(w, r, "discussion/list", map[string]interface{}{
-		"List": dlist,
+	var displayList interface{}
+
+	switch itype {
+	case "discussion":
+		displayList = DiscussionGetList(cur)
+	case "user":
+		displayList = Event.Users.GetUsers()
+	default:
+		return
+	}
+
+	RenderTemplate(w, r, itype+"/list", map[string]interface{}{
+		"List": displayList,
 	})
 }
