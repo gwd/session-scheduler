@@ -55,31 +55,3 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 
 	http.Redirect(w, r, "/?flash=User+created", http.StatusFound)
 }
-
-func HandleUserEdit(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	user := RequestUser(r)
-	RenderTemplate(w, r, "users/edit", map[string]interface{}{
-		"User": user,
-	})
-}
-
-func HandleUserUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	currentUser := RequestUser(r)
-	currentPassword := r.FormValue("currentPassword")
-	newPassword := r.FormValue("newPassword")
-	profile := parseProfile(r)
-
-	user, err := UpdateUser(currentUser, currentPassword, newPassword, profile)
-	if err != nil {
-		if IsValidationError(err) {
-			RenderTemplate(w, r, "users/edit", map[string]interface{}{
-				"Error": err.Error(),
-				"User":  user,
-			})
-			return
-		}
-		panic(err)
-	}
-
-	http.Redirect(w, r, "/account?flash=User+updated", http.StatusFound)
-}

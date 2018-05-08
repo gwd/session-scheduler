@@ -42,8 +42,6 @@ func serve() {
 
 	secureRouter := NewRouter()
 	secureRouter.GET("/sign-out", HandleSessionDestroy)
-	secureRouter.GET("/account", HandleUserEdit)
-	secureRouter.POST("/account", HandleUserUpdate)
 	secureRouter.GET("/discussion/new", HandleDiscussionNew)
 	secureRouter.POST("/discussion/new", HandleDiscussionCreate)
 	secureRouter.GET("/admin/:template", HandleAdminConsole)

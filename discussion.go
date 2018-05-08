@@ -43,7 +43,7 @@ type DiscussionDisplay struct {
 }
 
 func (d *Discussion) GetURL() string {
-	return "/discussion/by-id/" + string(d.ID) + "/view"
+	return "/uid/discussion/" + string(d.ID) + "/view"
 }
 
 func (d *Discussion) GetMaxScore() int {

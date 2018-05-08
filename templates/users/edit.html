@@ -1,13 +1,13 @@
-{{define "users/edit"}}
+{{define "user/edit"}}
 <div class="row">
 	<div class="col-md-6 col-md-offset-3">
-		<h1>Your Details</h1>
+		<h1>Editing user .Display.Username</h1>
 		{{with .Error}}
 		<div class="alert error">
 			{{.}}
 		</div>
 		{{end}}
-		<form action="/account" method="POST">
+		<form action="edit" method="POST">
 			<h4>Change Password <small>optional</small></h4>
 			<div class="form-group">
 				<label for="currentPassword">Current Password</label>
@@ -17,7 +17,7 @@
 				<label for="newPassword">New Password</label>
 				<input type="password" name="newPassword" id="newPassword" class="form-control">
 			</div>
-			{{template "users/profile/form" .User.Profile}}
+			{{template "users/profile/form" .Display.Profile}}
 			<input type="submit" value="Save" class="btn btn-primary">
 		</form>
 	</div>
@@ -51,6 +51,9 @@
 <div class="row">
   <div class="col-9 col-offset-3">
       {{template "user/item" .Display}}
+    {{if .Display.MayEdit}}
+    <a href="edit">Edit</a>
+    {{end}}
   </div>
 </div>
 {{end}}

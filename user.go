@@ -32,6 +32,29 @@ type User struct {
 	Profile        UserProfile
 }
 
+type UserDisplay struct {
+	ID       UserID
+	Username string
+	IsAdmin  bool
+	MayEdit bool
+	Profile  UserProfile
+	
+}
+
+func (u *User) MayEdit(ID UserID) bool {
+	return u.IsAdmin || u.ID == ID
+}
+
+func (u *User) GetDisplay(cur *User) *UserDisplay {
+	return &UserDisplay{
+		ID: u.ID,
+		Username: u.Username,
+		IsAdmin: u.IsAdmin,
+		MayEdit: cur.MayEdit(u.ID),
+		Profile: u.Profile,
+	}
+}
+
 func NewUser(username, password string, profile *UserProfile) (*User, error) {
 	user := &User{
 		Username: username,
@@ -115,32 +138,33 @@ func UpdateUser(user *User, currentPassword, newPassword string,
 	out := *user
 	out.Profile = *profile
 
-	// No current password? Don't try update the password.
-	if currentPassword == "" {
-		return out, nil
-	}
+	if newPassword != "" {
+		// No current password? Don't try update the password.
+		if currentPassword == "" {
+			return out, nil
+		}
 
-	if bcrypt.CompareHashAndPassword(
-		[]byte(user.HashedPassword),
-		[]byte(currentPassword),
-	) != nil {
-		return out, errPasswordIncorrect
-	}
+		if bcrypt.CompareHashAndPassword(
+			[]byte(user.HashedPassword),
+			[]byte(currentPassword),
+		) != nil {
+			return out, errPasswordIncorrect
+		}
 
-	if newPassword == "" {
-		return out, errNoPassword
+		if len(newPassword) < passwordLength {
+			return out, errPasswordTooShort
+		}
+		
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
+		if err != nil {
+			return out, err
+		}
+		user.HashedPassword = string(hashedPassword)
 	}
-
-	if len(newPassword) < passwordLength {
-		return out, errPasswordTooShort
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
-	user.HashedPassword = string(hashedPassword)
 
 	user.Profile = *profile
 
 	Event.Users.Save(user)
 
-	return out, err
+	return out, nil
 }

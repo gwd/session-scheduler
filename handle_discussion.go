@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/julienschmidt/httprouter"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -41,14 +42,26 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cur := RequestUser(r)
 
 	uid := ps.ByName("uid")
-	
 	action := ps.ByName("action")
-	if action != "view" {
+	itype := ps.ByName("itype")
+
+	if itype == "user" && uid == "self" {
+		if cur != nil {
+			uid = string(cur.ID)
+		} else {
+			return
+		}
+	}
+	
+	// OK: discussion / user => view; user -> edit 
+	if !(action == "view" ||
+		(action == "edit" && itype == "user")) {
 		return
 	}
+		
 
-	itype := ps.ByName("itype")
 	var display interface{}
+
 	switch itype {
 	case "discussion":
 		disc, _ := DiscussionFindById(uid)
@@ -56,7 +69,17 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			display = disc.GetDisplay(cur)
 		}
 	case "user":
-		display, _ = Event.Users.Find(UserID(uid))
+		switch itype {
+		case "edit":
+			// Only allowed to edit our own profile unless you're an admin
+			if !cur.MayEdit(UserID(uid)) {
+				return
+			}
+		}
+		user, _ := Event.Users.Find(UserID(uid))
+		if user != nil {
+			display = user.GetDisplay(cur)
+		}
 	default:
 		return
 	}
@@ -68,6 +91,8 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
+	log.Printf("%s/%s: Display %v", itype, action, display)
+	
 	RenderTemplate(w, r, itype+"/"+action, map[string]interface{}{
 		"Display": display,
 	})
@@ -75,18 +100,31 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cur := RequestUser(r)
-	if cur == nil || cur.Username == AdminUsername {
-		return
-	}
 
-	uid := ps.ByName("uid")
-	
-	action := ps.ByName("action")
-	if action != "setinterest" {
+	if cur == nil {
 		return
 	}
 
 	itype := ps.ByName("itype")
+	uid := ps.ByName("uid")
+	if itype == "user" && uid == "self" {
+		if cur != nil {
+			uid = string(cur.ID)
+		} else {
+			return
+		}
+	}
+	
+	action := ps.ByName("action")
+
+	log.Printf("POST %s %s %s", uid, action, itype)
+	
+	if !((itype == "discussion" && action == "setinterest") ||
+		(itype == "user" && action == "edit")) {
+		log.Printf(" Disallowed action")
+		return
+	}
+
 	switch itype {
 	case "discussion":
 		disc, _ := DiscussionFindById(uid)
@@ -95,6 +133,11 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		}
 		switch action {
 		case "setinterest":
+			// Administrators can't express interest in discussions
+			if cur.Username == AdminUsername {
+				return
+			}
+
 			interestString := r.FormValue("interest")
 			interest, err := strconv.Atoi(interestString)
 			if err != nil || !(interest >= 0){
@@ -102,6 +145,40 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			}
 			cur.SetInterest(disc, interest)
 		}
+	case "user":
+		// Only allowed to edit our own profile unless you're an admin
+		if !cur.MayEdit(UserID(uid)) {
+			log.Printf(" uid %s tried to edit uid %s", string(cur.ID), uid)
+			return
+		}
+
+		switch action {
+		case "edit":
+			user, _ := Event.Users.Find(UserID(uid))
+			if user == nil {
+				return
+			}
+
+			currentPassword := r.FormValue("currentPassword")
+			newPassword := r.FormValue("newPassword")
+			profile := parseProfile(r)
+
+			log.Printf(" new profile %v", *profile)
+
+			userNext, err := UpdateUser(user, currentPassword, newPassword, profile)
+
+			if err != nil {
+				if IsValidationError(err) {
+					RenderTemplate(w, r, "user/edit", map[string]interface{}{
+						"Error": err.Error(),
+						"User":  userNext,
+					})
+					return
+				}
+				panic(err)
+			}
+		}
+
 	default:
 		return
 	}
