@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"html/template"
 )
 
 const (
@@ -33,7 +34,7 @@ type Discussion struct {
 type DiscussionDisplay struct {
 	ID          DiscussionID
 	Title       string
-	Description string
+	Description template.HTML
 	Owner       *User
 	Interested  []*User
 	IsUser      bool
@@ -75,7 +76,7 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 	dd := &DiscussionDisplay{
 		ID:          d.ID,
 		Title:       d.Title,
-		Description: d.Description,
+		Description:  ProcessText(d.Description),
 	}
 	dd.Owner, _ = Event.Users.Find(d.Owner)
 	if cur != nil {

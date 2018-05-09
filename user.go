@@ -1,6 +1,10 @@
 package main
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"html/template"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 const (
 	hashCost       = 10
@@ -38,7 +42,7 @@ type UserDisplay struct {
 	IsAdmin  bool
 	MayEdit bool
 	Profile  UserProfile
-	
+	Description template.HTML
 }
 
 func (u *User) MayEdit(ID UserID) bool {
@@ -52,7 +56,9 @@ func (u *User) GetDisplay(cur *User) *UserDisplay {
 		IsAdmin: u.IsAdmin,
 		MayEdit: cur.MayEdit(u.ID),
 		Profile: u.Profile,
+		Description: ProcessText(u.Profile.Description),
 	}
+	
 }
 
 func NewUser(username, password string, profile *UserProfile) (*User, error) {
