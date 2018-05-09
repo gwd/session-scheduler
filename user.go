@@ -45,8 +45,12 @@ type UserDisplay struct {
 	Description template.HTML
 }
 
-func (u *User) MayEdit(ID UserID) bool {
+func (u *User) MayEditUser(ID UserID) bool {
 	return u.IsAdmin || u.ID == ID
+}
+
+func (u *User) MayEditDiscussion(d *Discussion) bool {
+	return u.IsAdmin || u.ID == d.Owner
 }
 
 func (u *User) GetDisplay(cur *User) *UserDisplay {
@@ -54,7 +58,7 @@ func (u *User) GetDisplay(cur *User) *UserDisplay {
 		ID: u.ID,
 		Username: u.Username,
 		IsAdmin: u.IsAdmin,
-		MayEdit: cur.MayEdit(u.ID),
+		MayEdit: cur.MayEditUser(u.ID),
 		Profile: u.Profile,
 		Description: ProcessText(u.Profile.Description),
 	}

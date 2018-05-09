@@ -53,9 +53,9 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 	}
 	
-	// OK: discussion / user => view; user -> edit 
-	if !(action == "view" ||
-		(action == "edit" && itype == "user")) {
+	// OK: discussion / user => view; discussion / user -> edit 
+	if !((action == "view" || action == "edit") &&
+		(itype == "user" || itype == "discussion")) {
 		return
 	}
 		
@@ -65,19 +65,18 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	switch itype {
 	case "discussion":
 		disc, _ := DiscussionFindById(uid)
-		if disc != nil {
-			display = disc.GetDisplay(cur)
-		}
-	case "user":
-		switch itype {
-		case "edit":
-			// Only allowed to edit our own profile unless you're an admin
-			if !cur.MayEdit(UserID(uid)) {
-				return
+
+		if disc != nil && (action != "edit" || cur.MayEditDiscussion(disc)) {
+			switch action {
+			case "edit":
+				display = disc
+			case "view":
+				display = disc.GetDisplay(cur)
 			}
 		}
+	case "user":
 		user, _ := Event.Users.Find(UserID(uid))
-		if user != nil {
+		if user != nil && (action != "edit" || cur.MayEditUser(UserID(uid))) {
 			display = user.GetDisplay(cur)
 		}
 	default:
@@ -119,7 +118,8 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 	log.Printf("POST %s %s %s", uid, action, itype)
 	
-	if !((itype == "discussion" && action == "setinterest") ||
+	if !((itype == "discussion" &&
+		(action == "setinterest" || action == "edit")) ||
 		(itype == "user" && action == "edit")) {
 		log.Printf(" Disallowed action")
 		return
@@ -144,10 +144,31 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 			cur.SetInterest(disc, interest)
+		case "edit":
+			if !cur.MayEditDiscussion(disc) {
+				return
+			}
+
+			title := r.FormValue("title")
+			description := r.FormValue("description")
+			
+			discussionNext, err := UpdateDiscussion(disc, title, description)
+			if err != nil {
+				if IsValidationError(err) {
+					RenderTemplate(w, r, "edit", map[string]interface{}{
+						"Error":      err.Error(),
+						"Display": discussionNext,
+					})
+					return
+				}
+				panic(err)
+			}
+		default:
+			return
 		}
 	case "user":
 		// Only allowed to edit our own profile unless you're an admin
-		if !cur.MayEdit(UserID(uid)) {
+		if !cur.MayEditUser(UserID(uid)) {
 			log.Printf(" uid %s tried to edit uid %s", string(cur.ID), uid)
 			return
 		}

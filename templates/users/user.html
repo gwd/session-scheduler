@@ -1,4 +1,52 @@
-{{define "users/profile/form"}}
+{{define "user/link"}}
+<a href="/uid/user/{{.ID}}/view">{{.Username}}</a>
+{{end}}
+
+{{define "user/item"}}
+<div class="container flex-column">
+  <h5>{{template "user/link" .}}</h5>
+  {{if .Profile.RealName}}
+<div>Name: {{.Profile.RealName}}</div>
+{{end}}
+  {{if .Profile.Email}}
+<div>Email: {{.Profile.Email}}</div>
+{{end}}
+  {{if .Profile.Company}}
+<div>Company: {{.Profile.Company}}</div>
+{{end}}
+  {{if .Description}}
+<div>Description: {{.Description}}</div>
+{{end}}
+</div>
+{{end}}
+
+
+{{define "user/view"}}
+<div class="row">
+  <div class="col-9 col-offset-3">
+      {{template "user/item" .Display}}
+    {{if .Display.MayEdit}}
+    <a href="edit">Edit</a>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "user/list"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <ul class="list-group">
+    {{range .List}}
+      <li class="list-group-item">{{template "user/item" .}}</li>
+    {{else}}
+      <p>No users registered yet</p>
+    {{end}}
+    </ul> 
+  </div>
+</div>
+{{end}}
+
+{{define "user/profile/form"}}
 		<h4>Profile information (optional)</h4>
 		
 		<p><details class="text-muted"><summary>How is this used?</summary>The
@@ -28,7 +76,34 @@
 
 {{end}}
 
-{{define "users/new"}}
+{{define "user/edit"}}
+<div class="row">
+	<div class="col-md-6 col-md-offset-3">
+		<h1>Editing user .Display.Username</h1>
+		{{with .Error}}
+		<div class="alert error">
+			{{.}}
+		</div>
+		{{end}}
+		<form action="edit" method="POST">
+			<h4>Change Password <small>optional</small></h4>
+			<div class="form-group">
+				<label for="currentPassword">Current Password</label>
+				<input type="password" name="currentPassword" id="currentPassword" class="form-control">
+			</div>
+			<div class="form-group">
+				<label for="newPassword">New Password</label>
+				<input type="password" name="newPassword" id="newPassword" class="form-control">
+			</div>
+			{{template "user/profile/form" .Display.Profile}}
+			<input type="submit" value="Save" class="btn btn-primary">
+		</form>
+	</div>
+</div>
+{{end}}
+
+
+{{define "user/new"}}
 <div class="col-md-6 col-md-offset-3">
 	<h1>Sign Up</h1>
 	{{if .Error}}
@@ -45,7 +120,7 @@
 			<label for="newPassword">Password</label>
 			<input type="password" name="Password" id="newPassword" class="form-control">
 		</div>
-		{{template "users/profile/form" .User.Profile}}
+		{{template "user/profile/form" .User.Profile}}
 		<input type="submit" value="Register" class="btn btn-primary">
 	</form>
 </div>

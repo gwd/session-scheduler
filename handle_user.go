@@ -7,7 +7,7 @@ import (
 )
 
 func HandleUserNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	RenderTemplate(w, r, "users/new", nil)
+	RenderTemplate(w, r, "user/new", nil)
 }
 
 func parseProfile(r *http.Request) (profile *UserProfile) {
@@ -29,7 +29,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 
 	if err != nil {
 		if IsValidationError(err) {
-			RenderTemplate(w, r, "users/new", map[string]interface{}{
+			RenderTemplate(w, r, "user/new", map[string]interface{}{
 				"Error": err.Error(),
 				"User":  user,
 			})

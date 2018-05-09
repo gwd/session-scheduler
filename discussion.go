@@ -38,8 +38,7 @@ type DiscussionDisplay struct {
 	Owner       *User
 	Interested  []*User
 	IsUser      bool
-	IsAdmin     bool
-	IsMine      bool
+	MayEdit     bool
 	Interest int
 }
 
@@ -83,12 +82,8 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		if cur.Username != AdminUsername {
 			dd.IsUser = true
 			dd.Interest = cur.Interest[d.ID]
-			if dd.Owner.ID == cur.ID {
-				dd.IsMine = true
-			}
-		} else {
-			dd.IsAdmin = true
 		}
+		dd.MayEdit = cur.MayEditDiscussion(d)
 	}
 	for uid := range d.Interested {
 		a, _ := Event.Users.Find(uid)
@@ -97,6 +92,28 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		}
 	}
 	return dd
+}
+
+func UpdateDiscussion(disc *Discussion, title, description string) (*Discussion, error) {
+	out := *disc
+
+	out.Title = title
+	out.Description = description
+	
+	if title == "" {
+		return &out, errNoTitle
+	}
+
+	if description == "" {
+		return &out, errNoDesc
+	}
+
+	disc.Title = title
+	disc.Description = description
+
+	err := Event.Discussions.Save(disc)
+
+	return disc, err
 }
 
 func NewDiscussion(owner *User, title, description string) (*Discussion, error) {

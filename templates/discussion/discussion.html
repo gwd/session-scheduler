@@ -1,0 +1,112 @@
+{{define "discussion/link"}}
+<a href="/uid/discussion/{{.ID}}/view">{{.Title}}</a>
+{{end}}
+
+{{define "discussion/item-full"}}
+<div class="row">
+  <div class="col-9 col-offset-3">
+    <h5 class="card-title">{{template "discussion/link" .}}</h5>
+    <span class="text-muted">Owner: {{template "user/link" .Owner}}</span>
+    <p class="card-text">{{.Description}}</p>
+    {{if .IsUser}}
+    <div class="btn-group input-group" role="group">
+      <form action="setinterest" method="POST">
+      <label>Interested:</label>
+      <button type="submit" name="interest" class="btn {{if eq .Interest 0}}btn-primary{{else}}btn-secondary{{end}}" value="0">None</button>
+      <button type="submit" name="interest" class="btn {{if and (gt .Interest 0) (lt .Interest 26)}}btn-primary{{else}}btn-secondary{{end}}" value="25">A little</button>
+      <button type="submit" name="interest" class="btn {{if and (gt .Interest 25) (lt .Interest 76)}}btn-primary{{else}}btn-secondary{{end}}" value="75">Yes</button>
+      <button type="submit" name="interest" class="btn {{if and (gt .Interest 75) (lt .Interest 101)}}btn-primary{{else}}btn-secondary{{end}}" value="100">Very</button>
+      </form>
+    </div>
+    {{end}}
+    {{if .MayEdit}}
+    <a href="edit" class="btn">Edit</a>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "discussion/view"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+      {{template "discussion/item-full" .Display}}
+  </div>
+</div>
+{{end}}
+
+{{define "discussion/item-short"}}
+<div class="row">
+  <div class="col-9 col-offset-3">
+    <h5>{{template "discussion/link" .}}</h5>
+    <span class="text-muted">Owner: {{template "user/link" .Owner}}</span>
+  </div>
+</div>
+{{end}}
+
+{{define "discussion/list"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <ul class="list-group">
+    {{range .List}}
+      <li class="list-group-item">{{template "discussion/item-short" .}}</li>
+    {{else}}
+      <p>No discussions registered yet</p>
+    {{end}}
+    </ul> 
+  </div>
+</div>
+{{end}}
+
+{{define "uid/notfound"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <h1>No such {{.Utype}} id</h1>
+    <p>Sorry, we couldn't find the {{.Utype}} you were looking for.</p>
+  </div>
+</div>
+{{end}}
+
+{{define "discussion/form"}}
+<div class="form-group">
+  <label for="newTitle">Title</label>
+  <input type="text" name="title" id="newTitle" class="form-control" value="{{.Title}}" placeholder="Title of session">
+</div>
+<div class="form-group">
+  <label for="newDescription">Session description</label>
+  <textarea id="newDescription" class="form-control" name="description" placeholder="What do you want to talk about?"rows="4">{{.Description}}</textarea>
+</div>
+{{end}}
+
+{{define "discussion/new"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <h1>Create a new session</h1>
+    {{if .Error}}
+    <p class="text-danger">
+      {{.Error}}
+    </p>
+    {{end}}
+    <form action="/discussion/new" method="POST">
+      {{template "discussion/form" .Discussion}}
+    <input type="submit" value="Suggest Topic" class="btn btn-primary">
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "discussion/edit"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <h1>Modify session</h1>
+    {{if .Error}}
+    <p class="text-danger">
+      {{.Error}}
+    </p>
+    {{end}}
+    <form action="edit" method="POST">
+      {{template "discussion/form" .Display}}
+    <input type="submit" value="Modify Topic" class="btn btn-primary">
+    </form>
+  </div>
+</div>
+{{end}}
