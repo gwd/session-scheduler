@@ -53,16 +53,18 @@ func (u *User) MayEditDiscussion(d *Discussion) bool {
 	return u.IsAdmin || u.ID == d.Owner
 }
 
-func (u *User) GetDisplay(cur *User) *UserDisplay {
-	return &UserDisplay{
+func (u *User) GetDisplay(cur *User) (ud *UserDisplay) {
+	ud = &UserDisplay{
 		ID: u.ID,
 		Username: u.Username,
 		IsAdmin: u.IsAdmin,
-		MayEdit: cur.MayEditUser(u.ID),
 		Profile: u.Profile,
 		Description: ProcessText(u.Profile.Description),
 	}
-	
+	if cur != nil {
+		ud.MayEdit = cur.MayEditUser(u.ID)
+	}
+	return
 }
 
 func NewUser(username, password string, profile *UserProfile) (*User, error) {

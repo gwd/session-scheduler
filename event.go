@@ -152,6 +152,16 @@ func (ustore UserStore) GetUsers() (users []*User) {
 	return
 }
 
+func (ustore UserStore) GetUsersDisplay(cur *User) (users []*UserDisplay) {
+	for _, u := range ustore {
+		if u.Username != AdminUsername {
+			users = append(users, u.GetDisplay(cur))
+		}
+	}
+	// FIXME: Sort?
+	return
+}
+
 func (ustore UserStore) FindByUsername(username string) (*User, error) {
 	if username == "" {
 		return nil, nil

@@ -219,7 +219,7 @@ func HandleList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	case "discussion":
 		displayList = DiscussionGetList(cur)
 	case "user":
-		displayList = Event.Users.GetUsers()
+		displayList = Event.Users.GetUsersDisplay(cur)
 	default:
 		return
 	}
