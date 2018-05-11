@@ -20,7 +20,9 @@
     </div>
     {{end}}
     {{if .MayEdit}}
-    <a href="edit" class="btn">Edit</a>
+    <a href="edit" class="btn btn-primary" role="button">Edit</a>
+    <a href="delete" class="btn btn-danger" role="button">Delete</a>
+
     {{end}}
   </div>
 </div>
@@ -106,6 +108,18 @@
     <form action="edit" method="POST">
       {{template "discussion/form" .Display}}
     <input type="submit" value="Modify Topic" class="btn btn-primary">
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "discussion/delete"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <h1>Delete session</h1>
+    Really delete discussion "{{.Display.Title}}"?
+    <form action="delete" method="POST">
+    <input type="submit" value="Delete" class="btn btn-danger">
     </form>
   </div>
 </div>

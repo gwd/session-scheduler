@@ -101,6 +101,37 @@ func (slot *Slot) Score() (score, missed int) {
 	return
 }
 
+func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
+	// Delete the discussion from the map
+	delete(slot.Discussions, did)
+			
+	// Find all users attending this discussion and have them go
+	// somewhere else
+ 	for uid, attendingDid := range slot.Users {
+		if attendingDid != did {
+			continue
+		}
+		user, _ := Event.Users.Find(uid)
+		altDid := DiscussionID("")
+		altInterest := 0
+		for candidateDid := range slot.Discussions {
+			if user.Interest[candidateDid] > altInterest {
+				altDid = candidateDid
+				altInterest = user.Interest[candidateDid]
+			}
+		}
+		if altInterest > 0 {
+			// Found something -- change the user to going to this session
+			slot.Users[uid] = altDid
+		} else {
+			// User isn't interested in anything in this session -- remove them
+			delete(slot.Users, uid)
+		}
+	}
+	
+	return nil
+}
+
 // Pure scheduling: Only slots
 type Schedule struct {
 	Slots []*Slot
@@ -122,6 +153,16 @@ func (sched *Schedule) Score() (score, missed int) {
 		missed += smissed
 	}
 	return
+}
+
+func (sched *Schedule) RemoveDiscussion(did DiscussionID) error {
+	for _, slot := range sched.Slots {
+		if slot.Discussions[did] {
+			slot.RemoveDiscussion(did)
+			break
+		}
+	}
+	return nil
 }
 
 func MakeSchedule() (err error) {

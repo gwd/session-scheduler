@@ -116,6 +116,23 @@ func UpdateDiscussion(disc *Discussion, title, description string) (*Discussion,
 	return disc, err
 }
 
+func DeleteDiscussion(did DiscussionID) {
+	// Remove it from the schedule before removing it from user list
+	// so we still have the 'Interest' value in case we decide to
+	// maintain a score at a given time.
+	if Event.Schedule != nil {
+		Event.Schedule.RemoveDiscussion(did)
+
+		// Removing a discussion means updating attendees, and
+		// possibly moving rooms as well.  Run the placement again.
+		Event.Timetable.Place(Event.Schedule)
+	}
+	
+	UserRemoveDiscussion(did)
+	
+	Event.Discussions.Delete(did)
+}
+
 func NewDiscussion(owner *User, title, description string) (*Discussion, error) {
 	disc := &Discussion{
 		Owner:       owner.ID,

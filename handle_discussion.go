@@ -54,8 +54,9 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	
 	// OK: discussion / user => view; discussion / user -> edit 
-	if !((action == "view" || action == "edit") &&
-		(itype == "user" || itype == "discussion")) {
+	if !(((action == "view" || action == "edit") &&
+		(itype == "user" || itype == "discussion")) ||
+		(itype == "discussion" && action == "delete")){
 		return
 	}
 		
@@ -70,7 +71,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			switch action {
 			case "edit":
 				display = disc
-			case "view":
+			case "view", "delete":
 				display = disc.GetDisplay(cur)
 			}
 		}
@@ -119,7 +120,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	log.Printf("POST %s %s %s", uid, action, itype)
 	
 	if !((itype == "discussion" &&
-		(action == "setinterest" || action == "edit")) ||
+		(action == "setinterest" || action == "edit" || action == "delete")) ||
 		(itype == "user" && action == "edit")) {
 		log.Printf(" Disallowed action")
 		return
@@ -163,6 +164,16 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				}
 				panic(err)
 			}
+		case "delete":
+			if !cur.MayEditDiscussion(disc) {
+				return
+			}
+
+			DeleteDiscussion(disc.ID)
+
+			// Can't redirect to 'view' as it's been deleted
+			http.Redirect(w, r, "/list/discussion", http.StatusFound)
+			return
 		default:
 			return
 		}

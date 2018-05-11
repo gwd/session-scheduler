@@ -153,22 +153,34 @@ func (ustore UserStore) FindRandom() (user * User, err error) {
 	return
 }
 
+func (ustore UserStore) Iterate(f func (u *User) error) (err error) {
+	for _, user := range ustore {
+		err = f(user)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func (ustore UserStore) GetUsers() (users []*User) {
-	for _, u := range ustore {
+	ustore.Iterate(func(u *User) error {
 		if u.Username != AdminUsername {
 			users = append(users, u)
 		}
-	}
+		return nil
+	})
 	// FIXME: Sort?
 	return
 }
 
 func (ustore UserStore) GetUsersDisplay(cur *User) (users []*UserDisplay) {
-	for _, u := range ustore {
+	ustore.Iterate(func(u *User) error {
 		if u.Username != AdminUsername {
 			users = append(users, u.GetDisplay(cur))
 		}
-	}
+		return nil
+	})
 	// FIXME: Sort?
 	return
 }
@@ -229,8 +241,8 @@ func (dstore DiscussionStore) Save(discussion *Discussion) error {
 	return Event.Save()
 }
 
-func (dstore DiscussionStore) Delete(discussion *Discussion) error {
-	delete(dstore, discussion.ID)
+func (dstore DiscussionStore) Delete(did DiscussionID) error {
+	delete(dstore, did)
 	return Event.Save()
 }
 

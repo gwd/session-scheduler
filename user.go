@@ -150,6 +150,13 @@ func (user *User) SetInterest(disc *Discussion, interest int) (error) {
 	return nil
 }
 
+func UserRemoveDiscussion(did DiscussionID) (error) {
+	return Event.Users.Iterate(func(u *User) error {
+		delete(u.Interest, did)
+		return nil
+	})
+}
+
 func UpdateUser(user *User, currentPassword, newPassword string,
                  profile *UserProfile) (User, error) {
 	out := *user

@@ -26,9 +26,6 @@ type TimetableDiscussion struct {
 	Title string
 	Attendees int
 	Score int
-
-	// Users and their interest
-	Attending []*User
 }
 
 type TimetableSlot struct {
@@ -38,9 +35,27 @@ type TimetableSlot struct {
 	// Which room will each discussion be in?
 	// (Separate because placement and scheduling are separate steps)
 	Discussions []TimetableDiscussion
+}
 
-	// Link to the "real" slot
-	slot *Slot
+func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
+	// For now, just list the discussions.  Place into locations later.
+	ts.Discussions = []TimetableDiscussion{}
+	for did := range slot.Discussions {
+		disc, _ := Event.Discussions.Find(did)
+		tdisc := TimetableDiscussion{
+			ID: did,
+			Title: disc.Title,
+			Attendees: slot.DiscussionAttendeeCount(did),
+		}
+		tdisc.Score, _ = slot.DiscussionScore(did)
+		
+		ts.Discussions = append(ts.Discussions, tdisc)
+	}
+	
+	// Sort by number of attendees
+	sort.Slice(ts.Discussions, func(i, j int) bool {
+		return ts.Discussions[i].Attendees > ts.Discussions[j].Attendees
+	})
 }
 
 type TimetableDay struct {
@@ -105,24 +120,7 @@ func (tt *Timetable) Place(sched *Schedule) (err error) {
 
 			slot := sched.Slots[count]
 
-			// For now, just list the discussions.  Place into locations later.
-			ts.Discussions = []TimetableDiscussion{}
-			for did := range slot.Discussions {
-				disc, _ := Event.Discussions.Find(did)
-				tdisc := TimetableDiscussion{
-					ID: did,
-					Title: disc.Title,
-					Attendees: slot.DiscussionAttendeeCount(did),
-				}
-				tdisc.Score, _ = slot.DiscussionScore(did)
-
-				ts.Discussions = append(ts.Discussions, tdisc)
-			}
-
-			// Sort by number of attendees
-			sort.Slice(ts.Discussions, func(i, j int) bool {
-				return ts.Discussions[i].Attendees > ts.Discussions[j].Attendees
-			})
+			ts.PlaceSlot(slot)
 
 			count++
 		}
