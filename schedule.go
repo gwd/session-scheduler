@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"sort"
+	"time"
 )
 
 type SlotAttendance map[UserID]DiscussionID
@@ -103,6 +104,7 @@ func (slot *Slot) Score() (score, missed int) {
 // Pure scheduling: Only slots
 type Schedule struct {
 	Slots []*Slot
+	Created time.Time
 }
 
 func (sched *Schedule) Init(slots int) {
@@ -174,6 +176,8 @@ func MakeSchedule() (err error) {
 
 	log.Printf("Happiness: %d, sadness %d", score, missed)
 
+	sched.Created = time.Now()
+	
 	Event.Schedule = sched
 
 	Event.Timetable.Place(sched)

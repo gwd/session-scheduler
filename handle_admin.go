@@ -4,7 +4,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/hako/durafmt"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -15,14 +17,21 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		return
 	}
 
+	content := map[string]interface{}{ "User": user }
+
 	tmpl := ps.ByName("template")
 	switch tmpl {
-	case "console", "test":
-		RenderTemplate(w, r, "admin/"+tmpl, map[string]interface{}{
-			"User": user,
-			tmpl: true,
-			"Vcode": Event.VerificationCode,
-		})
+	case "console":
+		content["Vcode"] = Event.VerificationCode
+		lastUpdate := "Never"
+		if Event.Schedule != nil {
+			lastUpdate = durafmt.ParseShort(time.Since(Event.Schedule.Created)).String()+" ago"
+		}
+		content["SinceLastSchedule"] = lastUpdate
+		fallthrough
+	case "test":
+		content[tmpl] = true
+		RenderTemplate(w, r, "admin/"+tmpl, content)
 	}
 
 }
