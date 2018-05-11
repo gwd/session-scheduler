@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"sort"
 )
 
@@ -20,12 +21,14 @@ type DiscussionScheduleDisplay struct {
 	Missing []UserScheduleDisplay
 }
 
-
 type TimetableDiscussion struct {
 	ID DiscussionID
 	Title string
 	Attendees int
 	Score int
+	// Copy of the "canonical" location, updated every time the
+	// schedule is run
+	LocationInfo Location
 }
 
 type TimetableSlot struct {
@@ -56,6 +59,29 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 	sort.Slice(ts.Discussions, func(i, j int) bool {
 		return ts.Discussions[i].Attendees > ts.Discussions[j].Attendees
 	})
+
+	// And place them in locations, using the non-place as a catch-all
+	locations := Event.Locations.GetLocations()
+	lidx := 0
+	for i := range ts.Discussions {
+		tdisc := &ts.Discussions[i]
+		if lidx < len(locations) {
+			loc := locations[lidx]
+			tdisc.LocationInfo = *loc
+			log.Printf("Setting discussion %s room to id %d (%s)",
+				tdisc.Title, lidx, tdisc.LocationInfo.Name)
+			if loc.IsPlace {
+				lidx++
+			} else {
+				if lidx + 1 != len(locations) {
+					log.Fatalf("Non-place not last in list! lidx %d len %d",
+						lidx, len(locations))
+				}
+			}
+		} else {
+			log.Printf("Out of locations")
+		}
+	}
 }
 
 type TimetableDay struct {

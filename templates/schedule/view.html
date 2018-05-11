@@ -19,9 +19,10 @@
 	    {{else}}
 	    {{range .Discussions}}
 	    <div class="card mb-2"><div class="card-body">
-	      <span class="card-title">{{template "discussion/link" .}}<span>
-	      <span class="badge badge-success" style="float: right">{{.Score}}</span>
-	      <span class="badge badge-primary" style="float: right">{{.Attendees}}</span>
+	      <div class="card-title">{{template "discussion/link" .}}</div>
+	      <div>{{template "location/link" .LocationInfo}}</div>
+	      <div class="badge badge-success" style="float: right">Interest {{.Score}}</div>
+	      <div class="badge badge-primary" style="float: right">Attendees {{.Attendees}}</div>
 	    </div></div>
 	    {{end}}
 	    {{end}}

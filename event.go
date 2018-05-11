@@ -13,6 +13,7 @@ import (
 type EventStore struct {
 	Users       UserStore
 	Discussions DiscussionStore
+	Locations   LocationStore
 	Schedule    *Schedule
 	Timetable   Timetable
 	ScheduleSlots int
@@ -42,6 +43,7 @@ func (store *EventStore) Init(opt EventOptions) {
 	store.Users.Init()
 	store.Discussions.Init()
 	store.Timetable.Init()
+	store.Locations.Init()
 	store.Schedule = nil
 
 	store.ScheduleSlots = opt.Slots
@@ -75,6 +77,7 @@ func (store *EventStore) Reset() {
 	store.Users.Init()
 	store.Discussions.Init()
 	store.Timetable.Init()
+	store.Locations.Init()
 	store.Schedule = nil
 
 	Event.Users.Save(admin)
@@ -266,3 +269,4 @@ func (dstore DiscussionStore) GetList(cur *User) (list []*DiscussionDisplay) {
 	})
 	return
 }
+
