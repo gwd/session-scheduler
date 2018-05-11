@@ -3,10 +3,10 @@
   <nav class="sidebar-sticky">
     <ul class="nav flex-column nav-pills">
       <li class="nav-item">
-      <a class="nav-link active" href="/admin/console">Console</a>
+      <a class="nav-link {{if .console}} active{{end}}" href="/admin/console">Console</a>
       </li>
       <li class="nav-item">
-      <a class="nav-link" href="/admin/test">Testing</a>
+      <a class="nav-link {{if .test}} active{{end}}" href="/admin/test">Testing</a>
       </li>
     </ul>
   </nav>
@@ -15,19 +15,33 @@
 
 {{define "admin/console"}}
 <div class="row">
-  {{template "admin/sidebar"}}
+  {{template "admin/sidebar" .}}
   <div class="container">
     <h2>Admin console</h2>
-    <form action="/admin/runschedule" method="POST">
-    <input type="submit" value="Run Scheduler" class="btn btn-primary">
-    </form>
+    <div class="container">
+      <p>Verification code: <strong>{{.Vcode}}</strong></p>
+    </div>
+    <ul class="list-group">
+      <li class="list-group-item">
+      <form action="/admin/runschedule" method="POST">
+      <input type="submit" value="Run Scheduler" class="btn btn-primary">
+      </form>
+      </li>
+      <li class="list-group-item">
+      <form action="/admin/setvcode" method="POST">
+      <input type="submit" value="Set Verification Code" class="btn btn-primary">
+      <label for="vcode">New verification code</label>
+      <input type="text" id="vcode" name="vcode" value="{{.Vcode}}">
+      </form>
+      </li>
+    </ul>
   </div>
 </div>
 {{end}}
 
 {{define "admin/test"}}
 <div class="row">
-  {{template "admin/sidebar"}}
+  {{template "admin/sidebar" .}}
   <div class="container">
     <h2>Test console</h2>
     {{if .IsTestMode}}

@@ -11,8 +11,7 @@ const idSource = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 // Save the length in a constant so we don't look it up each time.
 const idSourceLen = byte(len(idSource))
 
-// GenerateID creates a prefixed random identifier.
-func GenerateID(prefix string, length int) string {
+func GenerateRawID(length int) string {
 	// Create an array with the correct capacity
 	id := make([]byte, length)
 	// Fill our array with random numbers
@@ -23,6 +22,11 @@ func GenerateID(prefix string, length int) string {
 		id[i] = idSource[b%idSourceLen]
 	}
 
+	return string(id)
+}
+
+// GenerateID creates a prefixed random identifier.
+func GenerateID(prefix string, length int) string {
 	// Return the formatted id
-	return fmt.Sprintf("%s_%s", prefix, string(id))
+	return fmt.Sprintf("%s_%s", prefix, GenerateRawID(length))
 }

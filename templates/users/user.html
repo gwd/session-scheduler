@@ -105,23 +105,28 @@
 
 {{define "user/new"}}
 <div class="col-md-6 col-md-offset-3">
-	<h1>Sign Up</h1>
-	{{if .Error}}
-	<p class="text-danger">
-		{{.Error}}
-	</p>
-	{{end}}
-	<form action="/register" method="POST">
-		<div class="form-group">
-			<label for="newUsername">Username</label> (Required)
-			<input type="text" name="Username" value="{{.User.Username}}" id="newUsername" class="form-control">
-		</div>
-		<div class="form-group">
-			<label for="newPassword">Password</label>
-			<input type="password" name="Password" id="newPassword" class="form-control">
-		</div>
-		{{template "user/profile/form" .User.Profile}}
-		<input type="submit" value="Register" class="btn btn-primary">
-	</form>
+  <h1>Sign Up</h1>
+  {{if .Error}}
+    <p class="text-danger">
+    {{.Error}}
+    </p>
+  {{end}}
+  <form action="/register" method="POST">
+    <div class="form-group">
+      <label for="newUsername">Username</label> (Required)
+      <input type="text" name="Username" value="{{.User.Username}}" id="newUsername" class="form-control">
+    </div>
+    <div class="form-group">
+      <label for="newPassword">Password</label>
+      <input type="password" name="Password" id="newPassword" class="form-control">
+    </div>
+    <div class="form-group">
+      <label for="vcode">Verification Code</label>
+      <input type="text" name="Vcode" id="vcode" class="form-control">
+      <p class="text-muted">Please contact lars dot kurth at citrix dot com if you haven't received a verification code</p>
+    </div>
+    {{template "user/profile/form" .User.Profile}}
+    <input type="submit" value="Register" class="btn btn-primary">
+  </form>
 </div>
 {{end}}

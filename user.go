@@ -67,11 +67,16 @@ func (u *User) GetDisplay(cur *User) (ud *UserDisplay) {
 	return
 }
 
-func NewUser(username, password string, profile *UserProfile) (*User, error) {
+func NewUser(username, password, vcode string, profile *UserProfile) (*User, error) {
 	user := &User{
 		Username: username,
 		Profile: *profile,
 	}
+
+	if vcode != Event.VerificationCode {
+		return user, errInvalidVcode
+	}
+	
 	if username == "" {
 		return user, errNoUsername
 	}

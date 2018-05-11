@@ -28,9 +28,9 @@ func NewTestUser() {
 	
 	log.Printf("Creating test user %s %v", username, *profile)
 
-	for _, err := NewUser(username, TestPassword, profile);
-	        err != nil;
-            _, err = NewUser(username, TestPassword, profile) {
+	for _, err := NewUser(username, TestPassword, Event.VerificationCode, profile);
+	           err != nil;
+               _, err = NewUser(username, TestPassword, Event.VerificationCode, profile) {
      	if err == errUsernameExists {
 			username = fake.UserName()
 			log.Printf(" User exists!  Trying username %s instead", username)

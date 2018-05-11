@@ -17,12 +17,14 @@ type EventStore struct {
 	Timetable   Timetable
 	ScheduleSlots int
 	TestMode    bool
+	VerificationCode string
 	filename    string
 }
 
 type EventOptions struct {
-	Slots         int
-	AdminPassword string
+	Slots            int
+	AdminPassword    string
+	VerificationCode string
 }
 
 var Event EventStore
@@ -44,13 +46,19 @@ func (store *EventStore) Init(opt EventOptions) {
 
 	store.ScheduleSlots = opt.Slots
 
+	store.VerificationCode = opt.VerificationCode
+	if store.VerificationCode == "" {
+		store.VerificationCode = GenerateRawID(8)
+	}
+
 	// Create the admin user
 	pwd := opt.AdminPassword
 	if pwd == "" {
-		pwd = GenerateID("pwd", 12)
+		pwd = GenerateRawID(12)
 		log.Printf("Administrator account: admin %s", pwd)
 	}
-	admin, err := NewUser(AdminUsername, pwd, &UserProfile{ RealName: "Xen Schedule Administrator" })
+	admin, err := NewUser(AdminUsername, pwd, Event.VerificationCode,
+		&UserProfile{ RealName: "Xen Schedule Administrator" })
 	if err != nil {
 		log.Fatalf("Error creating admin user: %v", err)
 	}

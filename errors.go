@@ -16,6 +16,7 @@ var (
 	errNoTitle              = ValidationError(errors.New("You must provide a title"))
 	errNoDesc               = ValidationError(errors.New("You must provide a description"))
 	errInvalidInterest      = ValidationError(errors.New("Interest value out of range"))
+	errInvalidVcode         = ValidationError(errors.New("Incorrect verification code"))
 )
 
 func IsValidationError(err error) bool {

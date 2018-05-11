@@ -11,40 +11,66 @@ import (
 func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := RequestUser(r)
 
-	if !user.IsAdmin {
+	if user == nil || !user.IsAdmin {
 		return
 	}
 
-	template := ps.ByName("template")
-	switch template {
+	tmpl := ps.ByName("template")
+	switch tmpl {
 	case "console", "test":
-		RenderTemplate(w, r, "admin/"+template, map[string]interface{}{
+		RenderTemplate(w, r, "admin/"+tmpl, map[string]interface{}{
 			"User": user,
+			tmpl: true,
+			"Vcode": Event.VerificationCode,
 		})
 	}
 
 }
 
-func HandleAdminRunSchedule(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := RequestUser(r)
 
-	if !user.IsAdmin {
+	if user == nil || !user.IsAdmin {
 		return
 	}
-	
-	err := MakeSchedule()
-	if err == nil {
-		http.Redirect(w, r, "/admin/console?flash=Schedule+Generated", http.StatusFound)
-	} else {
-		log.Printf("Error generating schedule: %v", err)
-		http.Redirect(w, r, "/admin/console?flash=Error+generating+schedule", http.StatusFound)
+
+	action := ps.ByName("action")
+	if !(action == "runschedule" || action == "setvcode") {
+		return
+	}
+
+	switch action {
+	case "runschedule":
+		err := MakeSchedule()
+		if err == nil {
+			http.Redirect(w, r, "console?flash=Schedule+Generated", http.StatusFound)
+		} else {
+			log.Printf("Error generating schedule: %v", err)
+			http.Redirect(w, r, "console?flash=Error+generating+schedule", http.StatusFound)
+		}
+	case "setvcode":
+		newvcode := r.FormValue("vcode")
+		if newvcode == "" {
+			RenderTemplate(w, r, "console?flash=Invalid+Vcode",
+				map[string]interface{}{
+					"User": user,
+					"console": true,
+					"Vcode": Event.VerificationCode,
+				})
+			return
+		}
+
+		Event.VerificationCode = newvcode
+		Event.Save()
+		http.Redirect(w, r, "console?flash=Verification+code+updated", http.StatusFound)
+		return
 	}
 }
 
 func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := RequestUser(r)
 
-	if !user.IsAdmin {
+	if user == nil || !user.IsAdmin {
 		return
 	}
 

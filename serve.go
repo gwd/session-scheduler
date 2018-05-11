@@ -45,7 +45,7 @@ func serve() {
 	secureRouter.GET("/discussion/new", HandleDiscussionNew)
 	secureRouter.POST("/discussion/new", HandleDiscussionCreate)
 	secureRouter.GET("/admin/:template", HandleAdminConsole)
-	secureRouter.POST("/admin/runschedule", HandleAdminRunSchedule)
+	secureRouter.POST("/admin/:action", HandleAdminAction)
 
 	secureRouter.POST("/testaction/:action", HandleTestAction)
 

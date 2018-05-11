@@ -24,6 +24,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	user, err := NewUser(
 		r.FormValue("Username"),
 		r.FormValue("Password"),
+		r.FormValue("Vcode"),
 		parseProfile(r),
 	)
 
