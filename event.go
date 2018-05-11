@@ -214,6 +214,16 @@ func (dstore DiscussionStore) Find(id DiscussionID) (*Discussion, error) {
 	return discussion, nil
 }
 
+func (dstore DiscussionStore) Iterate(f func (d *Discussion) error) (err error) {
+	for _, disc := range dstore {
+		err = f(disc)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func (dstore DiscussionStore) Save(discussion *Discussion) error {
 	dstore[discussion.ID] = discussion
 	return Event.Save()
@@ -225,11 +235,12 @@ func (dstore DiscussionStore) Delete(discussion *Discussion) error {
 }
 
 func (dstore DiscussionStore) GetList(cur *User) (list []*DiscussionDisplay) {
-	for _, d := range dstore {
+	dstore.Iterate(func (d *Discussion) error {
 		dd := d.GetDisplay(cur)
 		if dd != nil {
 			list = append(list, dd)
 		}
-	}
+		return nil
+	})
 	return
 }

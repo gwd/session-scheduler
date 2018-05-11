@@ -55,10 +55,25 @@ func NewTestDiscussion(owner *User) {
 		}
 	}
 	
-	log.Printf("Creating discussion with owner %s, title %s, desc %s",
-		owner.ID, title, desc)
+	for {
+		log.Printf("Creating discussion with owner %s, title %s, desc %s",
+			owner.ID, title, desc)
 
-	if _, err := NewDiscussion(owner, title, desc); err != nil {
+		_, err := NewDiscussion(owner, title, desc)
+		switch err {
+		case errTitleExists:
+			title = fake.Title()
+			continue
+		case errTooManyDiscussions:
+			// We could try a new user; but we don't want to loop forever
+			// if all users are full of their quota, and we don't want to spend
+			// time detecting that condition.  Just silently fail in that case.
+			err = nil
+			break
+		}
+		if err == nil {
+			break
+		}
 		log.Fatal("Creating new discussion: %v", err)
 	}
 }
@@ -67,7 +82,7 @@ func NewTestDiscussion(owner *User) {
 // 50% of the time generating a random amount of interest between 1 and 100
 func TestGenerateInterest() {
 	for _, user := range Event.Users.GetUsers() {
-		for _, disc := range Event.Discussions {
+		Event.Discussions.Iterate(func(disc *Discussion) error {
 			r := rand.Intn(100)
 			interest := 0
 			switch {
@@ -82,7 +97,8 @@ func TestGenerateInterest() {
 			if err := user.SetInterest(disc, interest); err != nil {
 				log.Fatalf("Setting interest: %v", err)
 			}
-		}
+			return nil
+		})
 	}
 }
 

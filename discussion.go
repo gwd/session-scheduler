@@ -130,8 +130,24 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 		return disc, errNoTitle
 	}
 
-	// FIXME: Check for duplicate titles
-
+	// Check for duplicate titles and too many discussions
+	count := 0
+	err := Event.Discussions.Iterate(func(check* Discussion) error {
+		if check.Title == title {
+			return errTitleExists
+		}
+		if disc.Owner == check.Owner {
+			count++
+			if count > Event.ScheduleSlots {
+				return errTooManyDiscussions
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return disc, err
+	}
+		
 	if description == "" {
 		return disc, errNoDesc
 	}
@@ -142,7 +158,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 
 	owner.SetInterest(disc, 100)
 
-	err := Event.Discussions.Save(disc)
+	err = Event.Discussions.Save(disc)
 
 	return disc, err
 }

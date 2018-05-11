@@ -66,7 +66,7 @@ It will then start serving http on localhost:3000.  To view the webpage, go to "
 Logging in as `admin`, you are in "Admin mode".  The `admin` account may edit users and sessions, but not express interest in sessions.  If you want to experience life as a user, you'll have to create a user account.
 
 The `admin` account has a "Console" page available.  From there you can initiate the session scheduler
-and enable test mode.
+and enable test mode, set the verification code, and other admin activities.
 
 # Test mode
 
@@ -78,4 +78,15 @@ you to:
 3. Generate random "interest" values for current users in current discussions
 4. Clear the user database (while keeping the current admin password).
 
+There are under the admin console.
+
 Because these are destructive, they are only available when "test mode" is enabled.
+
+# Miscellaneous notes
+
+Registration requires a verification code.  This will be generated randomly the first time session-scheduler
+is run.  It can also be set from the admin console.
+
+Discussion proposals refuse duplicate discussions.
+
+Any given user is limited to generating sessions equal to the total number of session slots.
