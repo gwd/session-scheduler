@@ -1,4 +1,4 @@
 session-scheduler
-data
+data/*.json
 notes.txt
 *.diff
