@@ -14,6 +14,7 @@ type EventStore struct {
 	Users       UserStore
 	Discussions DiscussionStore
 	Schedule    *Schedule
+	Timetable   Timetable
 	ScheduleSlots int
 	TestMode    bool
 	filename    string
@@ -29,7 +30,8 @@ var Event EventStore
 const (
 	StoreFilename = "data/event.json"
 	AdminUsername = "admin"
-	DefaultSlots = 10
+	// 3 days * 3 slots per day
+	DefaultSlots = 9
 )
 
 var OptAdminPassword string
@@ -37,6 +39,7 @@ var OptAdminPassword string
 func (store *EventStore) Init(opt EventOptions) {
 	store.Users.Init()
 	store.Discussions.Init()
+	store.Timetable.Init()
 	store.Schedule = nil
 
 	store.ScheduleSlots = opt.Slots

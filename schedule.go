@@ -5,18 +5,19 @@ import (
 	"sort"
 )
 
-// Start simple: 10 slots, any amount of parallelism
+type SlotAttendance map[UserID]DiscussionID
+
 type Slot struct {
 	// What are all the concurrent discussions happening during this slot?
 	Discussions map[DiscussionID]bool
-	
-	// Where is everyone during this slot?
-	Users map[UserID]DiscussionID
+
+	Users SlotAttendance
 }
+
 
 func (slot *Slot) Init() {
 	slot.Discussions = make(map[DiscussionID]bool)
-	slot.Users = make(map[UserID]DiscussionID)
+	slot.Users = SlotAttendance(make(map[UserID]DiscussionID))
 }
 
 func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
@@ -60,36 +61,54 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 	return
 }
 
-func (slot *Slot) Score() (score, missed int) {
-	for did := range slot.Discussions {
-		// For every discussion in this slot...
-		disc, _ := Event.Discussions.Find(did)
+func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
+	// For every discussion in this slot...
+	disc, _ := Event.Discussions.Find(did)
 
-		for uid := range disc.Interested {
-			// Find out how much each user was interested in it
-			user, _ := Event.Users.Find(uid)
+	for uid := range disc.Interested {
+		// Find out how much each user was interested in it
+		user, _ := Event.Users.Find(uid)
 
-			interest := user.Interest[disc.ID]
+		interest := user.Interest[disc.ID]
 
-			// If they're going, add it to the score;
-			// if not, add it to the 'missed' category
-			if slot.Users[uid] == disc.ID {
-				score += interest
-			} else {
-				missed += interest
-			}
+		// If they're going, add it to the score;
+		// if not, add it to the 'missed' category
+		if slot.Users[uid] == disc.ID {
+			score += interest
+		} else {
+			missed += interest
 		}
 	}
 	return
 }
 
+func (slot *Slot) DiscussionAttendeeCount(did DiscussionID) (count int) {
+	for _, attendingID := range slot.Users {
+		if attendingID == did {
+			count++
+		}
+	}
+	return
+}
+
+func (slot *Slot) Score() (score, missed int) {
+	for did := range slot.Discussions {
+		ds, dm := slot.DiscussionScore(did)
+		score += ds
+		missed += dm
+	}
+	return
+}
+
+// Pure scheduling: Only slots
 type Schedule struct {
-	Slots []Slot
+	Slots []*Slot
 }
 
 func (sched *Schedule) Init(slots int) {
-	sched.Slots = make([]Slot, slots)
+	sched.Slots = make([]*Slot, slots)
 	for i := range sched.Slots {
+		sched.Slots[i] = &Slot{}
 		sched.Slots[i].Init()
 	}
 }
@@ -99,77 +118,6 @@ func (sched *Schedule) Score() (score, missed int) {
 		sscore, smissed := sched.Slots[i].Score()
 		score += sscore
 		missed += smissed
-	}
-	return
-}
-
-type UserScheduleDisplay struct {
-	Username string
-	Interest int
-}
-
-type DiscussionScheduleDisplay struct {
-	ID DiscussionID
-	Title string
-	Description string
-	Url string
-	Attending []UserScheduleDisplay
-	Missing []UserScheduleDisplay
-}
-
-type SlotDisplay struct {
-	Discussions []*DiscussionScheduleDisplay
-	// Time?
-}
-
-func (slot *Slot) GetDisplay(cur *User) (sd SlotDisplay) {
-	for did := range slot.Discussions {
-		dsd := &DiscussionScheduleDisplay{}
-		
-		// For every discussion in this slot...
-		disc, _ := Event.Discussions.Find(did)
-
-		log.Printf(" Packing display for discussion %s", disc.Title)
-
-		dsd.ID = disc.ID
-		dsd.Title = disc.Title
-		dsd.Description = disc.Description
-		dsd.Url = disc.GetURL()
-
-		for uid := range disc.Interested {
-			user, _ := Event.Users.Find(uid)
-
-			usd := UserScheduleDisplay{
-				Username: user.Username,
-				Interest: user.Interest[disc.ID],
-			}
-
-			log.Printf("  Placing user %s in appropriate list", user.Username)
-			
-			// If they're going to this discussion, add them to the attending list;
-			// otherwise, add them to the missing list
-			if slot.Users[uid] == disc.ID {
-				dsd.Attending = append(dsd.Attending, usd)
-			} else {
-				dsd.Missing = append(dsd.Missing, usd)
-			}
-		}
-
-		sd.Discussions = append(sd.Discussions, dsd)
-	}
-	return
-
-}
-
-type ScheduleDisplay struct {
-	Slots []SlotDisplay
-}
-
-func (sched *Schedule) GetDisplay(cur *User) (sd *ScheduleDisplay) {
-	sd = &ScheduleDisplay{}
-	for i := range sched.Slots {
-		log.Printf("Packing display for slot %d", i)
-		sd.Slots = append(sd.Slots, sched.Slots[i].GetDisplay(cur))
 	}
 	return
 }
@@ -228,6 +176,8 @@ func MakeSchedule() (err error) {
 
 	Event.Schedule = sched
 
+	Event.Timetable.Place(sched)
+	
 	Event.Save()
 	
 	return

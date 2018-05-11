@@ -1,37 +1,37 @@
 {{define "schedule/view"}}
 <div class="row">
 <div class="col-md-8 col-md-offset-2">
-  <table class="table">
-    <tbody>
-    {{range .Schedule.Slots}}
-    <tr>
-      {{range .Discussions}}
-      <td><h5>{{template "discussion/link" .}}</h5>
-	<p>{{.Description}}</p>
-	<h6>Attending</h6>
-	<ul class="list-group">
-	  {{range .Attending}}
-	  <li class="list-group-item">{{.Username}}
-	  <span class="badge badge-success" style="float: right">{{.Interest}}</span>
-	  </li>
-	  {{end}}
-	</ul>
-	{{if .Missing}}
-	<h6>Missing</h6>
-	<ul class="list-group">
-	  {{range .Missing}}
-	  <li class="list-group-item">{{.Username}}
-	  <span class="badge badge-warning" style="float: right">{{.Interest}}</span>
-	  </li>
-	  {{end}}
-	</ul>
+  {{range .Timetable.Days}}
+    <div class="container col container-fluid">
+      <strong>{{.DayName}}</strong>
+      <table class="table">
+	{{range .Slots}}
+	<tr>
+	  <td>
+	    {{.Time}}
+	  </td>
+	  <td>
+	    <div class="container row">
+	    {{if .IsBreak}}
+	    <div class="card"><div class="card-body">
+	      <span class="card-title">Break</span>
+	    </div></div>
+	    {{else}}
+	    {{range .Discussions}}
+	    <div class="card mb-2"><div class="card-body">
+	      <span class="card-title">{{template "discussion/link" .}}<span>
+	      <span class="badge badge-success" style="float: right">{{.Score}}</span>
+	      <span class="badge badge-primary" style="float: right">{{.Attendees}}</span>
+	    </div></div>
+	    {{end}}
+	    {{end}}
+	    </div>
+	  </td>
+	</tr>
 	{{end}}
-      {{end}}
-    </tr>
-    {{end}}
-    </tbody>
-  </table>
+      </table>
+    </div>
+  {{end}}
 </div>
 </div>
 {{end}}
-
