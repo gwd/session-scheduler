@@ -14,20 +14,30 @@ At the moment, this is a prototype focused on Xen's Developer Summit.
 
 # Build instructions
 
-Clone the repo:
+Make sure you have your `GOPATH` set up to something reasonable:
 
 ```
-git clone https://github.com/gwd/session-scheduler
-cd session-scheduler
+$ echo $GOPATH
+/Users/dunlapg/go
 ```
 
-Get the dependencies:
+Use `go get` to download the repo and all its dependencies:
 
 ```
-go get .
+go get -d github.com/gwd/session-scheduler
 ```
 
-And build:
+This will download the source and dependencies into your `$GOPATH`, but not compile it yet.
+
+The session-scheduler must be run from the git repo; this will be in `$GOPATH/src/github.com/gwd/sessions-scheduler`.
+
+Change to this directory:
+
+```
+cd $GOPATH/src/github.com/gwd/session-scheduler
+```
+
+Build the binary:
 
 ```
 go build
@@ -41,7 +51,7 @@ mkdir data
 
 # Starting instructions
 
-Running it is simple:
+Running it is simple.  From the git repo, run:
 
 ```
 ./session-scheduler
