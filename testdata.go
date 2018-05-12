@@ -54,12 +54,15 @@ func NewTestDiscussion(owner *User) {
 			log.Fatalf("Getting a random user: %v", err)
 		}
 	}
+
+	var disc *Discussion
 	
 	for {
+		var err error
 		log.Printf("Creating discussion with owner %s, title %s, desc %s",
 			owner.ID, title, desc)
 
-		_, err := NewDiscussion(owner, title, desc)
+		disc, err = NewDiscussion(owner, title, desc)
 		switch err {
 		case errTitleExists:
 			title = fake.Title()
@@ -75,6 +78,14 @@ func NewTestDiscussion(owner *User) {
 			break
 		}
 		log.Fatal("Creating new discussion: %v", err)
+	}
+
+	if disc != nil {
+		for i := range disc.PossibleSlots {
+			if rand.Int31n(2) == 0 {
+				disc.PossibleSlots[i] = false
+			}
+		}
 	}
 }
 

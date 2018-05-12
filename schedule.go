@@ -192,6 +192,10 @@ func MakeSchedule() (err error) {
 		best := struct { score, index int }{ score: 0, index: -1 }
 		for i := range sched.Slots {
 			log.Printf(" Evaluating slot %d", i)
+			if !disc.PossibleSlots[i] {
+				log.Printf("  Impossible, skipping")
+				continue
+			}
 			// OK, how much will we increase the score by putting this discussion here?
 			score := sched.Slots[i].Assign(disc, false)
 			log.Printf("  Total value: %d", score)

@@ -21,6 +21,7 @@ type Discussion struct {
 	Title       string
 	Description string
 	Interested   map[UserID]bool
+	PossibleSlots []bool
 
 	// Things to add at some point:
 	// Session Length (30m, 1hr, &c)
@@ -31,15 +32,28 @@ type Discussion struct {
 }
 
 // Annotated for display to an individual user
+
+type DisplaySlot struct {
+	Label string
+	Index int
+	Possible bool
+}
+
 type DiscussionDisplay struct {
 	ID          DiscussionID
 	Title       string
 	Description template.HTML
+	DescriptionRaw string
 	Owner       *User
 	Interested  []*User
+	// IsUser: Used to determine whether to display 'interest'
 	IsUser      bool
+	// MayEdit: Used to determine whether to show edit / delete buttons
 	MayEdit     bool
+	// IsAdmin: Used to determine whether to show slot scheduling options
+	IsAdmin     bool
 	Interest int
+	PossibleSlots []DisplaySlot
 }
 
 func (d *Discussion) GetURL() string {
@@ -75,6 +89,7 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 	dd := &DiscussionDisplay{
 		ID:          d.ID,
 		Title:       d.Title,
+		DescriptionRaw: d.Description,
 		Description:  ProcessText(d.Description),
 	}
 	dd.Owner, _ = Event.Users.Find(d.Owner)
@@ -84,6 +99,10 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 			dd.Interest = cur.Interest[d.ID]
 		}
 		dd.MayEdit = cur.MayEditDiscussion(d)
+		if cur.IsAdmin {
+			dd.IsAdmin = true
+			dd.PossibleSlots = Event.Timetable.FillPossibleSlots(d.PossibleSlots)
+		}
 	}
 	for uid := range d.Interested {
 		a, _ := Event.Users.Find(uid)
@@ -94,7 +113,7 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 	return dd
 }
 
-func UpdateDiscussion(disc *Discussion, title, description string) (*Discussion, error) {
+func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool) (*Discussion, error) {
 	out := *disc
 
 	out.Title = title
@@ -110,6 +129,10 @@ func UpdateDiscussion(disc *Discussion, title, description string) (*Discussion,
 
 	disc.Title = title
 	disc.Description = description
+
+	if pSlots != nil {
+		disc.PossibleSlots = pSlots
+	}
 
 	err := Event.Discussions.Save(disc)
 
@@ -133,11 +156,20 @@ func DeleteDiscussion(did DiscussionID) {
 	Event.Discussions.Delete(did)
 }
 
+func MakePossibleSlots(len int) []bool {
+	pslots := make([]bool, len)
+	for i := range pslots {
+		pslots[i] = true
+	}
+	return pslots
+}
+
 func NewDiscussion(owner *User, title, description string) (*Discussion, error) {
 	disc := &Discussion{
 		Owner:       owner.ID,
 		Title:       title,
 		Description: description,
+		PossibleSlots: MakePossibleSlots(Event.ScheduleSlots),
 	}
 
 	log.Printf("Got new discussion: '%s' '%s' '%s'",

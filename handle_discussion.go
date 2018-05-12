@@ -28,7 +28,7 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 		if IsValidationError(err) {
 			RenderTemplate(w, r, "discussion/new", map[string]interface{}{
 				"Error":      err.Error(),
-				"Discussion": disc,
+				"Discussion": disc.GetDisplay(nil),
 			})
 			return
 		}
@@ -68,12 +68,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		disc, _ := DiscussionFindById(uid)
 
 		if disc != nil && (action != "edit" || cur.MayEditDiscussion(disc)) {
-			switch action {
-			case "edit":
-				display = disc
-			case "view", "delete":
-				display = disc.GetDisplay(cur)
-			}
+			display = disc.GetDisplay(cur)
 		}
 	case "user":
 		user, _ := Event.Users.Find(UserID(uid))
@@ -152,8 +147,17 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 			title := r.FormValue("title")
 			description := r.FormValue("description")
+			possibleSlots := make([]bool, Event.ScheduleSlots)
+			for _, iString := range r.Form["possible"] {
+				i, err := strconv.Atoi(iString)
+				if err != nil {
+					return
+				}
+				possibleSlots[i] = true
+			}
 			
-			discussionNext, err := UpdateDiscussion(disc, title, description)
+			
+			discussionNext, err := UpdateDiscussion(disc, title, description, possibleSlots)
 			if err != nil {
 				if IsValidationError(err) {
 					RenderTemplate(w, r, "edit", map[string]interface{}{

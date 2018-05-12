@@ -24,6 +24,16 @@
     <a href="delete" class="btn btn-danger" role="button">Delete</a>
 
     {{end}}
+    {{if .IsAdmin}}
+    <div class="container">
+      <p class="text-muted">Possible scheduling slots:</p>
+      <ul class="list-group">
+	{{range .PossibleSlots}}
+	<li class="list-group-item{{if .Possible}} bg-primary{{end}}">{{.Label}}</li>
+	{{end}}
+      </ul>
+    </div>
+    {{end}}
   </div>
 </div>
 {{end}}
@@ -75,8 +85,19 @@
 </div>
 <div class="form-group">
   <label for="newDescription">Session description</label>
-  <textarea id="newDescription" class="form-control" name="description" placeholder="What do you want to talk about?"rows="4">{{.Description}}</textarea>
+  <textarea id="newDescription" class="form-control"  name="description" placeholder="What do you want to talk  about?"rows="4">{{.DescriptionRaw}}</textarea>
 </div>
+{{if .IsAdmin}}
+<fieldset>
+  <legend>Possible Slots to schedule</legend>
+  {{range .PossibleSlots}}
+  <div class="form-group">
+    <input type="checkbox" name="possible" value="{{.Index}}"{{if .Possible}}checked{{end}}>
+    <label>{{.Label}}</label>
+  </div>
+  {{end}}
+</fieldset>
+    {{end}}
 {{end}}
 
 {{define "discussion/new"}}
