@@ -41,7 +41,7 @@ type UserDisplay struct {
 	Username string
 	IsAdmin  bool
 	MayEdit bool
-	Profile  UserProfile
+	Profile  *UserProfile
 	Description template.HTML
 }
 
@@ -58,11 +58,12 @@ func (u *User) GetDisplay(cur *User) (ud *UserDisplay) {
 		ID: u.ID,
 		Username: u.Username,
 		IsAdmin: u.IsAdmin,
-		Profile: u.Profile,
-		Description: ProcessText(u.Profile.Description),
 	}
 	if cur != nil {
 		ud.MayEdit = cur.MayEditUser(u.ID)
+		// Only display profile information to people who are logged in
+		ud.Profile = &u.Profile
+		ud.Description = ProcessText(u.Profile.Description)
 	}
 	return
 }

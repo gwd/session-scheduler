@@ -5,18 +5,22 @@
 {{define "user/item"}}
 <div class="container flex-column">
   <h5>{{template "user/link" .}}</h5>
-  {{if .Profile.RealName}}
-<div>Name: {{.Profile.RealName}}</div>
-{{end}}
-  {{if .Profile.Email}}
-<div>Email: {{.Profile.Email}}</div>
-{{end}}
-  {{if .Profile.Company}}
-<div>Company: {{.Profile.Company}}</div>
-{{end}}
-  {{if .Description}}
-<div>Description: {{.Description}}</div>
-{{end}}
+  {{if .Profile}}
+    {{if .Profile.RealName}}
+    <div>Name: {{.Profile.RealName}}</div>
+    {{end}}
+    {{if .Profile.Email}}
+    <div>Email: {{.Profile.Email}}</div>
+    {{end}}
+    {{if .Profile.Company}}
+    <div>Company: {{.Profile.Company}}</div>
+    {{end}}
+    {{if .Description}}
+    <div>Description: {{.Description}}</div>
+    {{end}}
+  {{else}}
+    <div class="text-muted">Full profile information only available when logged in</div>
+  {{end}}
 </div>
 {{end}}
 
