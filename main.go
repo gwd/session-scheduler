@@ -7,15 +7,17 @@ import (
 )
 
 func main() {
+	count := flag.Int("count", -1, "Number of times to iterate (tests only)")
+	flag.StringVar(&OptAdminPassword, "admin-password", "", "Set admin password")
+	
+	flag.Parse()
+
 	err := Event.Load()
 	if err != nil {
 		log.Printf("Loading schedule data: %v", err)
 		os.Exit(1)
 	}
 
-	count := flag.Int("count", -1, "Number of times to iterate (tests only)")
-
-	flag.Parse()
 
 	cmd := flag.Arg(0)
 	if cmd == "" {

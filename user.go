@@ -151,6 +151,15 @@ func (user *User) SetInterest(disc *Discussion, interest int) (error) {
 	return nil
 }
 
+func (user *User) SetPassword(newPassword string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
+	if err != nil {
+		return err
+	}
+	user.HashedPassword = string(hashedPassword)
+	return nil
+}
+
 func UserRemoveDiscussion(did DiscussionID) (error) {
 	return Event.Users.Iterate(func(u *User) error {
 		delete(u.Interest, did)
@@ -179,12 +188,11 @@ func UpdateUser(user *User, currentPassword, newPassword string,
 		if len(newPassword) < passwordLength {
 			return out, errPasswordTooShort
 		}
-		
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
+
+		err := user.SetPassword(newPassword)
 		if err != nil {
 			return out, err
 		}
-		user.HashedPassword = string(hashedPassword)
 	}
 
 	user.Profile = *profile

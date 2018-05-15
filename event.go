@@ -98,6 +98,15 @@ func (store *EventStore) Load() error {
 	if err != nil {
 		return err
 	}
+	// Someone has request resetting the admin password
+	if OptAdminPassword != "" {
+		admin, err := store.Users.FindByUsername(AdminUsername)
+		if err != nil || admin == nil {
+			log.Fatal("Can't find admin user: %v", err)
+		}
+		log.Printf("Resetting admin password")
+		admin.SetPassword(OptAdminPassword)
+	}
 	return nil
 }
 
