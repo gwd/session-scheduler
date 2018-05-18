@@ -23,6 +23,10 @@ type Discussion struct {
 	Interested   map[UserID]bool
 	PossibleSlots []bool
 
+	// Cached information from a schedule
+	location    *Location
+	time        string
+	
 	// Things to add at some point:
 	// Session Length (30m, 1hr, &c)
 	// Invitees?
@@ -53,6 +57,8 @@ type DiscussionDisplay struct {
 	// IsAdmin: Used to determine whether to show slot scheduling options
 	IsAdmin     bool
 	Interest int
+	Location    Location
+	Time        string
 	PossibleSlots []DisplaySlot
 	AllUsers   []*User
 }
@@ -92,7 +98,13 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		Title:       d.Title,
 		DescriptionRaw: d.Description,
 		Description:  ProcessText(d.Description),
+		Time: d.time,
 	}
+
+	if d.location != nil {
+		dd.Location = *d.location
+	}
+	
 	dd.Owner, _ = Event.Users.Find(d.Owner)
 	if cur != nil {
 		if cur.Username != AdminUsername {

@@ -40,7 +40,7 @@ type TimetableSlot struct {
 	Discussions []TimetableDiscussion
 }
 
-func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
+func (ts *TimetableSlot) PlaceSlot(slot *Slot, dayName string) {
 	// For now, just list the discussions.  Place into locations later.
 	ts.Discussions = []TimetableDiscussion{}
 	for did := range slot.Discussions {
@@ -53,6 +53,8 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 		tdisc.Score, _ = slot.DiscussionScore(did)
 		
 		ts.Discussions = append(ts.Discussions, tdisc)
+
+		disc.time = dayName + " " + ts.Time
 	}
 	
 	// Sort by number of attendees
@@ -67,9 +69,14 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 		tdisc := &ts.Discussions[i]
 		if lidx < len(locations) {
 			loc := locations[lidx]
-			tdisc.LocationInfo = *loc
+			disc, _ := Event.Discussions.Find(tdisc.ID)
+
 			log.Printf("Setting discussion %s room to id %d (%s)",
 				tdisc.Title, lidx, tdisc.LocationInfo.Name)
+
+			tdisc.LocationInfo = *loc
+			disc.location = loc
+
 			if loc.IsPlace {
 				lidx++
 			} else {
@@ -149,7 +156,7 @@ func (tt *Timetable) Place(sched *Schedule) (err error) {
 
 			slot := sched.Slots[count]
 
-			ts.PlaceSlot(slot)
+			ts.PlaceSlot(slot, td.DayName)
 
 			count++
 		}

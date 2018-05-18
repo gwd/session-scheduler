@@ -113,6 +113,7 @@ func (store *EventStore) Load() error {
 	if err != nil {
 		return err
 	}
+
 	// Someone has request resetting the admin password
 	if OptAdminPassword != "" {
 		admin, err := store.Users.FindByUsername(AdminUsername)
@@ -121,6 +122,11 @@ func (store *EventStore) Load() error {
 		}
 		log.Printf("Resetting admin password")
 		admin.SetPassword(OptAdminPassword)
+	}
+
+	// Run timetable placement to update discussion info
+	if Event.Schedule != nil {
+		Event.Timetable.Place(Event.Schedule)
 	}
 	return nil
 }

@@ -7,6 +7,10 @@
   <div class="col-9 col-offset-3">
     <h5 class="card-title">{{template "discussion/link" .}}</h5>
     <span class="text-muted">Owner: {{template "user/link" .Owner}}</span>
+    {{if .Time}}
+    <div>Time: {{.Time}}</div>
+    <div>Location: {{.Location.Name}}</div>
+    {{end}}
     <p class="card-text">{{.Description}}</p>
     {{if .IsUser}}
     <div class="btn-group input-group" role="group">
