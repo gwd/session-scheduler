@@ -147,10 +147,11 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 			title := r.FormValue("title")
 			description := r.FormValue("description")
-			possibleSlots := make([]bool, Event.ScheduleSlots)
+			var possibleSlots []bool
 			owner := disc.Owner
 
 			if cur.IsAdmin {
+				possibleSlots = make([]bool, Event.ScheduleSlots)
 				for _, iString := range r.Form["possible"] {
 					i, err := strconv.Atoi(iString)
 					if err != nil {
