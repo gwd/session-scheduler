@@ -72,6 +72,9 @@ type Timetable struct {
 
 
 func (tt *Timetable) Init() {
+	// Clear out any old data which may be there
+	*tt = Timetable{}
+	
 	// For now, hardcode 3 days (W Th F), 3 time slots
 	// 4 locations: 
 	for _, day := range []string{"Wednesday", "Thursday", "Friday"} {

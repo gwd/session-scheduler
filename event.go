@@ -74,6 +74,7 @@ func (store *EventStore) Reset() {
 
 	store.Users.Init()
 	store.Discussions.Init()
+	store.Timetable.Init()
 	store.Schedule = nil
 
 	Event.Users.Save(admin)
