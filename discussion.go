@@ -54,6 +54,7 @@ type DiscussionDisplay struct {
 	IsAdmin     bool
 	Interest int
 	PossibleSlots []DisplaySlot
+	AllUsers   []*User
 }
 
 func (d *Discussion) GetURL() string {
@@ -102,6 +103,7 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		if cur.IsAdmin {
 			dd.IsAdmin = true
 			dd.PossibleSlots = Event.Timetable.FillPossibleSlots(d.PossibleSlots)
+			dd.AllUsers = Event.Users.GetUsers()
 		}
 	}
 	for uid := range d.Interested {
@@ -113,7 +115,8 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 	return dd
 }
 
-func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool) (*Discussion, error) {
+func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool,
+	newOwnerID UserID) (*Discussion, error) {
 	out := *disc
 
 	out.Title = title
@@ -134,6 +137,18 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 		disc.PossibleSlots = pSlots
 	}
 
+	if newOwnerID != "" && newOwnerID != disc.Owner {
+		newOwner, _ := Event.Users.Find(newOwnerID)
+		if newOwner != nil {
+			// All we need to do is set the owner's interest to max,
+			// and set the new owner.
+			newOwner.SetInterest(disc, InterestMax)
+			disc.Owner = newOwnerID
+		} else {
+			log.Printf("Ignoring non-existing user %v", newOwnerID)
+		}
+	}
+	
 	err := Event.Discussions.Save(disc)
 
 	return disc, err

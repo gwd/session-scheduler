@@ -78,6 +78,10 @@
 </div>
 {{end}}
 
+{{define "discussion/form-user-option"}}
+<option value="{{.ID}}">{{.Username}} {{if .Profile.RealName}}({{.Profile.RealName}}){{end}}</option>
+{{end}}
+
 {{define "discussion/form"}}
 <div class="form-group">
   <label for="newTitle">Title</label>
@@ -89,7 +93,18 @@
 </div>
 {{if .IsAdmin}}
 <fieldset>
-  <legend>Possible Slots to schedule</legend>
+  <div class="form-group">
+    <legend for="owner">Owner</legend>
+    <select class="form-control" name="owner" id="owner">
+      {{template "discussion/form-user-option" .Owner}}
+      {{range .AllUsers}}
+      {{template "discussion/form-user-option" .}}
+      {{end}}
+    </select>
+  </div>
+</fieldset>
+<fieldset>
+   <legend>Possible Slots to schedule</legend>
   {{range .PossibleSlots}}
   <div class="form-group">
     <input type="checkbox" name="possible" value="{{.Index}}"{{if .Possible}}checked{{end}}>

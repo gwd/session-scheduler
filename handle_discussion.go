@@ -148,16 +148,21 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			title := r.FormValue("title")
 			description := r.FormValue("description")
 			possibleSlots := make([]bool, Event.ScheduleSlots)
-			for _, iString := range r.Form["possible"] {
-				i, err := strconv.Atoi(iString)
-				if err != nil {
-					return
+			owner := disc.Owner
+
+			if cur.IsAdmin {
+				for _, iString := range r.Form["possible"] {
+					i, err := strconv.Atoi(iString)
+					if err != nil {
+						return
+					}
+					possibleSlots[i] = true
 				}
-				possibleSlots[i] = true
+				owner = UserID(r.FormValue("owner"))
 			}
 			
 			
-			discussionNext, err := UpdateDiscussion(disc, title, description, possibleSlots)
+			discussionNext, err := UpdateDiscussion(disc, title, description, possibleSlots, owner)
 			if err != nil {
 				if IsValidationError(err) {
 					RenderTemplate(w, r, "edit", map[string]interface{}{
