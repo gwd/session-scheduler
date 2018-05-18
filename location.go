@@ -28,19 +28,19 @@ func (lstore *LocationStore) Init() {
 	// For now, hardcode 3 actual rooms, and one "generic"
 	lstore.Save(&Location{
 		ID: LocationID(GenerateID("loc", locationIDLength)),
-		Name: "Room 1",
+		Name: "Jiangning",
 		IsPlace: true,
 		Capacity: 100,
 	})
 	lstore.Save(&Location{
 		ID: LocationID(GenerateID("loc", locationIDLength)),
-		Name: "Room 2",
+		Name: "Meeting Room 4",
 		IsPlace: true,
 		Capacity: 50,
 	})
 	lstore.Save(&Location{
 		ID: LocationID(GenerateID("loc", locationIDLength)),
-		Name: "Room 3",
+		Name: "Meeting Room 5",
 		IsPlace: true,
 		Capacity: 50,
 	})
