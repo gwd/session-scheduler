@@ -31,6 +31,9 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		}
 		content["SinceLastSchedule"] = lastUpdate
 		content["IsStale"] = isStale
+		if Event.LockedSlots != nil {
+			content["LockedSlots"] = Event.Timetable.FillDisplaySlots(Event.LockedSlots)
+		}
 		fallthrough
 	case "test":
 		content[tmpl] = true
@@ -49,7 +52,8 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	action := ps.ByName("action")
 	if !(action == "runschedule" ||
 		action == "setvcode" ||
-		action == "resetEventData") {
+		action == "resetEventData" ||
+		action == "setLocked") {
 		return
 	}
 
@@ -82,6 +86,15 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		Event.Save()
 		http.Redirect(w, r, "console?flash=Verification+code+updated", http.StatusFound)
 		return
+	case "setLocked":
+		r.ParseForm()
+		locked, err := FormCheckToBool(r.Form["locked"])
+		if err != nil {
+			return
+		}
+		Event.LockedSlots = locked
+		Event.Save()
+		http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)
 	}
 }
 

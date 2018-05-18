@@ -93,6 +93,18 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	})
 }
 
+func FormCheckToBool(formData []string) (bslot []bool, err error) {
+	bslot = make([]bool, Event.ScheduleSlots)
+	for _, iString := range formData {
+		i, err := strconv.Atoi(iString)
+		if err != nil {
+			return nil, err
+		}
+		bslot[i] = true
+	}
+	return 
+}
+
 func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cur := RequestUser(r)
 
@@ -151,13 +163,10 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			owner := disc.Owner
 
 			if cur.IsAdmin {
-				possibleSlots = make([]bool, Event.ScheduleSlots)
-				for _, iString := range r.Form["possible"] {
-					i, err := strconv.Atoi(iString)
-					if err != nil {
-						return
-					}
-					possibleSlots[i] = true
+				var err error
+				possibleSlots, err = FormCheckToBool(r.Form["possible"])
+				if err != nil {
+					return
 				}
 				owner = UserID(r.FormValue("owner"))
 			}

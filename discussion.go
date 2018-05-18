@@ -40,7 +40,7 @@ type Discussion struct {
 type DisplaySlot struct {
 	Label string
 	Index int
-	Possible bool
+	Checked bool
 }
 
 type DiscussionDisplay struct {
@@ -114,7 +114,7 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		dd.MayEdit = cur.MayEditDiscussion(d)
 		if cur.IsAdmin {
 			dd.IsAdmin = true
-			dd.PossibleSlots = Event.Timetable.FillPossibleSlots(d.PossibleSlots)
+			dd.PossibleSlots = Event.Timetable.FillDisplaySlots(d.PossibleSlots)
 			dd.AllUsers = Event.Users.GetUsers()
 		}
 	}

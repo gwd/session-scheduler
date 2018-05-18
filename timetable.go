@@ -165,7 +165,7 @@ func (tt *Timetable) Place(sched *Schedule) (err error) {
 	return
 }
 
-func (tt *Timetable) FillPossibleSlots(pslot []bool) (dss []DisplaySlot) {
+func (tt *Timetable) FillDisplaySlots(bslot []bool) (dss []DisplaySlot) {
 	count := 0
 	for _, td := range tt.Days {
 		for _, ts := range td.Slots {
@@ -174,7 +174,7 @@ func (tt *Timetable) FillPossibleSlots(pslot []bool) (dss []DisplaySlot) {
 			}
 
 			ds := DisplaySlot{
-				Possible: pslot[count],
+				Checked: bslot[count],
 				Label: td.DayName+" "+ts.Time,
 				Index: count,
 			}

@@ -17,6 +17,7 @@ type EventStore struct {
 	Schedule    *Schedule
 	Timetable   Timetable
 	ScheduleSlots int
+	LockedSlots []bool
 	TestMode    bool
 	VerificationCode string
 	filename    string
@@ -47,6 +48,7 @@ func (store *EventStore) Init(opt EventOptions) {
 	store.Schedule = nil
 
 	store.ScheduleSlots = opt.Slots
+	store.LockedSlots = make([]bool, opt.Slots)
 
 	store.VerificationCode = opt.VerificationCode
 	if store.VerificationCode == "" {
@@ -73,6 +75,7 @@ func (store *EventStore) ResetEventData() {
 	store.Timetable.Init()
 	store.Locations.Init()
 	store.Schedule = nil
+	store.LockedSlots = make([]bool, store.ScheduleSlots)
 
 	Event.Save()
 }

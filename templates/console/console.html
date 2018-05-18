@@ -13,6 +13,18 @@
 </div>
 {{end}}
 
+{{define "admin/slots-form"}}
+<form action="/admin/setLocked" class="form-group col-3" method="POST">
+  {{range .}}
+  <div class="form-check{{if .Checked}} bg-success{{end}}">
+    <input type="checkbox" name="locked" value="{{.Index}}"{{if .Checked}} checked{{end}}>
+    <label>{{.Label}}</label>
+  </div>
+  {{end}}
+  <input type="submit" value="Update locked slots" class="btn btn-primary">
+</form>
+{{end}}
+
 {{define "admin/console"}}
 <div class="row">
   {{template "admin/sidebar" .}}
@@ -47,6 +59,10 @@
       <input type="submit" value="Reset Event Data" class="btn btn-primary">
       <span class="text-muted">Use to regenerate timetable / location data after schema change</span>
       </form>
+      </li>
+      <li class="list-group-item">
+      <legend>Locked slots (won't be rescheduled)</legend>
+      {{template "admin/slots-form" .LockedSlots}}
       </li>
     </ul>
   </div>

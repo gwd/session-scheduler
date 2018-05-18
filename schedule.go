@@ -169,14 +169,31 @@ func (sched *Schedule) RemoveDiscussion(did DiscussionID) error {
 func MakeSchedule() (err error) {
 	sched := &Schedule{}
 
-	// Hard-code ten slots for now
 	sched.Init(Event.ScheduleSlots)
 	
 	// First, sort our discussions by total potential score
 	dList := []*Discussion{}
 
+	dLocked := make(map[DiscussionID]bool)
+
+	// If a slot is locked:
+	// - Copy the old one verbatim into the new schedule
+	// - Exclude the discussion in it from placement
+	if Event.Schedule != nil && Event.LockedSlots != nil {
+		for i := range Event.Schedule.Slots {
+			if Event.LockedSlots[i] {
+				sched.Slots[i] = Event.Schedule.Slots[i]
+				for did := range sched.Slots[i].Discussions {
+					dLocked[did] = true
+				}
+			}
+		}
+	}
+
 	for _, disc := range Event.Discussions {
-		dList = append(dList, disc)
+		if !dLocked[disc.ID] {
+			dList = append(dList, disc)
+		}
 	}
 
 	dListMaxIsLess := func(i, j int) bool {
@@ -193,6 +210,10 @@ func MakeSchedule() (err error) {
 		best := struct { score, index int }{ score: 0, index: -1 }
 		for i := range sched.Slots {
 			log.Printf(" Evaluating slot %d", i)
+			if Event.LockedSlots[i] {
+				log.Printf("  Locked, skipping")
+				continue
+			}
 			if !disc.PossibleSlots[i] {
 				log.Printf("  Impossible, skipping")
 				continue

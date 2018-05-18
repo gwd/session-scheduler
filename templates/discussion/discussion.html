@@ -2,6 +2,23 @@
 <a href="/uid/discussion/{{.ID}}/view">{{.Title}}</a>
 {{end}}
 
+{{define "discussion/slots-display"}}
+<ul class="list-group">
+  {{range .}}
+  <li class="list-group-item{{if .Checked}} bg-primary{{end}}">{{.Label}}</li>
+  {{end}}
+</ul>
+{{end}}
+
+{{define "discussion/slots-form"}}
+  {{range .}}
+  <div class="form-group">
+    <input type="checkbox" name="possible" value="{{.Index}}"{{if .Checked}} checked{{end}}>
+    <label>{{.Label}}</label>
+  </div>
+  {{end}}
+{{end}}
+
 {{define "discussion/item-full"}}
 <div class="row">
   <div class="col-9 col-offset-3">
@@ -31,11 +48,7 @@
     {{if .IsAdmin}}
     <div class="container">
       <p class="text-muted">Possible scheduling slots:</p>
-      <ul class="list-group">
-	{{range .PossibleSlots}}
-	<li class="list-group-item{{if .Possible}} bg-primary{{end}}">{{.Label}}</li>
-	{{end}}
-      </ul>
+      {{template "discussion/slots-display" .PossibleSlots}}
     </div>
     {{end}}
   </div>
@@ -108,10 +121,10 @@
   </div>
 </fieldset>
 <fieldset>
-   <legend>Possible Slots to schedule</legend>
+  <legend>Possible Slots to schedule</legend>
   {{range .PossibleSlots}}
   <div class="form-group">
-    <input type="checkbox" name="possible" value="{{.Index}}"{{if .Possible}}checked{{end}}>
+    <input type="checkbox" name="possible" value="{{.Index}}"{{if .Checked}} checked{{end}}>
     <label>{{.Label}}</label>
   </div>
   {{end}}
