@@ -9,6 +9,7 @@ import (
 func main() {
 	count := flag.Int("count", -1, "Number of times to iterate (tests only)")
 	flag.StringVar(&OptAdminPassword, "admin-password", "", "Set admin password")
+	flag.StringVar(&OptServeAddress, "address", OptServeAddress, "Address to serve http from")
 	
 	flag.Parse()
 

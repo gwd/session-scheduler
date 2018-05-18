@@ -16,7 +16,9 @@ import (
 // /list/discussions
 // /list/users
 // /admin/{console,test}
-// 
+//
+
+var OptServeAddress = "localhost:3000"
 
 func serve() {
 	router := NewRouter()
@@ -55,7 +57,8 @@ func serve() {
 	middleware.Add(http.HandlerFunc(RequireLogin))
 	middleware.Add(secureRouter)
 
-	log.Fatal(http.ListenAndServe("localhost:3000", middleware))
+	log.Printf("Listening on %s", OptServeAddress)
+	log.Fatal(http.ListenAndServe(OptServeAddress, middleware))
 }
 
 // Creates a new router
