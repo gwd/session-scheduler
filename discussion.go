@@ -205,6 +205,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 
 	disc.Interested = make(map[UserID]bool)
 
+	// SetInterest will mark the schedule stale
 	owner.SetInterest(disc, 100)
 
 	err = Event.Discussions.Save(disc)

@@ -147,6 +147,9 @@ func (user *User) SetInterest(disc *Discussion, interest int) (error) {
 		delete(disc.Interested, user.ID)
 		disc.maxScoreValid = false // Lazily update this when it's wanted
 	}
+	if Event.Schedule != nil {
+		Event.Schedule.IsStale = true
+	}
 	Event.Save()
 	return nil
 }

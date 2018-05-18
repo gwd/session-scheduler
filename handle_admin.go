@@ -24,10 +24,13 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	case "console":
 		content["Vcode"] = Event.VerificationCode
 		lastUpdate := "Never"
+		isStale := false
 		if Event.Schedule != nil {
 			lastUpdate = durafmt.ParseShort(time.Since(Event.Schedule.Created)).String()+" ago"
+			isStale = Event.Schedule.IsStale
 		}
 		content["SinceLastSchedule"] = lastUpdate
+		content["IsStale"] = isStale
 		fallthrough
 	case "test":
 		content[tmpl] = true

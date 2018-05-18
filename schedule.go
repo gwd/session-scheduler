@@ -136,6 +136,7 @@ func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 type Schedule struct {
 	Slots []*Slot
 	Created time.Time
+	IsStale bool
 }
 
 func (sched *Schedule) Init(slots int) {
