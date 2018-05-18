@@ -48,12 +48,15 @@
 	    </div>
 	</header>
 	<div class="container-fluid">
-		{{if .Flash}}
-			<div class="alert alert-info">
-				{{.Flash}}
-			</div>
-		{{end}}
-		{{ yield }}
+	  {{if .Flash}}
+	  <div class="alert alert-info alert-dismissible fade show" role="alert">
+	    {{.Flash}}
+	    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+	    <span aria-hidden="true">&times;</span>
+	    </button>
+	  </div>
+	  {{end}}
+	  {{ yield }}
 	</div>
 	</body>
 </html>
