@@ -42,6 +42,12 @@
       <input type="text" id="vcode" name="vcode" value="{{.Vcode}}">
       </form>
       </li>
+      <li class="list-group-item">
+      <form action="/admin/resetEventData" method="POST">
+      <input type="submit" value="Reset Event Data" class="btn btn-primary">
+      <span class="text-muted">Use to regenerate timetable / location data after schema change</span>
+      </form>
+      </li>
     </ul>
   </div>
 </div>
@@ -50,7 +56,7 @@
 {{define "admin/test"}}
 <div class="row">
   {{template "admin/sidebar" .}}
-  <div class="container">
+  <div class="col-10">
     <h2>Test console</h2>
     {{if .IsTestMode}}
     <ul class="list-group">
@@ -63,8 +69,8 @@
       <li class="list-group-item">
       <h4>Clear the database</h4>
       <p>Remove all users, discussions, and schedules.  Leaves admin account.</p>
-      <form action="/testaction/reset" method="POST">
-      <input type="submit" value="Clear" class="btn btn-primary">
+      <form action="/testaction/resetUserData" method="POST">
+      <input type="submit" value="Clear All Data" class="btn btn-primary">
       </form></li>
       <li class="list-group-item">
       <h4>Generate users</h4>

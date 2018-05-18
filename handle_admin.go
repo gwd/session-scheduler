@@ -47,7 +47,9 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	}
 
 	action := ps.ByName("action")
-	if !(action == "runschedule" || action == "setvcode") {
+	if !(action == "runschedule" ||
+		action == "setvcode" ||
+		action == "resetEventData") {
 		return
 	}
 
@@ -60,6 +62,10 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			log.Printf("Error generating schedule: %v", err)
 			http.Redirect(w, r, "console?flash=Error+generating+schedule", http.StatusFound)
 		}
+	case "resetEventData":
+		Event.ResetEventData()
+		http.Redirect(w, r, "console?flash=Event+data+reset", http.StatusFound)
+		return
 	case "setvcode":
 		newvcode := r.FormValue("vcode")
 		if newvcode == "" {
@@ -114,8 +120,8 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 			flash = "Test+mode+disabled"
 		case "enabletest":
 			flash = "Test+mode+already+disabled"
-		case "reset":
-			Event.Reset()
+		case "resetUserData":
+			Event.ResetUserData()
 			flash = "Data+reset"
 		case "genuser":
 			countString := r.FormValue("count")

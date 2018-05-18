@@ -68,7 +68,20 @@ func (store *EventStore) Init(opt EventOptions) {
 	Event.Users.Save(admin)
 }
 
-func (store *EventStore) Reset() {
+// Reset "event" data, without touching users or discussions
+func (store *EventStore) ResetEventData() {
+	store.Timetable.Init()
+	store.Locations.Init()
+	store.Schedule = nil
+
+	Event.Save()
+}
+
+// Reset "user" data -- users, discussions, and interest (keeping admin user).
+// This also resets the 'event' data, as it won't make much sense anymore with the
+// users and discussions gone.
+// This should only be done in test mode!
+func (store *EventStore) ResetUserData() {
 	admin, err := store.Users.FindByUsername(AdminUsername)
 	if err != nil || admin == nil {
 		log.Fatal("Can't find admin user: %v", err)
@@ -76,9 +89,7 @@ func (store *EventStore) Reset() {
 
 	store.Users.Init()
 	store.Discussions.Init()
-	store.Timetable.Init()
-	store.Locations.Init()
-	store.Schedule = nil
+	store.ResetEventData()
 
 	Event.Users.Save(admin)
 }
