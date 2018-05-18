@@ -1,17 +1,19 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <link rel="stylesheet" href="/assets/css/bootstrap.css">
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script src="/assets/js/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
+    <script src="/assets/js/bootstrap.min.js" crossorigin="anonymous"></script>
   </head>
 	<body>
-	<header class="navbar navbar-expand navbar-dark bg-dark" role="navigation">
+	<header class="navbar navbar-expand-md navbar-dark bg-dark" role="navigation">
             <a class="navbar-brand" href="/">XenSummit Session Planner</a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse">
+            <div class="collapse navbar-collapse" id="navbarContent">
 	      <ul class="navbar-nav mr-auto">
 		<li class="nav-item">
 		<a class="nav-link" href="/list/discussion">Sessions</a></li>
@@ -42,7 +44,6 @@
 		<a href="/login" class="nav-link">Login</a></li>
 	      {{end}}
 	      </ul>
-	      </p>
 	    </div>
 	    </div>
 	</header>
