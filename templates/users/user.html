@@ -30,8 +30,9 @@
   <div class="col-9 col-offset-3">
       {{template "user/item" .Display}}
     {{if .Display.MayEdit}}
-    <a href="edit">Edit</a>
+    <a href="edit" class="btn btn-primary" role="button">Edit</a>
     {{end}}
+    {{template "discussion/list" .Display}}
   </div>
 </div>
 {{end}}

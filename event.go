@@ -201,7 +201,7 @@ func (ustore UserStore) GetUsers() (users []*User) {
 func (ustore UserStore) GetUsersDisplay(cur *User) (users []*UserDisplay) {
 	ustore.Iterate(func(u *User) error {
 		if u.Username != AdminUsername {
-			users = append(users, u.GetDisplay(cur))
+			users = append(users, u.GetDisplay(cur, false))
 		}
 		return nil
 	})
@@ -268,6 +268,19 @@ func (dstore DiscussionStore) Save(discussion *Discussion) error {
 func (dstore DiscussionStore) Delete(did DiscussionID) error {
 	delete(dstore, did)
 	return Event.Save()
+}
+
+func (dstore DiscussionStore) GetListUser(u *User, cur *User) (list []*DiscussionDisplay) {
+	dstore.Iterate(func (d *Discussion) error {
+		if d.Owner == u.ID {
+			dd := d.GetDisplay(cur)
+			if dd != nil {
+				list = append(list, dd)
+			}
+		}
+		return nil
+	})
+	return
 }
 
 func (dstore DiscussionStore) GetList(cur *User) (list []*DiscussionDisplay) {

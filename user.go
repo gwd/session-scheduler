@@ -43,6 +43,7 @@ type UserDisplay struct {
 	MayEdit bool
 	Profile  *UserProfile
 	Description template.HTML
+	List []*DiscussionDisplay
 }
 
 func (u *User) MayEditUser(ID UserID) bool {
@@ -53,7 +54,7 @@ func (u *User) MayEditDiscussion(d *Discussion) bool {
 	return u.IsAdmin || u.ID == d.Owner
 }
 
-func (u *User) GetDisplay(cur *User) (ud *UserDisplay) {
+func (u *User) GetDisplay(cur *User, long bool) (ud *UserDisplay) {
 	ud = &UserDisplay{
 		ID: u.ID,
 		Username: u.Username,
@@ -64,6 +65,7 @@ func (u *User) GetDisplay(cur *User) (ud *UserDisplay) {
 		// Only display profile information to people who are logged in
 		ud.Profile = &u.Profile
 		ud.Description = ProcessText(u.Profile.Description)
+		ud.List = Event.Discussions.GetListUser(u, cur)
 	}
 	return
 }

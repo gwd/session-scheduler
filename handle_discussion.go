@@ -73,7 +73,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	case "user":
 		user, _ := Event.Users.Find(UserID(uid))
 		if user != nil && (action != "edit" || cur.MayEditUser(UserID(uid))) {
-			display = user.GetDisplay(cur)
+			display = user.GetDisplay(cur, true)
 		}
 	default:
 		return
