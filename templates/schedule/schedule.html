@@ -3,7 +3,7 @@
 <div class="col-md-8 col-md-offset-2">
   {{range .Timetable.Days}}
     <div class="container col container-fluid">
-      <strong>{{.DayName}}</strong>
+      <a id="{{.DayName}}"><strong>{{.DayName}}</strong></a>
       <table class="table">
 	{{range .Slots}}
 	<tr>
