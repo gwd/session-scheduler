@@ -4,6 +4,11 @@
   {{range .Timetable.Days}}
     <div class="container col container-fluid">
       <a id="{{.DayName}}"><strong>{{.DayName}}</strong></a>
+      {{if .IsFinal}}
+        <span class="mx-1 badge badge-success">Final</span>
+      {{else}}
+        <span class="mx-1 badge badge-warning">Tentative</span>
+      {{end}}
       <table class="table">
 	{{range .Slots}}
 	<tr>

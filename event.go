@@ -17,7 +17,7 @@ type EventStore struct {
 	Schedule    *Schedule
 	Timetable   Timetable
 	ScheduleSlots int
-	LockedSlots []bool
+	LockedSlots
 	TestMode    bool
 	VerificationCode string
 	filename    string
@@ -141,6 +141,13 @@ func (store *EventStore) Save() error {
 	}
 
 	return ioutil.WriteFile(store.filename, contents, 0660)
+}
+
+type LockedSlots []bool
+
+func (ls *LockedSlots) Set(new LockedSlots) {
+	*ls = new
+	Event.Timetable.UpdateIsFinal(new)
 }
 
 type UserStore map[UserID]*User

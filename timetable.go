@@ -93,6 +93,7 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot, dayName string) {
 
 type TimetableDay struct {
 	DayName string
+	IsFinal bool
 	// Date?
 	
 	Slots []*TimetableSlot
@@ -163,6 +164,28 @@ func (tt *Timetable) Place(sched *Schedule) (err error) {
 	}
 	
 	return
+}
+
+func (tt *Timetable) UpdateIsFinal(ls LockedSlots) {
+	count := 0
+	for _, td := range tt.Days {
+		// Start by assuming the day is finalized...
+		td.IsFinal = true
+		for _, ts := range td.Slots {
+			if ts.IsBreak {
+				continue
+			}
+
+			// And only clear if it we find one slot in this day that's not.
+			// Note we still need to finish all the loops though so the slots
+			// line up with the right days.
+			if !ls[count] {
+				td.IsFinal = false
+			}
+
+			count++
+		}
+	}
 }
 
 func (tt *Timetable) FillDisplaySlots(bslot []bool) (dss []DisplaySlot) {

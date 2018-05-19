@@ -92,7 +92,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		if err != nil {
 			return
 		}
-		Event.LockedSlots = locked
+		Event.LockedSlots.Set(locked)
 		Event.Save()
 		http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)
 	}
