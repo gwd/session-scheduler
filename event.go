@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -296,6 +297,11 @@ func (dstore DiscussionStore) GetListUser(u *User, cur *User) (list []*Discussio
 		}
 		return nil
 	})
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].ID < list[j].ID
+	})
+
 	return
 }
 
@@ -307,6 +313,11 @@ func (dstore DiscussionStore) GetList(cur *User) (list []*DiscussionDisplay) {
 		}
 		return nil
 	})
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].ID < list[j].ID
+	})
+	
 	return
 }
 

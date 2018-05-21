@@ -1,5 +1,5 @@
 {{define "discussion/link"}}
-<a href="/uid/discussion/{{.ID}}/view">{{.Title}}</a>
+<a href="/uid/discussion/{{.ID}}/view" id="{{.ID}}">{{.Title}}</a>
 {{end}}
 
 {{define "discussion/slots-display"}}
@@ -64,25 +64,45 @@
 {{end}}
 
 {{define "discussion/item-short"}}
-<div class="row">
-  <div class="col-9 col-offset-3">
-    <h5>{{template "discussion/link" .}}</h5>
-    <span class="text-muted">Owner: {{template "user/link" .Owner}}</span>
+<div class="container">
+  <div class="row">
+    <div class="col">
+      <h5>{{template "discussion/link" .Discussion}}</h5>
+      <span class="text-muted">Owner: {{template "user/link" .Discussion.Owner}}</span>
+    </div>
+    {{if .Discussion.IsUser}}
+    <div class=" col btn-group input-group" role="group">
+      {{with .Discussion}}
+      <form action="/uid/discussion/{{.ID}}/setinterest" method="POST">
+      <button type="submit" name="interest" class="btn {{if eq .Interest 0}}btn-primary{{else}}btn-secondary{{end}}" value="0">None</button>
+      <button type="submit" name="interest" class="btn {{if and (gt .Interest 0) (lt .Interest 26)}}btn-primary{{else}}btn-secondary{{end}}" value="25">A little</button>
+      <button type="submit" name="interest" class="btn {{if and (gt .Interest 25) (lt .Interest 76)}}btn-primary{{else}}btn-secondary{{end}}" value="75">Yes</button>
+      <button type="submit" name="interest" class="btn {{if and (gt .Interest 75) (lt .Interest 101)}}btn-primary{{else}}btn-secondary{{end}}" value="100">Very</button>
+      {{end}}
+      {{with .redirectURL}}
+      <input type="hidden" name="redirectURL" value="{{.}}">
+      {{else}}
+      <input type="hidden" name="redirectURL" value="/list/discussion#{{.Discussion.ID}}">
+      {{end}}
+      </form>
+    </div>
+    {{end}}
   </div>
 </div>
 {{end}}
 
 {{define "discussion/list"}}
-<div class="row">
-  <div class="col-md-6 col-md-offset-3">
+<div class="container">
+  {{$redirectURL := .redirectURL}}
     <ul class="list-group">
     {{range .List}}
-      <li class="list-group-item">{{template "discussion/item-short" .}}</li>
+      <li class="list-group-item">
+      {{template "discussion/item-short"  dict "Discussion" . "redirectURL" $redirectURL }}
+      </li>
     {{else}}
       <p>No discussions registered yet</p>
     {{end}}
     </ul> 
-  </div>
 </div>
 {{end}}
 

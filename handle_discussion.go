@@ -133,6 +133,10 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		return
 	}
 
+	// By default, redirect to the current Uid's 'view'.  This will be
+	// overriden if necessary.
+	redirectURL := "view"
+
 	switch itype {
 	case "discussion":
 		disc, _ := DiscussionFindById(uid)
@@ -152,6 +156,11 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 			cur.SetInterest(disc, interest)
+
+			if tmp := r.FormValue("redirectURL"); tmp != "" {
+				redirectURL = tmp
+			}
+			
 		case "edit":
 			if !cur.MayEditDiscussion(disc) {
 				return
@@ -234,7 +243,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		return
 	}
 
-	http.Redirect(w, r, "view", http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 
 }
 
@@ -243,18 +252,17 @@ func HandleList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	itype := ps.ByName("itype")
 
-	var displayList interface{}
-
+	templateArgs := make(map[string]interface{})
+	
 	switch itype {
 	case "discussion":
-		displayList = DiscussionGetList(cur)
+		templateArgs["List"] = DiscussionGetList(cur)
+		templateArgs["redirectURL"] = ""
 	case "user":
-		displayList = Event.Users.GetUsersDisplay(cur)
+		templateArgs["List"] = Event.Users.GetUsersDisplay(cur)
 	default:
 		return
 	}
 
-	RenderTemplate(w, r, itype+"/list", map[string]interface{}{
-		"List": displayList,
-	})
+	RenderTemplate(w, r, itype+"/list", templateArgs)
 }

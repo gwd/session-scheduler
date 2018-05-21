@@ -32,7 +32,8 @@
     {{if .Display.MayEdit}}
     <a href="edit" class="btn btn-primary" role="button">Edit</a>
     {{end}}
-    {{template "discussion/list" .Display}}
+    {{$redirectURL := printf "/uid/user/%s/view" .Display.ID}}
+    {{template "discussion/list" dict "List" .Display.List "redirectURL" $redirectURL}}
   </div>
 </div>
 {{end}}
