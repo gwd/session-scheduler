@@ -211,7 +211,11 @@ func (ustore UserStore) GetUsers() (users []*User) {
 		}
 		return nil
 	})
-	// FIXME: Sort?
+
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].ID < users[j].ID
+	})
+
 	return
 }
 
@@ -222,7 +226,10 @@ func (ustore UserStore) GetUsersDisplay(cur *User) (users []*UserDisplay) {
 		}
 		return nil
 	})
-	// FIXME: Sort?
+
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].ID < users[j].ID
+	})
 	return
 }
 
