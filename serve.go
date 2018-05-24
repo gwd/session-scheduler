@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -20,7 +23,21 @@ import (
 
 var OptServeAddress = "localhost:3000"
 
+func handleSigs() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+
+	// Block until a signal is received.
+	s := <-c
+	
+	log.Printf("Got signal %v, shutting down...", s)
+	lock.Lock()
+	os.Exit(0)
+}
+
 func serve() {
+	go handleSigs()
+	
 	router := NewRouter()
 
 	router.GET("/", HandleHome)
