@@ -1,3 +1,46 @@
 {{define "index/home"}}
-<h1>Home</h1>
+<div class="container"><div class="row">
+  <div class="col-sm">
+<h1>Welcome to the XenSummit Design Session Scheduler</h1>
+
+<p>Design sessions are one of the most fruitful aspects of XenSummit.
+Anyone can propose a topic, even as the conference is going on, and
+interested people can get together to discuss it and hash out solutions.</p>
+
+<p>However, scheduling them so that everyone has the opportunity to go
+to the sessions they'd like to is difficult.  In the past this was
+done with post-it notes on a whiteboard.  This year, we're trying
+something new.</p>
+
+<p>The basic idea is:
+<ul>
+  <li>Anyone who wants to <a href="discussion/new">proposes</a> a
+  topic</li>
+  <li>Everyone goes through the <a href="list/discussion">list of
+  sessions</a> and says how much they would like to attend</li>
+  <li>The session scheduler looks for a <a href="schedule">schedule</a> which maximizes
+  people's preferences</li>
+</ul>
+</p>
+{{if .CurrentUser}}
+<h3>More information</h3>
+<ul>
+  <li>Tentative schedules will be run regularly, but <strong>nothing is
+  final</strong> until the lunchtime before the design sessions.</li>
+  <li>New sessions can be proposed any time before Friday
+  lunchtime.</li>
+  <li>User and session descriptions can use GitHub-style Markdown</li>
+  <li>Profile information (including e-mail and real name) is only
+  available to people who have logged in.  You can edit this at any
+  time by clicking your username in the upper-right-hand corner.</li>
+</ul>
+{{else}}
+<p>To get started, register your account by click the button below.
+You'll need the <strong>verification code</strong> to register.
+Contact Lars Kurth for more information.</p>
+<p><a href="register" class="btn btn-primary" role="button">Register
+now</a>
+</div>
+</div></div>
+{{end}}
 {{end}}
