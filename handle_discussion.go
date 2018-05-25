@@ -141,18 +141,26 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	case "discussion":
 		disc, _ := DiscussionFindById(uid)
 		if disc == nil {
+			log.Printf("Invalid discussion: %s", uid)
 			return
 		}
 		switch action {
 		case "setinterest":
 			// Administrators can't express interest in discussions
 			if cur.Username == AdminUsername {
+				log.Printf("%s user can't express interest",
+					AdminUsername)
 				return
 			}
 
 			interestString := r.FormValue("interest")
 			interest, err := strconv.Atoi(interestString)
-			if err != nil || !(interest >= 0){
+			if err != nil {
+				log.Printf("Error parsing interest: %v", err)
+				return
+			}
+			if !(interest >= 0) {
+				log.Printf("Negative interest (%d)", interest)
 				return
 			}
 			cur.SetInterest(disc, interest)
@@ -163,6 +171,8 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			
 		case "edit":
 			if !cur.MayEditDiscussion(disc) {
+				log.Printf("WARNING user %s doesn't have permission to edit discussion %s",
+					cur.Username, disc.ID)
 				return
 			}
 
@@ -194,6 +204,8 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			}
 		case "delete":
 			if !cur.MayEditDiscussion(disc) {
+				log.Printf("WARNING user %s doesn't have permission to edit discussion %s",
+					cur.Username, disc.ID)
 				return
 			}
 
@@ -216,6 +228,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		case "edit":
 			user, _ := Event.Users.Find(UserID(uid))
 			if user == nil {
+				log.Printf("Invalid user: %s", uid)
 				return
 			}
 

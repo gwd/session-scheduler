@@ -35,6 +35,23 @@ func handleSigs() {
 	os.Exit(0)
 }
 
+// Generic log of all requests
+func LogRequest(w http.ResponseWriter, r *http.Request) {
+	// Let the request pass if we've got a user
+	username := "[none]"
+	if user := RequestUser(r); user != nil {
+		username = user.Username
+	}
+
+	// originating ip, ip, user (if any), url
+	log.Printf("%s (%s) %s %s %s",
+		r.RemoteAddr,
+		r.Header.Get("X-Forwarded-For"),
+		username,
+		r.Method,
+		r.URL)
+}
+
 func serve() {
 	go handleSigs()
 	
@@ -70,6 +87,7 @@ func serve() {
 
 	
 	middleware := Middleware{}
+	middleware.Add(http.HandlerFunc(LogRequest))
 	middleware.Add(router)
 	middleware.Add(http.HandlerFunc(RequireLogin))
 	middleware.Add(secureRouter)

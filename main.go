@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 )
 
 func main() {
@@ -15,8 +14,7 @@ func main() {
 
 	err := Event.Load()
 	if err != nil {
-		log.Printf("Loading schedule data: %v", err)
-		os.Exit(1)
+		log.Fatalf("Loading schedule data: %v", err)
 	}
 
 
@@ -48,7 +46,7 @@ func main() {
 		}
 	case "testpopulate":
 		if *count != -500 {
-			log.Fatalf("WARNING: populate will erase the current database.  If you really want to do this, pass a count value of -500.")
+			log.Fatal("WARNING: populate will erase the current database.  If you really want to do this, pass a count value of -500.")
 		}
 		TestPopulate()
 	case "testinterest":

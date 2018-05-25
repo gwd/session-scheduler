@@ -82,6 +82,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			return
 		}
 
+		log.Printf("New vcode: %s", newvcode)
 		Event.VerificationCode = newvcode
 		Event.Save()
 		http.Redirect(w, r, "console?flash=Verification+code+updated", http.StatusFound)
@@ -92,6 +93,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		if err != nil {
 			return
 		}
+		log.Printf("New locked slots: %v", locked)
 		Event.LockedSlots.Set(locked)
 		Event.Save()
 		http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)

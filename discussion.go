@@ -134,11 +134,15 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 	out.Title = title
 	out.Description = description
 	
+	log.Printf("Update discussion post: '%s'", title)
+
 	if title == "" {
+		log.Printf("Update discussion failed: no title", title)
 		return &out, errNoTitle
 	}
 
 	if description == "" {
+		log.Print("Update discussion failed: no description")
 		return &out, errNoDesc
 	}
 
@@ -167,6 +171,8 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 }
 
 func DeleteDiscussion(did DiscussionID) {
+	log.Printf("Deleting discussion %s", did)
+
 	// Remove it from the schedule before removing it from user list
 	// so we still have the 'Interest' value in case we decide to
 	// maintain a score at a given time.
@@ -199,37 +205,43 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 		PossibleSlots: MakePossibleSlots(Event.ScheduleSlots),
 	}
 
-	log.Printf("Got new discussion: '%s' '%s' '%s'",
-		string(owner.ID), title, description)
+	log.Printf("%s New discussion post: '%s'",
+		owner.Username, title)
 
 	if title == "" {
+		log.Printf("%s New discussion failed: no title",
+			owner.Username, title)
 		return disc, errNoTitle
 	}
 
-	// Check for duplicate titles and too many discussions (admins are exempt)
-	if !owner.IsAdmin {
-		count := 0
-		err := Event.Discussions.Iterate(func(check* Discussion) error {
-			if check.Title == title {
-				return errTitleExists
-			}
-			if disc.Owner == check.Owner {
-				count++
-				if count > Event.ScheduleSlots {
-					return errTooManyDiscussions
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return disc, err
-		}
-	}
-		
 	if description == "" {
+		log.Printf("%s New discussion failed: no description",
+			owner.Username)
 		return disc, errNoDesc
 	}
 
+	// Check for duplicate titles and too many discussions (admins are exempt)
+	count := 0
+	err := Event.Discussions.Iterate(func(check* Discussion) error {
+		if check.Title == title {
+			log.Printf("%s New discussion failed: duplicate title",
+				owner.Username)
+			return errTitleExists
+		}
+		if !owner.IsAdmin && disc.Owner == check.Owner {
+			count++
+			if count > Event.ScheduleSlots {
+				log.Printf("%s New discussion failed: Too many discussions (%d)",
+					owner.Username, count)
+				return errTooManyDiscussions
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return disc, err
+	}
+		
 	disc.ID.generate()
 
 	disc.Interested = make(map[UserID]bool)

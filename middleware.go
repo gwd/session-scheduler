@@ -17,7 +17,6 @@ func (m *Middleware) Add(handler http.Handler) {
 }
 
 func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	
 	// Wrap the supplied ResponseWriter
 	mw := NewMiddlewareResponseWriter(w)
 

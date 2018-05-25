@@ -71,7 +71,7 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot, dayName string) {
 			loc := locations[lidx]
 			disc, _ := Event.Discussions.Find(tdisc.ID)
 
-			log.Printf("Setting discussion %s room to id %d (%s)",
+			SchedDebug.Printf("Setting discussion %s room to id %d (%s)",
 				tdisc.Title, lidx, tdisc.LocationInfo.Name)
 
 			tdisc.LocationInfo = *loc
@@ -86,7 +86,7 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot, dayName string) {
 				}
 			}
 		} else {
-			log.Printf("Out of locations")
+			SchedDebug.Printf("Out of locations")
 		}
 	}
 }

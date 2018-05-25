@@ -2,6 +2,7 @@ package main
 
 import (
 	"html/template"
+	"log"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -76,28 +77,37 @@ func NewUser(username, password, vcode string, profile *UserProfile) (*User, err
 		Profile: *profile,
 	}
 
+	log.Printf("New user post: '%s'", username)
+		
+
 	if vcode != Event.VerificationCode {
+		log.Printf("New user failed: Bad vcode %s", vcode)
 		return user, errInvalidVcode
 	}
 	
 	if username == "" {
+		log.Printf("New user failed: no username")
 		return user, errNoUsername
 	}
 
 	if password == "" {
+		log.Printf("New user failed: no password")
 		return user, errNoPassword
 	}
 
 	if len(password) < passwordLength {
+		log.Printf("New user failed: password too short")
 		return user, errPasswordTooShort
 	}
 
 	// Check if the username exists
 	existingUser, err := Event.Users.FindByUsername(username)
 	if err != nil {
+		log.Printf("New user failed: %v", err)
 		return user, err
 	}
 	if existingUser != nil {
+		log.Printf("New user failed: user exists")
 		return user, errUsernameExists
 	}
 
@@ -138,7 +148,9 @@ func FindUser(username, password string) (*User, error) {
 }
 
 func (user *User) SetInterest(disc *Discussion, interest int) (error) {
+	log.Printf("Setinterest: %s '%s' %d", user.Username, disc.Title, interest)
 	if interest > InterestMax || interest < 0 {
+		log.Printf("SetInterest failed: Invalid interest")
 		return errInvalidInterest
 	}
 	if interest > 0 {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"sort"
 	"time"
@@ -15,6 +16,8 @@ type Slot struct {
 	Users SlotAttendance
 }
 
+// Change this to os.Stderr to enable
+var SchedDebug = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
 
 func (slot *Slot) Init() {
 	slot.Discussions = make(map[DiscussionID]bool)
@@ -47,11 +50,11 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 			if commit {
 				slot.Users[uid] = disc.ID
 			} else {
-				log.Printf("  User %s %d -> %d (+%d)",
+				SchedDebug.Printf("  User %s %d -> %d (+%d)",
 					user.Username, oInterest, tInterest, tInterest - oInterest)
 			}
 		} else if oInterest > 0 && !commit {
-			log.Printf("  User %s will stay where they are (%d > %d)",
+			SchedDebug.Printf("  User %s will stay where they are (%d > %d)",
 				user.Username, oInterest, tInterest)
 		}
 	}
@@ -203,24 +206,24 @@ func MakeSchedule() (err error) {
 
 	// Starting at the top, look for a slot to put it in which will maximize this score
 	for _, disc := range dList {
-		log.Printf("Scheduling discussion %s (max score %d)",
+		SchedDebug.Printf("Scheduling discussion %s (max score %d)",
 			disc.Title, disc.GetMaxScore())
 
 		// Find the slot that increases the score the most
 		best := struct { score, index int }{ score: 0, index: -1 }
 		for i := range sched.Slots {
-			log.Printf(" Evaluating slot %d", i)
+			SchedDebug.Printf(" Evaluating slot %d", i)
 			if Event.LockedSlots[i] {
-				log.Printf("  Locked, skipping")
+				SchedDebug.Printf("  Locked, skipping")
 				continue
 			}
 			if !disc.PossibleSlots[i] {
-				log.Printf("  Impossible, skipping")
+				SchedDebug.Printf("  Impossible, skipping")
 				continue
 			}
 			// OK, how much will we increase the score by putting this discussion here?
 			score := sched.Slots[i].Assign(disc, false)
-			log.Printf("  Total value: %d", score)
+			SchedDebug.Printf("  Total value: %d", score)
 			if score > best.score {
 				best.score = score
 				best.index = i
@@ -229,9 +232,9 @@ func MakeSchedule() (err error) {
 
 		// If we've found a slot, put it there
 		if best.index < 0 {
-			log.Printf(" Can't find a good slot!")
+			SchedDebug.Printf(" Can't find a good slot!")
 		} else {
-			log.Printf(" Putting discussion in slot %d",
+			SchedDebug.Printf(" Putting discussion in slot %d",
 				best.index)
 
 			// Make it so
@@ -241,7 +244,7 @@ func MakeSchedule() (err error) {
 
 	score, missed := sched.Score()
 
-	log.Printf("Happiness: %d, sadness %d", score, missed)
+	log.Printf("New schedule happiness: %d, sadness %d", score, missed)
 
 	sched.Created = time.Now()
 	
