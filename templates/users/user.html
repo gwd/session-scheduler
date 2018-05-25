@@ -2,7 +2,7 @@
 <a href="/uid/user/{{.ID}}/view">{{.Username}}</a>
 {{end}}
 
-{{define "user/item"}}
+{{define "user/item-full"}}
 <div class="container flex-column">
   <h5>{{template "user/link" .}}</h5>
   {{if .Profile}}
@@ -24,11 +24,20 @@
 </div>
 {{end}}
 
+{{define "user/item-short"}}
+<div class="container">
+  <div class="row">
+    <div class="col-sm"><h5>{{template "user/link" .}}</h5></div>
+    <div class="col-sm">{{if .Profile}}{{if .Profile.RealName}}{{.Profile.RealName}}{{end}}{{end}}</div>
+    <div class="col-sm">{{if .Profile}}{{if .Profile.Company}}{{.Profile.Company}}{{end}}{{end}}</div>
+  </div>
+</div>
+{{end}}
 
 {{define "user/view"}}
 <div class="row">
   <div class="col-9 col-offset-3">
-      {{template "user/item" .Display}}
+      {{template "user/item-full" .Display}}
     {{if .Display.MayEdit}}
     <a href="edit" class="btn btn-primary" role="button">Edit</a>
     {{end}}
@@ -39,17 +48,13 @@
 {{end}}
 
 {{define "user/list"}}
-<div class="row">
-  <div class="col-md-6 col-md-offset-3">
-    <ul class="list-group">
-    {{range .List}}
-      <li class="list-group-item">{{template "user/item" .}}</li>
-    {{else}}
-      <p>No users registered yet</p>
-    {{end}}
-    </ul> 
-  </div>
-</div>
+<ul class="list-group">
+  {{range .List}}
+  <li class="list-group-item">{{template "user/item-short" .}}</li>
+  {{else}}
+  <p>No users registered yet</p>
+  {{end}}
+</ul> 
 {{end}}
 
 {{define "user/profile/form"}}

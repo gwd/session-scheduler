@@ -1,6 +1,7 @@
 {{define "schedule/view"}}
+<div class="container">
 <div class="row">
-<div class="col-md-8 col-md-offset-2">
+<div class="col">
   {{range .Timetable.Days}}
     <div class="container col container-fluid">
       <a id="{{.DayName}}"><strong>{{.DayName}}</strong></a>
@@ -23,7 +24,7 @@
 	    </div></div>
 	    {{else}}
 	    {{range .Discussions}}
-	    <div class="card mb-2"><div class="card-body">
+	    <div class="card mx-2"><div class="card-body">
 	      <div class="card-title">{{template "discussion/link" .}}</div>
 	      <div>{{template "location/link" .LocationInfo}}</div>
 	      <div class="badge badge-success" style="float: right">Interest {{.Score}}</div>
@@ -38,6 +39,7 @@
       </table>
     </div>
   {{end}}
+</div>
 </div>
 </div>
 {{end}}
