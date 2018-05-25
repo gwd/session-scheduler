@@ -21,7 +21,7 @@ import (
 // /admin/{console,test}
 //
 
-var OptServeAddress = "localhost:3000"
+var OptServeAddress string
 
 func handleSigs() {
 	c := make(chan os.Signal, 1)
@@ -74,8 +74,8 @@ func serve() {
 	middleware.Add(http.HandlerFunc(RequireLogin))
 	middleware.Add(secureRouter)
 
-	log.Printf("Listening on %s", OptServeAddress)
-	log.Fatal(http.ListenAndServe(OptServeAddress, middleware))
+	log.Printf("Listening on %s", Event.ServeAddress)
+	log.Fatal(http.ListenAndServe(Event.ServeAddress, middleware))
 }
 
 // Creates a new router

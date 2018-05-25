@@ -21,6 +21,8 @@ type EventStore struct {
 	LockedSlots
 	TestMode    bool
 	VerificationCode string
+
+	ServeAddress string
 	filename    string
 }
 
@@ -28,6 +30,7 @@ type EventOptions struct {
 	Slots            int
 	AdminPassword    string
 	VerificationCode string
+	ServeAddress     string
 }
 
 var Event EventStore
@@ -69,6 +72,15 @@ func (store *EventStore) Init(opt EventOptions) {
 	}
 	admin.IsAdmin = true
 	Event.Users.Save(admin)
+
+	Event.ServeAddress = opt.ServeAddress
+	if Event.ServeAddress == "" {
+		// Generate a raw port between 1024 and 32768
+		Event.ServeAddress = fmt.Sprintf("localhost:%d",
+			rand.Int31n(32768-1024)+1024)
+	}
+
+	Event.Save()
 }
 
 // Reset "event" data, without touching users or discussions
@@ -108,7 +120,8 @@ func (store *EventStore) Load() error {
 		if os.IsNotExist(err) {
 			store.Init(EventOptions{
 				Slots: DefaultSlots,
-				AdminPassword: OptAdminPassword})
+				AdminPassword: OptAdminPassword,
+				ServeAddress: OptServeAddress})
 			return nil
 		}
 		return err
@@ -126,6 +139,13 @@ func (store *EventStore) Load() error {
 		}
 		log.Printf("Resetting admin password")
 		admin.SetPassword(OptAdminPassword)
+	}
+
+	if OptServeAddress != "" && OptServeAddress != Event.ServeAddress {
+		log.Printf("Changing default serve address to %s",
+			OptServeAddress)
+		Event.ServeAddress = OptServeAddress
+		Event.Save()
 	}
 
 	// Run timetable placement to update discussion info
