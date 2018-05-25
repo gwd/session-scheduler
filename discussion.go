@@ -206,22 +206,24 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 		return disc, errNoTitle
 	}
 
-	// Check for duplicate titles and too many discussions
-	count := 0
-	err := Event.Discussions.Iterate(func(check* Discussion) error {
-		if check.Title == title {
-			return errTitleExists
-		}
-		if disc.Owner == check.Owner {
-			count++
-			if count > Event.ScheduleSlots {
-				return errTooManyDiscussions
+	// Check for duplicate titles and too many discussions (admins are exempt)
+	if !owner.IsAdmin {
+		count := 0
+		err := Event.Discussions.Iterate(func(check* Discussion) error {
+			if check.Title == title {
+				return errTitleExists
 			}
+			if disc.Owner == check.Owner {
+				count++
+				if count > Event.ScheduleSlots {
+					return errTooManyDiscussions
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return disc, err
 		}
-		return nil
-	})
-	if err != nil {
-		return disc, err
 	}
 		
 	if description == "" {
@@ -235,9 +237,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 	// SetInterest will mark the schedule stale
 	owner.SetInterest(disc, 100)
 
-	err = Event.Discussions.Save(disc)
-
-	return disc, err
+	return disc, Event.Discussions.Save(disc)
 }
 
 func DiscussionFindById(id string) (*Discussion, error) {
