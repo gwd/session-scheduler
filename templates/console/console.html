@@ -61,13 +61,6 @@
       </form>
       </li>
       <li class="list-group-item">
-      <form action="/admin/reloadServer" method="POST">
-      <input type="submit" value="Reload Server" class="btn btn-primary">
-      <span class="text-muted">Use to reload the server after code /
-      template updates</span>
-      </form>
-      </li>
-      <li class="list-group-item">
       <legend>Locked slots (won't be rescheduled)</legend>
       {{template "admin/slots-form" .LockedSlots}}
       </li>
