@@ -86,7 +86,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	log.Printf("%s/%s: Display %v", itype, action, display)
+	//log.Printf("%s/%s: Display %v", itype, action, display)
 	
 	RenderTemplate(w, r, itype+"/"+action, map[string]interface{}{
 		"Display": display,
@@ -124,7 +124,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	
 	action := ps.ByName("action")
 
-	log.Printf("POST %s %s %s", uid, action, itype)
+	//log.Printf("POST %s %s %s", uid, action, itype)
 	
 	if !((itype == "discussion" &&
 		(action == "setinterest" || action == "edit" || action == "delete")) ||
