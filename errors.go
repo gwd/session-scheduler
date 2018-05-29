@@ -19,6 +19,7 @@ var (
 	errInvalidInterest      = ValidationError(errors.New("Interest value out of range"))
 	errInvalidVcode         = ValidationError(errors.New("Incorrect verification code"))
 	errTooManyDiscussions   = ValidationError(errors.New("You have too many discussions"))
+	errAllSlotsLocked       = ValidationError(errors.New("All slots are locked"))
 )
 
 func IsValidationError(err error) bool {
