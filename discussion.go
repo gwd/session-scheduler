@@ -25,7 +25,7 @@ type Discussion struct {
 
 	// Cached information from a schedule
 	location    *Location
-	time        string
+	slot        *TimetableSlot
 	
 	// Things to add at some point:
 	// Session Length (30m, 1hr, &c)
@@ -59,6 +59,7 @@ type DiscussionDisplay struct {
 	Interest int
 	Location    Location
 	Time        string
+	IsFinal     bool
 	PossibleSlots []DisplaySlot
 	AllUsers   []*User
 }
@@ -98,11 +99,15 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		Title:       d.Title,
 		DescriptionRaw: d.Description,
 		Description:  ProcessText(d.Description),
-		Time: d.time,
 	}
 
 	if d.location != nil {
 		dd.Location = *d.location
+	}
+
+	if d.slot != nil {
+		dd.IsFinal = d.slot.day.IsFinal
+		dd.Time = d.slot.day.DayName + " " + d.slot.Time
 	}
 	
 	dd.Owner, _ = Event.Users.Find(d.Owner)

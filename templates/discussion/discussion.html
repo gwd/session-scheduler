@@ -25,7 +25,7 @@
     <h5 class="card-title">{{template "discussion/link" .}}</h5>
     <span class="text-muted">Owner: {{template "user/link" .Owner}}</span>
     {{if .Time}}
-    <div>Time: {{.Time}}</div>
+    <div>Time: {{.Time}} {{template "schedule/finalbadge" .IsFinal}}</div>
     <div>Location: {{.Location.Name}}</div>
     {{end}}
     <p class="card-text">{{.Description}}</p>

@@ -34,13 +34,14 @@ type TimetableDiscussion struct {
 type TimetableSlot struct {
 	Time string
 	IsBreak bool
+	day *TimetableDay
 
 	// Which room will each discussion be in?
 	// (Separate because placement and scheduling are separate steps)
 	Discussions []TimetableDiscussion
 }
 
-func (ts *TimetableSlot) PlaceSlot(slot *Slot, dayName string) {
+func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 	// For now, just list the discussions.  Place into locations later.
 	ts.Discussions = []TimetableDiscussion{}
 	for did := range slot.Discussions {
@@ -54,7 +55,7 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot, dayName string) {
 		
 		ts.Discussions = append(ts.Discussions, tdisc)
 
-		disc.time = dayName + " " + ts.Time
+		disc.slot = ts
 	}
 	
 	// Sort by number of attendees
@@ -114,7 +115,7 @@ func (tt *Timetable) Init() {
 	for _, day := range []string{"Wednesday", "Thursday", "Friday"} {
 		td := &TimetableDay{ DayName: day }
 		for _, time := range []string{"1:50", "2:40", "3:25", "4:00"} {
-			ts := &TimetableSlot{ Time: time }
+			ts := &TimetableSlot{ Time: time, day: td }
 			if time == "3:25" {
 				ts.IsBreak = true
 			}
@@ -151,13 +152,14 @@ func (tt *Timetable) Place(sched *Schedule) (err error) {
 	count := 0
 	for _, td := range tt.Days {
 		for _, ts := range td.Slots {
+			ts.day = td
 			if ts.IsBreak {
 				continue
 			}
 
 			slot := sched.Slots[count]
 
-			ts.PlaceSlot(slot, td.DayName)
+			ts.PlaceSlot(slot)
 
 			count++
 		}

@@ -1,3 +1,11 @@
+{{define "schedule/finalbadge"}}
+      {{if .}}
+        <span class="mx-1 badge badge-success">Final</span>
+      {{else}}
+        <span class="mx-1 badge badge-warning">Tentative</span>
+      {{end}}
+{{end}}
+
 {{define "schedule/view"}}
 <div class="container">
 <div class="row">
@@ -5,11 +13,7 @@
   {{range .Timetable.Days}}
     <div class="container col container-fluid">
       <a id="{{.DayName}}"><strong>{{.DayName}}</strong></a>
-      {{if .IsFinal}}
-        <span class="mx-1 badge badge-success">Final</span>
-      {{else}}
-        <span class="mx-1 badge badge-warning">Tentative</span>
-      {{end}}
+      {{template "schedule/finalbadge" .IsFinal}}
       <table class="table">
 	{{range .Slots}}
 	<tr>
