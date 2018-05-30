@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"runtime/pprof"
 )
 
 func main() {
@@ -13,8 +15,22 @@ func main() {
 	flag.StringVar(&OptSearchAlgo, "searchalgo", string(SearchGenetic), "Search algorithm.  Options are heuristic, genetic, and random.")
 	flag.StringVar(&OptSearchDurationString, "searchtime", "30s", "Duration to run search")
 	flag.BoolVar(&OptCrossover, "crossover", true, "Enable the crossover function")
+
+	
+	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
 	
 	flag.Parse()
+
+    if *cpuprofile != "" {
+        f, err := os.Create(*cpuprofile)
+        if err != nil {
+            log.Fatal("could not create CPU profile: ", err)
+        }
+        if err := pprof.StartCPUProfile(f); err != nil {
+            log.Fatal("could not start CPU profile: ", err)
+        }
+        defer pprof.StopCPUProfile()
+    }
 
 	ScheduleInit()
 	
