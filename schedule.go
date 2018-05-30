@@ -41,11 +41,60 @@ func (d *SlotDiscussions) InsertOnce(did DiscussionID) {
 	}
 }
 
+type SlotUser struct {
+	Uid UserID
+	Did DiscussionID
+}
+
+type SlotUsers []SlotUser
+
+func (su *SlotUsers) Index(uid UserID) (bool, int) {
+	for i, v := range *su {
+		if v.Uid == uid {
+			return true, i
+		}
+	}
+	return false, -1
+}
+
+func (su *SlotUsers) Get(uid UserID) (did DiscussionID) {
+	prs, i := su.Index(uid)
+	if prs {
+		did = (*su)[i].Did
+	}
+	return
+}
+
+func (su *SlotUsers) GetPrs(uid UserID) (did DiscussionID, prs bool) {
+	p, i := su.Index(uid)
+	if p {
+		prs = true
+		did = (*su)[i].Did
+	}
+	return
+}
+
+func (su *SlotUsers) Set(uid UserID, did DiscussionID) {
+	prs, i := su.Index(uid)
+	if prs {
+		(*su)[i].Did = did
+	} else {
+		*su = append(*su, SlotUser{Uid: uid, Did: did})
+	}
+}
+
+func (su *SlotUsers) Delete(uid UserID) {
+	prs, i := su.Index(uid)
+	if !prs {
+		return
+	}
+	*su = append((*su)[:i], (*su)[i+1:]...)
+}
+
 type Slot struct {
 	// What are all the concurrent discussions happening during this slot?
 	Discussions SlotDiscussions
-
-	Users map[UserID]DiscussionID
+	Users       SlotUsers
 }
 
 func (slot *Slot) Clone() (nslot *Slot) {
@@ -53,9 +102,8 @@ func (slot *Slot) Clone() (nslot *Slot) {
 	nslot.Init()
 	nslot.Discussions = make([]DiscussionID, len(slot.Discussions))
 	copy(nslot.Discussions, slot.Discussions)
-	for k, v := range slot.Users {
-		nslot.Users[k] = v
-	}
+	nslot.Users = make([]SlotUser, len(slot.Users))
+	copy(nslot.Users, slot.Users)
 	return
 }
 
@@ -80,7 +128,7 @@ func ScheduleInit() {
 
 func (slot *Slot) Init() {
 	slot.Discussions = SlotDiscussions([]DiscussionID{})
-	slot.Users = make(map[UserID]DiscussionID)
+	slot.Users = SlotUsers([]SlotUser{})
 }
 
 func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
@@ -98,7 +146,7 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 		
 		// See if the user is currently scheduled to do something else
 		oInterest := 0
-		odid, prs := slot.Users[uid]
+		odid, prs := slot.Users.GetPrs(uid)
 		if prs {
 			i, iprs := user.Interest[odid]
 			if !iprs {
@@ -110,7 +158,7 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 		if tInterest > oInterest {
 			delta += tInterest - oInterest
 			if commit {
-				slot.Users[uid] = disc.ID
+				slot.Users.Set(uid, disc.ID)
 			}
 			if OptSchedDebugVerbose {
 				SchedDebug.Printf("  User %s %d -> %d (+%d)",
@@ -149,7 +197,7 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 		}
 		
 		// Is this their current favorite? If not, removing it won't have an effect
-		if slot.Users[uid] != disc.ID {
+		if slot.Users.Get(uid) != disc.ID {
 			if OptSchedDebugVerbose {
 				SchedDebug.Printf("  User %s already going to a different discussion, no change",
 					user.Username)
@@ -174,7 +222,7 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 						user.Username)
 				}
 				if commit {
-					delete(slot.Users, uid)
+					slot.Users.Delete(uid)
 				}
 			} else {
 				if OptSchedDebugVerbose {
@@ -182,7 +230,7 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 						user.Username, tInterest, best.interest, delta)
 				}
 				if commit {
-					slot.Users[uid] = disc.ID
+					slot.Users.Set(uid, disc.ID)
 				}
 			}
 		}
@@ -204,7 +252,7 @@ func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 
 		// If they're going, add it to the score;
 		// if not, add it to the 'missed' category
-		adid := slot.Users[uid] // "Attending" discussion id
+		adid := slot.Users.Get(uid) // "Attending" discussion id
 		if adid == disc.ID {
 			score += interest
 		} else {
@@ -218,7 +266,7 @@ func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 				log.Printf("User %v attending wrong discussion (%s %d < %s %d)!",
 					user.Username, adisc.Title, ainterest, disc.Title, interest)
 				score += interest
-				slot.Users[uid] = disc.ID
+				slot.Users.Set(uid, disc.ID)
 			} else {
 				missed += interest
 			}
@@ -228,8 +276,8 @@ func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 }
 
 func (slot *Slot) DiscussionAttendeeCount(did DiscussionID) (count int) {
-	for _, attendingID := range slot.Users {
-		if attendingID == did {
+	for _, attending := range slot.Users {
+		if attending.Did == did {
 			count++
 		}
 	}
@@ -251,11 +299,11 @@ func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 			
 	// Find all users attending this discussion and have them go
 	// somewhere else
- 	for uid, attendingDid := range slot.Users {
-		if attendingDid != did {
+ 	for _, attending := range slot.Users {
+		if attending.Did != did {
 			continue
 		}
-		user, _ := Event.Users.Find(uid)
+		user, _ := Event.Users.Find(attending.Uid)
 		altDid := DiscussionID("")
 		altInterest := 0
 		for _, candidateDid := range slot.Discussions {
@@ -266,10 +314,10 @@ func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 		}
 		if altInterest > 0 {
 			// Found something -- change the user to going to this session
-			slot.Users[uid] = altDid
+			slot.Users.Set(attending.Uid, altDid)
 		} else {
 			// User isn't interested in anything in this session -- remove them
-			delete(slot.Users, uid)
+			slot.Users.Delete(attending.Uid)
 		}
 	}
 	
