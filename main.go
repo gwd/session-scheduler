@@ -10,6 +10,9 @@ func main() {
 	flag.StringVar(&OptAdminPassword, "admin-password", "", "Set admin password")
 	flag.StringVar(&OptServeAddress, "address", OptServeAddress, "Address to serve http from")
 	flag.BoolVar(&OptSchedDebug, "sched-debug", false, "Enanable scheduler debug logging")
+	flag.StringVar(&OptSearchAlgo, "searchalgo", string(SearchGenetic), "Search algorithm.  Options are heuristic, genetic, and random.")
+	flag.StringVar(&OptSearchDurationString, "searchtime", "30s", "Duration to run search")
+	flag.BoolVar(&OptCrossover, "crossover", true, "Enable the crossover function")
 	
 	flag.Parse()
 

@@ -31,14 +31,26 @@ func (slot *Slot) Clone() (nslot *Slot) {
 
 // Change this to os.Stderr to enable
 var SchedDebug *log.Logger
+var SchedDebugVerbose *log.Logger
 var OptSchedDebug = false
-var OptSchedDebugVerbose = true
+var OptSchedDebugVerbose = false
 
 func ScheduleInit() {
 	if OptSchedDebug {
 		SchedDebug = log.New(os.Stderr, "schedule.go ", log.LstdFlags)
 	} else {
 		SchedDebug = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
+	}
+	if OptSchedDebugVerbose {
+		SchedDebugVerbose = log.New(os.Stderr, "schedule.go ", log.LstdFlags)
+	} else {
+		SchedDebugVerbose = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
+	}
+
+	var err error
+	OptSearchDuration, err = time.ParseDuration(OptSearchDurationString)
+	if err != nil {
+		log.Fatalf("Error parsing search time: %v", err)
 	}
 }
 
@@ -73,12 +85,10 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 			if commit {
 				slot.Users[uid] = disc.ID
 			}
-			if OptSchedDebugVerbose {
-				SchedDebug.Printf("  User %s %d -> %d (+%d)",
-					user.Username, oInterest, tInterest, tInterest - oInterest)
-			}
-		} else if oInterest > 0 && OptSchedDebugVerbose {
-			SchedDebug.Printf("  User %s will stay where they are (%d > %d)",
+			SchedDebugVerbose.Printf("  User %s %d -> %d (+%d)",
+				user.Username, oInterest, tInterest, tInterest - oInterest)
+		} else if oInterest > 0 {
+			SchedDebugVerbose.Printf("  User %s will stay where they are (%d > %d)",
 				user.Username, oInterest, tInterest)
 		}
 	}
@@ -110,10 +120,8 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 		
 		// Is this their current favorite? If not, removing it won't have an effect
 		if slot.Users[uid] != disc.ID {
-			if OptSchedDebugVerbose {
-				SchedDebug.Printf("  User %s already going to a different discussion, no change",
-					user.Username)
-			}
+			SchedDebugVerbose.Printf("  User %s already going to a different discussion, no change",
+				user.Username)
 		} else {
 			best := struct { interest int; did DiscussionID }{}
 			
@@ -129,18 +137,14 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 
 			delta = tInterest - best.interest
 			if best.did == "" {
-				if OptSchedDebugVerbose {
-					SchedDebug.Printf("  User %s has no other discussions of interest",
-						user.Username)
-				}
+				SchedDebugVerbose.Printf("  User %s has no other discussions of interest",
+					user.Username)
 				if commit {
 					delete(slot.Users, uid)
 				}
 			} else {
-				if OptSchedDebugVerbose {
-					SchedDebug.Printf("  User %s %d -> %d (%d)",
-						user.Username, tInterest, best.interest, delta)
-				}
+				SchedDebugVerbose.Printf("  User %s %d -> %d (%d)",
+					user.Username, tInterest, best.interest, delta)
 				if commit {
 					slot.Users[uid] = disc.ID
 				}
@@ -442,13 +446,19 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 
 	eScore, _ := sched.Score()
 	if eScore > sScore {
-		log.Printf("Mutated from %d to %d mplus", sScore, eScore)
+		SchedDebug.Printf("Mutated from %d to %d mplus", sScore, eScore)
 	} else {
-		log.Printf("Mutated from %d to %d", sScore, eScore)
+		SchedDebug.Printf("Mutated from %d to %d", sScore, eScore)
 	}
 }
 
+var OptCrossover = true
+
 func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
+	if !OptCrossover {
+		return
+	}
+	
 	sScore, _ := sched.Score()
 	
 	SchedDebug.Print("Crossover")
@@ -554,34 +564,79 @@ func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 
 	eScore, _ := sched.Score()
 	if eScore > sScore {
-		log.Printf("Crossover from %d to %d cplus", sScore, eScore)
+		SchedDebug.Printf("Crossover from %d to %d cplus", sScore, eScore)
 	} else {
-		log.Printf("Crossover from %d to %d", sScore, eScore)
+		SchedDebug.Printf("Crossover from %d to %d", sScore, eScore)
 	}
 }
 
+func MakeScheduleRandom(sched *Schedule, dList[]*Discussion) (best *Schedule, err error) {
+	start := time.Now()
+	stop := start.Add(OptSearchDuration)
+	
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	best = ScheduleFactoryInner(sched, dList, rng).(*Schedule)
+	bestScore, _ := best.Score()
+	bestTime := time.Now()
+
+	log.Printf("Random schedule time %v score %d", bestTime.Sub(start), bestScore)
+	for time.Now().Before(stop) {
+		next := ScheduleFactoryInner(sched, dList, rng).(*Schedule)
+		nextScore, _ := next.Score()
+		if nextScore > bestScore {
+			best = next
+			bestScore = nextScore
+			bestTime = time.Now()
+			log.Printf("Random schedule time %v score %d", bestTime.Sub(start), bestScore)
+		}
+	}
+
+	return
+}
 
 func MakeScheduleGenetic(sched *Schedule, dList []*Discussion) (*Schedule, error) {
 	ScheduleFactory := func(rng *rand.Rand) gago.Genome {
 		return ScheduleFactoryInner(sched, dList, rng)
 	}
 
-	ga := gago.Generational(ScheduleFactory)
+	ga := gago.GA {
+		NewGenome: ScheduleFactory,
+		NPops:     2,
+		PopSize:   200,
+		Model: gago.ModDownToSize{
+			NOffsprings: 100,
+			SelectorA: gago.SelElitism{},
+			SelectorB: gago.SelElitism{},
+			MutRate:   0.5,
+			CrossRate: 0.7,
+		},
+	}
 	ga.Logger = SchedDebug
+
+	start := time.Now()
+	stop := start.Add(OptSearchDuration)
+
+
 	if err := ga.Initialize(); err != nil {
 		log.Printf("Error initalizing ga: %v", err)
 		return nil, err
 	}
 
-	log.Printf("Generation %d age %v Best fitness %v\n", ga.Generations,
-		ga.Age, ga.HallOfFame[0].Fitness)
-    for i := 1; i < 100; i++ {
+	bestScore := ga.HallOfFame[0].Fitness
+	bestTime := time.Now()
+	log.Printf("Genetic schedule time %v generations %v score %v\n", bestTime.Sub(start),
+		ga.Generations, bestScore)
+	for time.Now().Before(stop) {
         if err := ga.Evolve(); err != nil {
             log.Println("Error evolving: %v", err)
 			return nil, err
         }
-		log.Printf("Generation %d age %v Best fitness %v\n", ga.Generations,
-			ga.Age, ga.HallOfFame[0].Fitness)
+		if ga.HallOfFame[0].Fitness < bestScore {
+			bestScore = ga.HallOfFame[0].Fitness
+			bestTime = time.Now()
+			log.Printf("Genetic schedule time %v generations %v score %v\n", bestTime.Sub(start),
+				ga.Generations, bestScore)
+		}
     }
 
 	return ga.HallOfFame[0].Genome.(*Schedule), nil
@@ -635,6 +690,17 @@ func MakeScheduleHeuristic(sched *Schedule, dList []*Discussion) (*Schedule, err
 
 	return sched, nil
 }
+
+type SearchAlgo string
+const (
+	SearchHeuristicOnly = SearchAlgo("heuristic")
+	SearchGenetic = SearchAlgo("genetic")
+	SearchRandom = SearchAlgo("random")
+)
+
+var OptSearchAlgo string
+var OptSearchDurationString string
+var OptSearchDuration time.Duration
 
 func MakeSchedule() (error) {
 	sched := &Schedule{}
@@ -690,8 +756,8 @@ func MakeSchedule() (error) {
 		}
 	}
 
-	var Hscore, Hmissed, Gscore, Gmissed int
-	var newH, newG *Schedule
+	var Hscore, Hmissed, Sscore, Smissed int
+	var newH, newS *Schedule
 	var err error
 
 	newH, err = MakeScheduleHeuristic(sched, dList)
@@ -702,20 +768,28 @@ func MakeSchedule() (error) {
 
 	Hscore, Hmissed = newH.Score()
 
-	newG, err = MakeScheduleGenetic(sched, dList)
+	switch SearchAlgo(OptSearchAlgo) {
+	case SearchGenetic:
+		newS, err = MakeScheduleGenetic(sched, dList)
+	case SearchRandom:
+		newS, err = MakeScheduleRandom(sched, dList)
+	}
+	
 	if err != nil {
 		log.Printf("Schedule generator failed")
 		return err
 	}
 
-	Gscore, Gmissed = newG.Score()
+	if newS != nil {
+		Sscore, Smissed = newS.Score()
+	}
 
 	log.Printf("Heuristic schedule happiness: %d, sadness %d", Hscore, Hmissed)
-	log.Printf("Genetic schedule happiness: %d, sadness %d", Gscore, Gmissed)
+	log.Printf("Genetic schedule happiness: %d, sadness %d", Sscore, Smissed)
 
 	new := newH
-	if Gscore > Hscore {
-		new = newG
+	if Sscore > Hscore {
+		new = newS
 	}
 	
 	new.Created = time.Now()
