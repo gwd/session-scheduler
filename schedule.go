@@ -31,7 +31,6 @@ func (slot *Slot) Clone() (nslot *Slot) {
 
 // Change this to os.Stderr to enable
 var SchedDebug *log.Logger
-var SchedDebugVerbose *log.Logger
 var OptSchedDebug = false
 var OptSchedDebugVerbose = false
 
@@ -40,11 +39,6 @@ func ScheduleInit() {
 		SchedDebug = log.New(os.Stderr, "schedule.go ", log.LstdFlags)
 	} else {
 		SchedDebug = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
-	}
-	if OptSchedDebugVerbose {
-		SchedDebugVerbose = log.New(os.Stderr, "schedule.go ", log.LstdFlags)
-	} else {
-		SchedDebugVerbose = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
 	}
 
 	var err error
@@ -85,10 +79,12 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 			if commit {
 				slot.Users[uid] = disc.ID
 			}
-			SchedDebugVerbose.Printf("  User %s %d -> %d (+%d)",
-				user.Username, oInterest, tInterest, tInterest - oInterest)
-		} else if oInterest > 0 {
-			SchedDebugVerbose.Printf("  User %s will stay where they are (%d > %d)",
+			if OptSchedDebugVerbose {
+				SchedDebug.Printf("  User %s %d -> %d (+%d)",
+					user.Username, oInterest, tInterest, tInterest - oInterest)
+			}
+		} else if oInterest > 0 && OptSchedDebugVerbose {
+			SchedDebug.Printf("  User %s will stay where they are (%d > %d)",
 				user.Username, oInterest, tInterest)
 		}
 	}
@@ -120,8 +116,10 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 		
 		// Is this their current favorite? If not, removing it won't have an effect
 		if slot.Users[uid] != disc.ID {
-			SchedDebugVerbose.Printf("  User %s already going to a different discussion, no change",
-				user.Username)
+			if OptSchedDebugVerbose {
+				SchedDebug.Printf("  User %s already going to a different discussion, no change",
+					user.Username)
+			}
 		} else {
 			best := struct { interest int; did DiscussionID }{}
 			
@@ -137,14 +135,18 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 
 			delta = tInterest - best.interest
 			if best.did == "" {
-				SchedDebugVerbose.Printf("  User %s has no other discussions of interest",
-					user.Username)
+				if OptSchedDebugVerbose {
+					SchedDebug.Printf("  User %s has no other discussions of interest",
+						user.Username)
+				}
 				if commit {
 					delete(slot.Users, uid)
 				}
 			} else {
-				SchedDebugVerbose.Printf("  User %s %d -> %d (%d)",
-					user.Username, tInterest, best.interest, delta)
+				if OptSchedDebugVerbose {
+					SchedDebug.Printf("  User %s %d -> %d (%d)",
+						user.Username, tInterest, best.interest, delta)
+				}
 				if commit {
 					slot.Users[uid] = disc.ID
 				}
@@ -153,6 +155,8 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 	}
 	return
 }
+
+var OptValidate = false
 
 func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 	// For every discussion in this slot...
@@ -171,7 +175,10 @@ func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 			score += interest
 		} else {
 			// Check to make sure the discussion they're attending is actually more
-			ainterest := user.Interest[adid]
+			ainterest := interest
+			if OptValidate {
+				ainterest = user.Interest[adid]
+			}
 			if ainterest < interest {
 				adisc, _ := Event.Discussions.Find(adid)
 				log.Printf("User %v attending wrong discussion (%s %d < %s %d)!",
@@ -260,6 +267,9 @@ func (sched *Schedule) Score() (score, missed int) {
 }
 
 func (sched *Schedule) Validate() (error) {
+	if !OptValidate {
+		return nil
+	}
 	// Make sure that this schedule has the following properties:
 	// - Every discussion placed exactly once
 	// - 'Locked' sessions match current scheduler locked session
@@ -342,7 +352,9 @@ func (sched *Schedule) AssignRandom(disc *Discussion, rng *rand.Rand) {
 	for {
 		slotIndex := rng.Intn(len(sched.Slots))
 		if disc.PossibleSlots[slotIndex] && !Event.LockedSlots[slotIndex] {
-			SchedDebug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
+			if OptSchedDebug {
+				SchedDebug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
+			}
 			sched.Slots[slotIndex].Assign(disc, true)
 			break
 		}
@@ -403,9 +415,12 @@ func (sched *Schedule) RandomUnlockedSlot(rng *rand.Rand) (slotn int, slot *Slot
 }
 
 func (sched *Schedule) Mutate(rng *rand.Rand) {
-	sScore, _ := sched.Score()
+	var sScore int
 	
-	SchedDebug.Print("Mutate")
+	if OptSchedDebug {
+		sScore, _ = sched.Score()
+		SchedDebug.Print("Mutate")
+	}
 	replace := []*Discussion{}
 
 	// Remove a random number of discussions
@@ -426,8 +441,10 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 		dnum := rng.Intn(len(slot.Discussions))
 		for did := range slot.Discussions {
 			if dnum == 0 {
-				SchedDebug.Printf(" Removing discussion %v from slot %d",
-					did, slotn)
+				if OptSchedDebug {
+					SchedDebug.Printf(" Removing discussion %v from slot %d",
+						did, slotn)
+				}
 				disc, _ := Event.Discussions.Find(did)
 				replace = append(replace, disc)
 				slot.Remove(disc, true)
@@ -444,11 +461,13 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 
 	sched.Validate()
 
-	eScore, _ := sched.Score()
-	if eScore > sScore {
-		SchedDebug.Printf("Mutated from %d to %d mplus", sScore, eScore)
-	} else {
-		SchedDebug.Printf("Mutated from %d to %d", sScore, eScore)
+	if OptSchedDebug {
+		eScore, _ := sched.Score()
+		if eScore > sScore {
+			SchedDebug.Printf("Mutated from %d to %d mplus", sScore, eScore)
+		} else {
+			SchedDebug.Printf("Mutated from %d to %d", sScore, eScore)
+		}
 	}
 }
 
@@ -458,10 +477,13 @@ func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 	if !OptCrossover {
 		return
 	}
+
+	var sScore int
+	if OptSchedDebug {
+		sScore, _ = sched.Score()
+		SchedDebug.Print("Crossover")
+	}
 	
-	sScore, _ := sched.Score()
-	
-	SchedDebug.Print("Crossover")
 	osched := Genome.(*Schedule)
 	
 	// Keep track of the discussions that don't get placed.  Keep a
@@ -562,11 +584,13 @@ func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 
 	sched.Validate()
 
-	eScore, _ := sched.Score()
-	if eScore > sScore {
-		SchedDebug.Printf("Crossover from %d to %d cplus", sScore, eScore)
-	} else {
-		SchedDebug.Printf("Crossover from %d to %d", sScore, eScore)
+	if OptSchedDebug {
+		eScore, _ := sched.Score()
+		if eScore > sScore {
+			SchedDebug.Printf("Crossover from %d to %d cplus", sScore, eScore)
+		} else {
+			SchedDebug.Printf("Crossover from %d to %d", sScore, eScore)
+		}
 	}
 }
 
