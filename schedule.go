@@ -10,9 +10,40 @@ import (
 	"github.com/MaxHalford/gago"
 )
 
+type SlotDiscussions []DiscussionID
+
+func (d *SlotDiscussions) Index(did DiscussionID) (bool, int) {
+	for i, v := range *d {
+		if v == did {
+			return true, i
+		}
+	}
+	return false, -1
+}
+
+func (d *SlotDiscussions) IsPresent(did DiscussionID) bool {
+	prs, _ := d.Index(did)
+	return prs
+}
+
+func (d *SlotDiscussions) Delete(did DiscussionID) {
+	prs, i := d.Index(did)
+	if !prs {
+		return
+	}
+	new := append((*d)[:i], (*d)[i+1:]...)
+	*d = new
+}
+
+func (d *SlotDiscussions) InsertOnce(did DiscussionID) {
+	if ! d.IsPresent(did) {
+		*d = append((*d), did)
+	}
+}
+
 type Slot struct {
 	// What are all the concurrent discussions happening during this slot?
-	Discussions map[DiscussionID]bool
+	Discussions SlotDiscussions
 
 	Users map[UserID]DiscussionID
 }
@@ -20,9 +51,8 @@ type Slot struct {
 func (slot *Slot) Clone() (nslot *Slot) {
 	nslot = &Slot{}
 	nslot.Init()
-	for k, v := range slot.Discussions {
-		nslot.Discussions[k] = v
-	}
+	nslot.Discussions = make([]DiscussionID, len(slot.Discussions))
+	copy(nslot.Discussions, slot.Discussions)
 	for k, v := range slot.Users {
 		nslot.Users[k] = v
 	}
@@ -49,11 +79,14 @@ func ScheduleInit() {
 }
 
 func (slot *Slot) Init() {
-	slot.Discussions = make(map[DiscussionID]bool)
+	slot.Discussions = SlotDiscussions([]DiscussionID{})
 	slot.Users = make(map[UserID]DiscussionID)
 }
 
 func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
+	if slot.Discussions.IsPresent(disc.ID) {
+		return
+	}
 	for uid := range disc.Interested {
 		user, _ := Event.Users.Find(uid)
 
@@ -89,20 +122,21 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 		}
 	}
 	if commit {
-		slot.Discussions[disc.ID] = true
+		slot.Discussions = append(slot.Discussions, disc.ID)
 	}
 
 	return
 }
 
 func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
-	if !slot.Discussions[disc.ID] {
+	
+	if !slot.Discussions.IsPresent(disc.ID) {
 		log.Printf("ERROR: Trying to remove non-assigned discussion %s", disc.ID)
 		return
 	}
 	
 	if commit {
-		delete(slot.Discussions, disc.ID)
+		slot.Discussions.Delete(disc.ID)
 	}
 
 	for uid := range disc.Interested {
@@ -125,7 +159,7 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 			
 			// This user is currently going to this discussion.  See
 			// if they have somewhere else they want to go.
-			for did := range slot.Discussions {
+			for _, did := range slot.Discussions {
 				i, iprs := user.Interest[did]
 				if iprs && i > best.interest {
 					best.interest = i
@@ -203,7 +237,7 @@ func (slot *Slot) DiscussionAttendeeCount(did DiscussionID) (count int) {
 }
 
 func (slot *Slot) Score() (score, missed int) {
-	for did := range slot.Discussions {
+	for _, did := range slot.Discussions {
 		ds, dm := slot.DiscussionScore(did)
 		score += ds
 		missed += dm
@@ -213,7 +247,7 @@ func (slot *Slot) Score() (score, missed int) {
 
 func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 	// Delete the discussion from the map
-	delete(slot.Discussions, did)
+	slot.Discussions.Delete(did)
 			
 	// Find all users attending this discussion and have them go
 	// somewhere else
@@ -224,7 +258,7 @@ func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 		user, _ := Event.Users.Find(uid)
 		altDid := DiscussionID("")
 		altInterest := 0
-		for candidateDid := range slot.Discussions {
+		for _, candidateDid := range slot.Discussions {
 			if user.Interest[candidateDid] > altInterest {
 				altDid = candidateDid
 				altInterest = user.Interest[candidateDid]
@@ -276,10 +310,10 @@ func (sched *Schedule) Validate() (error) {
 
 	// First, find the location of all the locked discussions in the 'master'
 	lockedD := make(map[DiscussionID]int)
-	if Event.Schedule != nil && Event.LockedSlots != nil {
-		for i, slot := range Event.Schedule.Slots {
+	if Event.ScheduleV2 != nil && Event.LockedSlots != nil {
+		for i, slot := range Event.ScheduleV2.Slots {
 			if Event.LockedSlots[i] {
-				for did := range slot.Discussions {
+				for _, did := range slot.Discussions {
 					lockedD[did] = i
 				}
 			}
@@ -290,15 +324,15 @@ func (sched *Schedule) Validate() (error) {
 	// Now go through each slot and find where discussions are mapped; checking that
 	// 1) No duplicates, and 2) Locked discussions in the right place
 	for i, slot := range sched.Slots {
-		for did := range slot.Discussions {
+		for _, did := range slot.Discussions {
 			t, prs := dMap[did]
 			if prs {
-				log.Fatalf("Found duplicate discussion! %v -> %d, %d",
+				log.Panicf("Found duplicate discussion! %v -> %d, %d",
 					did, t, i)
 			}
 			t, prs = lockedD[did]
 			if prs && t != i {
-				log.Fatalf("Locked discussion moved! %v in slot %d, should be %d",
+				log.Panicf("Locked discussion moved! %v in slot %d, should be %d",
 					did, i, t)
 			}
 			dMap[did] = i
@@ -309,7 +343,7 @@ func (sched *Schedule) Validate() (error) {
 	err := Event.Discussions.Iterate(func(disc *Discussion) error {
 		_, prs := dMap[disc.ID]
 		if !prs {
-			log.Fatalf("Discussion %v missing!", disc.ID)
+			log.Panicf("Discussion %v missing!", disc.ID)
 		}
 		return nil
 	})
@@ -319,7 +353,7 @@ func (sched *Schedule) Validate() (error) {
 
 func (sched *Schedule) RemoveDiscussion(did DiscussionID) error {
 	for _, slot := range sched.Slots {
-		if slot.Discussions[did] {
+		if slot.Discussions.IsPresent(did) {
 			slot.RemoveDiscussion(did)
 			break
 		}
@@ -439,19 +473,14 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 
 		// Choose a random discussion
 		dnum := rng.Intn(len(slot.Discussions))
-		for did := range slot.Discussions {
-			if dnum == 0 {
-				if OptSchedDebug {
-					SchedDebug.Printf(" Removing discussion %v from slot %d",
-						did, slotn)
-				}
-				disc, _ := Event.Discussions.Find(did)
-				replace = append(replace, disc)
-				slot.Remove(disc, true)
-				break
-			}
-			dnum--
+		did := slot.Discussions[dnum]
+		if OptSchedDebug {
+			SchedDebug.Printf(" Removing discussion %v from slot %d",
+				did, slotn)
 		}
+		disc, _ := Event.Discussions.Find(did)
+		replace = append(replace, disc)
+		slot.Remove(disc, true)
 	}
 	
 	// And put them back somewhere else
@@ -473,6 +502,8 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 
 var OptCrossover = true
 
+
+
 func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 	if !OptCrossover {
 		return
@@ -489,7 +520,7 @@ func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 	// Keep track of the discussions that don't get placed.  Keep a
 	// pointer so we don't have to look it up again when we decide to
 	// use it.
-	displaced := make(map[DiscussionID]*Discussion)
+	displaced := SlotDiscussions{}
 
 	// For each slot, replace a random number of discussions
 	for i := range sched.Slots {
@@ -501,64 +532,65 @@ func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 			(Event.LockedSlots != nil && Event.LockedSlots[i]) {
 			continue
 		}
+
+		maxIndex := 64
+		if len(slot.Discussions) < maxIndex {
+			maxIndex = len(slot.Discussions)
+		}
 		
-		remIndexes := make(map[int]bool)
+		var remIndexes uint64
+		remDisc := []*Discussion{}
 
 		toRemove := rng.Intn(len(slot.Discussions))
 
 		// Choose a random set of "indexes" to remove
 		for n := 0; n < toRemove ; n++ {
 			for {
-				i := rng.Intn(len(slot.Discussions))
-				if ! remIndexes[i] {
-					remIndexes[i] = true
+				i := uint(rng.Intn(maxIndex))
+				if remIndexes & (1 << i) == 0 {
+					remIndexes |= 1 << i
+
+					did := slot.Discussions[i]
+					disc, _ := Event.Discussions.Find(did)
+					displaced.InsertOnce(did)
+					remDisc = append(remDisc, disc)
 					break
 				}
 			}
 		}
 
-		addIndexes := make(map[int]bool)
+		var addIndexes uint64
 		toMove := toRemove
 		if toMove > len(oslot.Discussions) {
 			toMove = len(oslot.Discussions)
 		}
 		
+		maxIndex = 64
+		if len(oslot.Discussions) < maxIndex {
+			maxIndex = len(oslot.Discussions)
+		}
+
 		// And a set to move from the other parent
 		for n := 0; n < toMove ; n++ {
 			for {
-				i := rng.Intn(len(oslot.Discussions))
-				if ! addIndexes[i] {
-					addIndexes[i] = true
+				i := uint(rng.Intn(maxIndex))
+				if addIndexes & (1 << i) == 0 {
+					addIndexes |= 1 << i
 					break
 				}
 			}
 		}
 
-		// Make that into a list of discussions to remove, adding them
-		// to the list of 'displaced' discussions
-		remDisc := []*Discussion{}
-		n := 0
-		for did := range slot.Discussions {
-			if remIndexes[n] {
-				disc, _ := Event.Discussions.Find(did)
-				displaced[did] = disc
-				remDisc = append(remDisc, disc)
-			}
-			n++
-		}
-
 		// Do the same for the discussions to add, but add the
 		// non-added ones to the 'displaced' discussion list
 		addDisc := []*Discussion{}
-		n = 0
-		for did := range slot.Discussions {
+		for i, did := range slot.Discussions {
 			disc, _ := Event.Discussions.Find(did)
-			if addIndexes[n] {
+			if addIndexes & (1 << uint(i)) != 0 {
 				addDisc = append(addDisc, disc)
 			} else {
-				displaced[did] = disc
+				displaced.InsertOnce(did)
 			}
-			n++
 		}
 
 		// Now remove the removed ones, add the added ones
@@ -570,15 +602,14 @@ func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 		}
 
 		// And finally, go through the list cleaning out the 'displaced' list
-		for did := range slot.Discussions {
-			if displaced[did] != nil {
-				delete(displaced, did)
-			}
+		for _, did := range slot.Discussions {
+			displaced.Delete(did)
 		}
 	}
 
 	// Finally, put all the displaced discussions somewhere random
-	for _, disc := range displaced {
+	for _, did := range displaced {
+		disc, _ := Event.Discussions.Find(did)
 		sched.AssignRandom(disc, rng)
 	}
 
@@ -744,11 +775,11 @@ func MakeSchedule() (error) {
 	// we can't really do a schedule.)
 	allLocked := true
 	if Event.LockedSlots != nil {
-		if Event.Schedule != nil {
-			for i := range Event.Schedule.Slots {
+		if Event.ScheduleV2 != nil {
+			for i := range Event.ScheduleV2.Slots {
 				if Event.LockedSlots[i] {
-					sched.Slots[i] = Event.Schedule.Slots[i]
-					for did := range sched.Slots[i].Discussions {
+					sched.Slots[i] = Event.ScheduleV2.Slots[i]
+					for _, did := range sched.Slots[i].Discussions {
 						dLocked[did] = true
 					}
 				} else {
@@ -818,7 +849,7 @@ func MakeSchedule() (error) {
 	
 	new.Created = time.Now()
 	
-	Event.Schedule = new
+	Event.ScheduleV2 = new
 
 	Event.Timetable.Place(new)
 	

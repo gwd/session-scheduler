@@ -181,12 +181,12 @@ func DeleteDiscussion(did DiscussionID) {
 	// Remove it from the schedule before removing it from user list
 	// so we still have the 'Interest' value in case we decide to
 	// maintain a score at a given time.
-	if Event.Schedule != nil {
-		Event.Schedule.RemoveDiscussion(did)
+	if Event.ScheduleV2 != nil {
+		Event.ScheduleV2.RemoveDiscussion(did)
 
 		// Removing a discussion means updating attendees, and
 		// possibly moving rooms as well.  Run the placement again.
-		Event.Timetable.Place(Event.Schedule)
+		Event.Timetable.Place(Event.ScheduleV2)
 	}
 	
 	UserRemoveDiscussion(did)

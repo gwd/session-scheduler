@@ -44,7 +44,7 @@ type TimetableSlot struct {
 func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 	// For now, just list the discussions.  Place into locations later.
 	ts.Discussions = []TimetableDiscussion{}
-	for did := range slot.Discussions {
+	for _, did := range slot.Discussions {
 		disc, _ := Event.Discussions.Find(did)
 		tdisc := TimetableDiscussion{
 			ID: did,

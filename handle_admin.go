@@ -25,9 +25,9 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		content["Vcode"] = Event.VerificationCode
 		lastUpdate := "Never"
 		isStale := false
-		if Event.Schedule != nil {
-			lastUpdate = durafmt.ParseShort(time.Since(Event.Schedule.Created)).String()+" ago"
-			isStale = Event.Schedule.IsStale
+		if Event.ScheduleV2 != nil {
+			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String()+" ago"
+			isStale = Event.ScheduleV2.IsStale
 		}
 		content["SinceLastSchedule"] = lastUpdate
 		content["IsStale"] = isStale

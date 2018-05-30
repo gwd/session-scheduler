@@ -15,7 +15,7 @@ type EventStore struct {
 	Users       UserStore
 	Discussions DiscussionStore
 	Locations   LocationStore
-	Schedule    *Schedule
+	ScheduleV2    *Schedule
 	Timetable   Timetable
 	ScheduleSlots int
 	LockedSlots
@@ -49,7 +49,7 @@ func (store *EventStore) Init(opt EventOptions) {
 	store.Discussions.Init()
 	store.Timetable.Init()
 	store.Locations.Init()
-	store.Schedule = nil
+	store.ScheduleV2 = nil
 
 	store.ScheduleSlots = opt.Slots
 	store.LockedSlots = make([]bool, opt.Slots)
@@ -87,7 +87,7 @@ func (store *EventStore) Init(opt EventOptions) {
 func (store *EventStore) ResetEventData() {
 	store.Timetable.Init()
 	store.Locations.Init()
-	store.Schedule = nil
+	store.ScheduleV2 = nil
 	store.LockedSlots = make([]bool, store.ScheduleSlots)
 
 	Event.Save()
@@ -149,8 +149,8 @@ func (store *EventStore) Load() error {
 	}
 
 	// Run timetable placement to update discussion info
-	if Event.Schedule != nil {
-		Event.Timetable.Place(Event.Schedule)
+	if Event.ScheduleV2 != nil {
+		Event.Timetable.Place(Event.ScheduleV2)
 	}
 	return nil
 }
