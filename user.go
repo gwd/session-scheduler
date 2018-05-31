@@ -147,7 +147,9 @@ func FindUser(username, password string) (*User, error) {
 	return existingUser, nil
 }
 
-func (user *User) SetInterest(disc *Discussion, interest int) (error) {
+// Use when you plan on setting a large sequence in a row and can save
+// the state yourself
+func (user *User) SetInterestNosave(disc *Discussion, interest int) (error) {
 	log.Printf("Setinterest: %s '%s' %d", user.Username, disc.Title, interest)
 	if interest > InterestMax || interest < 0 {
 		log.Printf("SetInterest failed: Invalid interest")
@@ -164,8 +166,15 @@ func (user *User) SetInterest(disc *Discussion, interest int) (error) {
 	if Event.ScheduleV2 != nil {
 		Event.ScheduleV2.IsStale = true
 	}
-	Event.Save()
 	return nil
+}
+
+func (user *User) SetInterest(disc *Discussion, interest int) (err error) {
+	err = user.SetInterestNosave(disc, interest)
+	if err == nil {
+		Event.Save()
+	}
+	return
 }
 
 func (user *User) SetPassword(newPassword string) error {
