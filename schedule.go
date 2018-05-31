@@ -506,9 +506,9 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 	replace := []*Discussion{}
 
 	// Remove a random number of discussions
-	rmCount := rng.Intn(len(Event.Discussions) * 100 / 25 + 1)
-	if rmCount < 2 {
-		rmCount = 2
+	rmCount := rng.Intn(len(Event.Discussions) * 25 / 100 + 1)
+	if rmCount < 1 {
+		rmCount = 1
 	}
 	for n := 0; n < rmCount; n++ {
 		// Choose a random slot
