@@ -80,27 +80,52 @@ func NewTestDiscussion(owner *User) {
 		log.Fatal("Creating new discussion: %v", err)
 	}
 
-	if disc != nil {
-		for i := range disc.PossibleSlots {
-			if rand.Int31n(2) == 0 {
+	// Only 25% of discussions have constraints
+	if disc != nil && rand.Intn(4) == 0 {
+		// Make a continuous range where it's not schedulable
+		start := rand.Intn(len(disc.PossibleSlots))
+		end := rand.Intn(len(disc.PossibleSlots) - start) + 1
+		if start != 0 || end != len(disc.PossibleSlots) {
+			for i := start; i < end; i++ {
 				disc.PossibleSlots[i] = false
 			}
 		}
 	}
 }
 
-// Loop over all users and discussions, 50% of the time generating no interest,
-// 50% of the time generating a random amount of interest between 1 and 100
+// Try to emulate "realistic" interest, where people will be like one another.
+// - Create four "unique" people at the beginning, with random interests
+// - Afterwards, choose someone randomly to emulate 90% of the time.
+// - When emulating somebody, choose like them 7/8 times
 func TestGenerateInterest() {
+	handled := []*User{}
 	for _, user := range Event.Users.GetUsers() {
+		var model *User
+		// Create 4 random "models" at first; after that, 10% are random
+		if len(handled) > 4 && rand.Intn(10) != 0 {
+			model = handled[rand.Intn(len(handled))]
+			log.Printf("User %s will follow model %s",
+				user.Username, model.Username)
+		} else {
+			log.Printf("User %s will be themselves", user.Username)
+		}
 		Event.Discussions.Iterate(func(disc *Discussion) error {
 			r := rand.Intn(100)
 			interest := 0
-			switch {
-			case r >= 40:
-				interest = rand.Intn(100)
-			case r >= 50:
-				interest = 100
+
+			// If we don't have a model, or feel like it (12.5%), do
+			// our own thing; otherwise emulate our model.
+			if model == nil || rand.Intn(8) == 0 {
+				switch {
+				case r >= 40:
+					interest = rand.Intn(100)
+				case r >= 50:
+					interest = 100
+				}
+				log.Print(" Choosing own interest")
+			} else {
+				interest = model.Interest[disc.ID]
+				log.Print(" Following mentor's interest")
 			}
 
 			log.Printf("Setting uid %s interest in discussion %s to %d",
@@ -110,6 +135,7 @@ func TestGenerateInterest() {
 			}
 			return nil
 		})
+		handled = append(handled, user)
 	}
 	Event.Save()
 }
