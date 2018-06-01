@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,6 +12,10 @@ import (
 	"sort"
 	"strings"
 )
+
+var deepCopyBuffer bytes.Buffer
+var deepCopyEncoder = gob.NewEncoder(&deepCopyBuffer)
+var deepCopyDecoder = gob.NewDecoder(&deepCopyBuffer)
 
 type EventStore struct {
 	Users       UserStore
@@ -150,6 +156,7 @@ func (store *EventStore) Load() error {
 
 	// Run timetable placement to update discussion info
 	if Event.ScheduleV2 != nil {
+		Event.ScheduleV2.LoadPost()
 		Event.Timetable.Place(Event.ScheduleV2)
 	}
 	return nil
@@ -277,6 +284,26 @@ func (ustore UserStore) FindByEmail(email string) (*User, error) {
 		}
 	}
 	return nil, nil
+}
+
+func (ustore *UserStore) DeepCopy(ucopy *UserStore) (err error) {
+	if err = deepCopyEncoder.Encode(ustore); err != nil {
+		return err
+	}
+	if err = deepCopyDecoder.Decode(ucopy); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dstore *DiscussionStore) DeepCopy(dcopy *DiscussionStore) (err error) {
+	if err = deepCopyEncoder.Encode(dstore); err != nil {
+		return err
+	}
+	if err = deepCopyDecoder.Decode(dcopy); err != nil {
+		return err
+	}
+	return nil
 }
 
 type DiscussionStore map[DiscussionID]*Discussion

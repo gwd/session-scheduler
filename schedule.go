@@ -95,11 +95,14 @@ type Slot struct {
 	// What are all the concurrent discussions happening during this slot?
 	Discussions SlotDiscussions
 	Users       SlotUsers
+
+	// Up-pointer to schedule of which we're a part
+	sched       *Schedule
 }
 
-func (slot *Slot) Clone() (nslot *Slot) {
+func (slot *Slot) Clone(sched *Schedule) (nslot *Slot) {
 	nslot = &Slot{}
-	nslot.Init()
+	nslot.Init(sched)
 	nslot.Discussions = make([]DiscussionID, len(slot.Discussions))
 	copy(nslot.Discussions, slot.Discussions)
 	nslot.Users = make([]SlotUser, len(slot.Users))
@@ -126,9 +129,10 @@ func ScheduleInit() {
 	}
 }
 
-func (slot *Slot) Init() {
+func (slot *Slot) Init(sched *Schedule) {
 	slot.Discussions = SlotDiscussions([]DiscussionID{})
 	slot.Users = SlotUsers([]SlotUser{})
+	slot.sched = sched
 }
 
 func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
@@ -136,7 +140,7 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 		return
 	}
 	for uid := range disc.Interested {
-		user, _ := Event.Users.Find(uid)
+		user, _ := slot.sched.store.Users.Find(uid)
 
 		// How interested is the user in this?
 		tInterest, iprs := user.Interest[disc.ID]
@@ -188,7 +192,7 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 	}
 
 	for uid := range disc.Interested {
-		user, _ := Event.Users.Find(uid)
+		user, _ := slot.sched.store.Users.Find(uid)
 
 		// How interested is the user in this?
 		tInterest, iprs := user.Interest[disc.ID]
@@ -241,12 +245,14 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 var OptValidate = false
 
 func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
+	us, ds := slot.sched.GetStores()
+	
 	// For every discussion in this slot...
-	disc, _ := Event.Discussions.Find(did)
+	disc, _ := ds.Find(did)
 
 	for uid := range disc.Interested {
 		// Find out how much each user was interested in it
-		user, _ := Event.Users.Find(uid)
+		user, _ := us.Find(uid)
 
 		interest := user.Interest[disc.ID]
 
@@ -262,7 +268,7 @@ func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 				ainterest = user.Interest[adid]
 			}
 			if ainterest < interest {
-				adisc, _ := Event.Discussions.Find(adid)
+				adisc, _ := ds.Find(adid)
 				log.Printf("User %v attending wrong discussion (%s %d < %s %d)!",
 					user.Username, adisc.Title, ainterest, disc.Title, interest)
 				score += interest
@@ -294,6 +300,8 @@ func (slot *Slot) Score() (score, missed int) {
 }
 
 func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
+	us, _ := slot.sched.GetStores()
+
 	// Delete the discussion from the map
 	slot.Discussions.Delete(did)
 			
@@ -303,7 +311,7 @@ func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 		if attending.Did != did {
 			continue
 		}
-		user, _ := Event.Users.Find(attending.Uid)
+		user, _ := us.Find(attending.Uid)
 		altDid := DiscussionID("")
 		altInterest := 0
 		for _, candidateDid := range slot.Discussions {
@@ -329,14 +337,38 @@ type Schedule struct {
 	Slots []*Slot
 	Created time.Time
 	IsStale bool
+	// Snapshot of user / discussion / locked data we can use without holding the lock
+	// This is only set while a search is going on
+	store *SearchStore
 }
 
-func (sched *Schedule) Init(slots int) {
+func (sched *Schedule) GetStores() (us *UserStore, ds *DiscussionStore) {
+	if sched.store != nil {
+		ds = &sched.store.Discussions
+		us = &sched.store.Users
+	} else {
+		ds = &Event.Discussions
+		us = &Event.Users
+	}
+	return
+}
+
+func (sched *Schedule) Init(slots int, store *SearchStore) {
 	sched.Slots = make([]*Slot, slots)
 	for i := range sched.Slots {
 		sched.Slots[i] = &Slot{}
-		sched.Slots[i].Init()
+		sched.Slots[i].Init(sched)
 	}
+	sched.store = store
+}
+
+func (sched *Schedule) LoadPost() {
+	// Restore "internal" pointers after load.
+	for i := range sched.Slots {
+		sched.Slots[i].sched = sched
+	}
+	// NB that we specificaly do *not* initialize sched.store -- that should
+	// only be set during scheduling.
 }
 
 func (sched *Schedule) Score() (score, missed int) {
@@ -352,15 +384,22 @@ func (sched *Schedule) Validate() (error) {
 	if !OptValidate {
 		return nil
 	}
+
+	if sched.store != nil {
+		log.Panicf("Validate called outside of schedule search!")
+	}
+
+	ss := sched.store
+	
 	// Make sure that this schedule has the following properties:
 	// - Every discussion placed exactly once
 	// - 'Locked' sessions match current scheduler locked session
 
 	// First, find the location of all the locked discussions in the 'master'
 	lockedD := make(map[DiscussionID]int)
-	if Event.ScheduleV2 != nil && Event.LockedSlots != nil {
-		for i, slot := range Event.ScheduleV2.Slots {
-			if Event.LockedSlots[i] {
+	if ss.CurrentSchedule != nil && ss.LockedSlots != nil {
+		for i, slot := range ss.CurrentSchedule.Slots {
+			if ss.LockedSlots[i] {
 				for _, did := range slot.Discussions {
 					lockedD[did] = i
 				}
@@ -388,7 +427,7 @@ func (sched *Schedule) Validate() (error) {
 	}
 
 	// Now go through all the discussions and make sure each one was mapped once
-	err := Event.Discussions.Iterate(func(disc *Discussion) error {
+	err := ss.Discussions.Iterate(func(disc *Discussion) error {
 		_, prs := dMap[disc.ID]
 		if !prs {
 			log.Panicf("Discussion %v missing!", disc.ID)
@@ -420,20 +459,21 @@ func (sched *Schedule) RemoveDiscussion(did DiscussionID) error {
 func (sched *Schedule) AssignRandom(disc *Discussion, rng *rand.Rand) {
 	// First check to make sure there are at least some possible slots
 	found := false
+	ss := sched.store 
 	for slotn := range disc.PossibleSlots {
-		if disc.PossibleSlots[slotn] && !Event.LockedSlots[slotn] {
+		if disc.PossibleSlots[slotn] && !ss.LockedSlots[slotn] {
 			found = true
 			break
 		}
 	}
 	if !found {
 		log.Fatalf("Discussion %s has no possible slots! %v %v",
-			disc.ID, disc.PossibleSlots, Event.LockedSlots)
+			disc.ID, disc.PossibleSlots, ss.LockedSlots)
 	}
 
 	for {
 		slotIndex := rng.Intn(len(sched.Slots))
-		if disc.PossibleSlots[slotIndex] && !Event.LockedSlots[slotIndex] {
+		if disc.PossibleSlots[slotIndex] && !ss.LockedSlots[slotIndex] {
 			if OptSchedDebug {
 				SchedDebug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
 			}
@@ -443,22 +483,32 @@ func (sched *Schedule) AssignRandom(disc *Discussion, rng *rand.Rand) {
 	}
 }
 
-func ScheduleFactoryInner(template *Schedule, dList []*Discussion, rng *rand.Rand) gago.Genome {
-	SchedDebug.Printf("Making new random schedule")
-	sched := &Schedule{}
-	sched.Init(len(template.Slots))
+func ScheduleFactoryTemplate(ss *SearchStore) (sched *Schedule) {
+	template := ss.CurrentSchedule
+	
+	sched = &Schedule{}
+	sched.Init(len(template.Slots), ss)
 
 	// Clone locked slots
-	if Event.LockedSlots != nil {
+	if ss.LockedSlots != nil {
 		for i := range sched.Slots {
-			if Event.LockedSlots[i] {
-				sched.Slots[i] = template.Slots[i].Clone()
+			if ss.LockedSlots[i] {
+				sched.Slots[i] = template.Slots[i].Clone(sched)
 			}
 		}
 	}
 
-	// Put each discussion in a random slot
-	for _, disc := range dList {
+	return
+}
+
+func ScheduleFactoryInner(ss *SearchStore, rng *rand.Rand) gago.Genome {
+	SchedDebug.Printf("Making new random schedule")
+
+	// Clone the locked discussions
+	sched := ScheduleFactoryTemplate(ss)
+
+	// Put each non-locked discussion in a random slot
+	for _, disc := range ss.dList {
 		SchedDebug.Printf("  Placing discussion `%s`", disc.Title)
 		sched.AssignRandom(disc, rng)
 	}
@@ -470,9 +520,9 @@ func ScheduleFactoryInner(template *Schedule, dList []*Discussion, rng *rand.Ran
 
 func (sched *Schedule) Clone() gago.Genome {
 	SchedDebug.Print("Clone")
-	new := &Schedule{}
+	new := &Schedule{ store: sched.store }
 	for i := range sched.Slots {
-		new.Slots = append(new.Slots, sched.Slots[i].Clone())
+		new.Slots = append(new.Slots, sched.Slots[i].Clone(new))
 	}
 
 	new.Validate()
@@ -498,7 +548,7 @@ func (sched *Schedule) Evaluate() (float64, error) {
 func (sched *Schedule) RandomUnlockedSlot(rng *rand.Rand) (slotn int, slot *Slot) {
 	for {
 		slotn = rng.Intn(len(sched.Slots))
-		if Event.LockedSlots == nil || !Event.LockedSlots[slotn] {
+		if sched.store.LockedSlots == nil || !sched.store.LockedSlots[slotn] {
 			slot = sched.Slots[slotn]
 			return
 		}
@@ -515,7 +565,7 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 	replace := []*Discussion{}
 
 	// Remove a random number of discussions
-	rmCount := rng.Intn(len(Event.Discussions) * 25 / 100 + 1)
+	rmCount := rng.Intn(len(sched.store.Discussions) * 25 / 100 + 1)
 	if rmCount < 1 {
 		rmCount = 1
 	}
@@ -535,7 +585,7 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 			SchedDebug.Printf(" Removing discussion %v from slot %d",
 				did, slotn)
 		}
-		disc, _ := Event.Discussions.Find(did)
+		disc, _ := sched.store.Discussions.Find(did)
 		replace = append(replace, disc)
 		slot.Remove(disc, true)
 	}
@@ -558,8 +608,6 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 }
 
 var OptCrossover = true
-
-
 
 func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 	if !OptCrossover {
@@ -682,18 +730,102 @@ func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
 	}
 }
 
-func MakeScheduleRandom(sched *Schedule, dList[]*Discussion) (best *Schedule, err error) {
+// A snapshot of users and discussions to use while reference while
+// searching for an optimum schedule, but not holding the lock.
+type SearchStore struct {
+	Users UserStore
+	Discussions DiscussionStore
+	LockedSlots
+	ScheduleSlots int
+	CurrentSchedule *Schedule
+
+	// List of discussions that need to be placed.  NB some schedulers
+	// reorder this.
+	dList []*Discussion
+}
+
+// Collect all relevant data needed to do the search without holding the lock.
+// This involves:
+// - Having a copy of Event data Users, Events, LockedSlots
+// - Holding a ref to the schedule current at the time of the
+// - Creating a list of discussions that need to be placed (i.e., not in locked slots)
+
+func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
+	if err = event.Users.DeepCopy(&ss.Users); err != nil {
+		return
+	}
+	if err = event.Discussions.DeepCopy(&ss.Discussions); err != nil {
+		return
+	}
+	if event.LockedSlots != nil {
+		ss.LockedSlots = append(LockedSlots(nil), event.LockedSlots...)
+	}
+	ss.ScheduleSlots = event.ScheduleSlots
+	ss.CurrentSchedule = event.ScheduleV2
+
+	// All the schedule search functions need to know which discussions they need
+	// to place (i.e., which ones are not in locked slots).  Make that list once.
+	dLocked := make(map[DiscussionID]bool)
+
+	// If a slot is locked:
+	// - Copy the old one verbatim into the new schedule
+	// - Exclude the discussion in it from placement
+	//
+	// Also while we're here, check to make sure there are unlocked slots (otherwise
+	// we can't really do a schedule.)
+	allLocked := true
+	if ss.LockedSlots != nil {
+		if ss.CurrentSchedule != nil {
+			for i := range ss.CurrentSchedule.Slots {
+				if ss.LockedSlots[i] {
+					for _, did := range ss.CurrentSchedule.Slots[i].Discussions {
+						dLocked[did] = true
+					}
+				} else {
+					allLocked = false
+				}
+			}
+		} else {
+			// No schedule; but we still need to check for unlocked slots
+			for _, l := range ss.LockedSlots {
+				if !l {
+					allLocked = false
+					break
+				}
+			}
+		}
+	} else {
+		// All slots unlocked
+		allLocked = false
+	}
+
+	if allLocked {
+		log.Printf("Can't make a schedule -- all slots are locked")
+		return errAllSlotsLocked
+	}
+
+	ss.dList = nil
+	for _, disc := range ss.Discussions {
+		if !dLocked[disc.ID] {
+			ss.dList = append(ss.dList, disc)
+		}
+	}
+
+	return 
+}
+
+func MakeScheduleRandom(ss *SearchStore) (best *Schedule, err error) {
 	start := time.Now()
 	stop := start.Add(OptSearchDuration)
 	
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	best = ScheduleFactoryInner(sched, dList, rng).(*Schedule)
+	best = ScheduleFactoryInner(ss, rng).(*Schedule)
 	bestScore, _ := best.Score()
 	bestTime := time.Now()
 
 	log.Printf("Random schedule time %v score %d", bestTime.Sub(start), bestScore)
 	for time.Now().Before(stop) {
-		next := ScheduleFactoryInner(sched, dList, rng).(*Schedule)
+		next := ScheduleFactoryInner(ss, rng).(*Schedule)
 		nextScore, _ := next.Score()
 		if nextScore > bestScore {
 			best = next
@@ -706,9 +838,9 @@ func MakeScheduleRandom(sched *Schedule, dList[]*Discussion) (best *Schedule, er
 	return
 }
 
-func MakeScheduleGenetic(sched *Schedule, dList []*Discussion) (*Schedule, error) {
+func MakeScheduleGenetic(ss *SearchStore) (*Schedule, error) {
 	ScheduleFactory := func(rng *rand.Rand) gago.Genome {
-		return ScheduleFactoryInner(sched, dList, rng)
+		return ScheduleFactoryInner(ss, rng)
 	}
 
 	ga := gago.GA {
@@ -754,15 +886,18 @@ func MakeScheduleGenetic(sched *Schedule, dList []*Discussion) (*Schedule, error
 	return ga.HallOfFame[0].Genome.(*Schedule), nil
 }
 
-func MakeScheduleHeuristic(sched *Schedule, dList []*Discussion) (*Schedule, error) {
+func MakeScheduleHeuristic(ss *SearchStore) (*Schedule, error) {
+	// Clone the locked discussions from the template
+	sched := ScheduleFactoryTemplate(ss)
+	
 	// Sort discussion list by interest, high to low
 	dListMaxIsLess := func(i, j int) bool {
-		return dList[i].GetMaxScore() < dList[j].GetMaxScore()
+		return ss.dList[i].GetMaxScore() < ss.dList[j].GetMaxScore()
 	}
-	sort.Slice(dList, dListMaxIsLess)
+	sort.Slice(ss.dList, dListMaxIsLess)
 
 	// Starting at the top, look for a slot to put it in which will maximize this score
-	for _, disc := range dList {
+	for _, disc := range ss.dList {
 		SchedDebug.Printf("Scheduling discussion %s (max score %d)",
 			disc.Title, disc.GetMaxScore())
 
@@ -815,64 +950,17 @@ var OptSearchDurationString string
 var OptSearchDuration time.Duration
 
 func MakeSchedule() (error) {
-	sched := &Schedule{}
+	ss := &SearchStore{}
 
-	sched.Init(Event.ScheduleSlots)
-	
-	// First, sort our discussions by total potential score
-	dList := []*Discussion{}
-
-	dLocked := make(map[DiscussionID]bool)
-
-	// If a slot is locked:
-	// - Copy the old one verbatim into the new schedule
-	// - Exclude the discussion in it from placement
-	//
-	// Also while we're here, check to make sure there are unlocked slots (otherwise
-	// we can't really do a schedule.)
-	allLocked := true
-	if Event.LockedSlots != nil {
-		if Event.ScheduleV2 != nil {
-			for i := range Event.ScheduleV2.Slots {
-				if Event.LockedSlots[i] {
-					sched.Slots[i] = Event.ScheduleV2.Slots[i]
-					for _, did := range sched.Slots[i].Discussions {
-						dLocked[did] = true
-					}
-				} else {
-					allLocked = false
-				}
-			}
-		} else {
-			// No schedule; but we still need to check for unlocked slots
-			for _, l := range Event.LockedSlots {
-				if !l {
-					allLocked = false
-					break
-				}
-			}
-		}
-	} else {
-		// All slots unlocked
-		allLocked = false
-	}
-
-	if allLocked {
-		log.Printf("Can't make a schedule -- all slots are locked")
-		return errAllSlotsLocked
-	}
-
-	for _, disc := range Event.Discussions {
-		if !dLocked[disc.ID] {
-			dList = append(dList, disc)
-		}
+	if err := ss.Snapshot(&Event); err != nil {
+		return err
 	}
 
 	var Hscore, Hmissed, Sscore, Smissed int
 	var newH, newS *Schedule
 	var err error
 
-	newH, err = MakeScheduleHeuristic(sched, dList)
+	newH, err = MakeScheduleHeuristic(ss)
 	if err != nil {
 		log.Printf("Schedule generator failed")
 		return err
@@ -882,9 +970,9 @@ func MakeSchedule() (error) {
 
 	switch SearchAlgo(OptSearchAlgo) {
 	case SearchGenetic:
-		newS, err = MakeScheduleGenetic(sched, dList)
+		newS, err = MakeScheduleGenetic(ss)
 	case SearchRandom:
-		newS, err = MakeScheduleRandom(sched, dList)
+		newS, err = MakeScheduleRandom(ss)
 	}
 	
 	if err != nil {
@@ -905,6 +993,9 @@ func MakeSchedule() (error) {
 	}
 	
 	new.Created = time.Now()
+
+	// Temporary stores only used during search
+	new.store = nil
 	
 	Event.ScheduleV2 = new
 
