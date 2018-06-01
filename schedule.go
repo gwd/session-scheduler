@@ -476,6 +476,15 @@ func (sched *Schedule) Clone() gago.Genome {
 	}
 
 	new.Validate()
+
+	if OptValidate {
+		sscore, smissed := sched.Score()
+		nscore, nmissed := new.Score()
+		if sscore != nscore || smissed != nmissed {
+			log.Panicf(" Schedule clone has different score: (%d, %d) != (%d, %d)!",
+				sscore, smissed, nscore, nmissed)
+		}
+	}
 	
 	return gago.Genome(new)
 }
