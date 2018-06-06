@@ -404,8 +404,8 @@ func (sched *Schedule) GetStores() (us *UserStore, ds *DiscussionStore) {
 	return
 }
 
-func (sched *Schedule) Init(slots int, store *SearchStore) {
-	sched.Slots = make([]*Slot, slots)
+func (sched *Schedule) Init(store *SearchStore) {
+	sched.Slots = make([]*Slot, store.ScheduleSlots)
 	for i := range sched.Slots {
 		sched.Slots[i] = &Slot{}
 		sched.Slots[i].Init(sched)
@@ -535,16 +535,14 @@ func (sched *Schedule) AssignRandom(disc *Discussion, rng *rand.Rand) {
 }
 
 func ScheduleFactoryTemplate(ss *SearchStore) (sched *Schedule) {
-	template := ss.CurrentSchedule
-	
 	sched = &Schedule{}
-	sched.Init(len(template.Slots), ss)
+	sched.Init(ss)
 
 	// Clone locked slots
-	if ss.LockedSlots != nil {
+	if ss.LockedSlots != nil && ss.CurrentSchedule != nil {
 		for i := range sched.Slots {
 			if ss.LockedSlots[i] {
-				sched.Slots[i] = template.Slots[i].Clone(sched)
+				sched.Slots[i] = ss.CurrentSchedule.Slots[i].Clone(sched)
 			}
 		}
 	}
