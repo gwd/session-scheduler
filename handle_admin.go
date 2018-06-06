@@ -24,13 +24,18 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	case "console":
 		content["Vcode"] = Event.VerificationCode
 		lastUpdate := "Never"
-		isStale := false
 		if Event.ScheduleV2 != nil {
 			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String()+" ago"
-			isStale = Event.ScheduleV2.IsStale
 		}
 		content["SinceLastSchedule"] = lastUpdate
-		content["IsStale"] = isStale
+		switch Event.ScheduleState {
+		case StateStale:
+			content["IsStale"] = true
+		case StateCurrent:
+			content["IsCurrent"] = true
+		case StateInProgress:
+			content["IsInProgress"] = true
+		}
 		if Event.LockedSlots != nil {
 			content["LockedSlots"] = Event.Timetable.FillDisplaySlots(Event.LockedSlots)
 		}
@@ -59,12 +64,12 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 	switch action {
 	case "runschedule":
-		err := MakeSchedule()
+		err := MakeSchedule(SearchAlgo(OptSearchAlgo), true)
 		if err == nil {
-			http.Redirect(w, r, "console?flash=Schedule+Generated", http.StatusFound)
+			http.Redirect(w, r, "console?flash=Schedule+Started", http.StatusFound)
 		} else {
 			log.Printf("Error generating schedule: %v", err)
-			http.Redirect(w, r, "console?flash=Error+generating+schedule", http.StatusFound)
+			http.Redirect(w, r, "console?flash=Error+starting+schedule", http.StatusFound)
 		}
 	case "resetEventData":
 		Event.ResetEventData()

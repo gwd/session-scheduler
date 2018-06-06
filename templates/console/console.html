@@ -36,8 +36,12 @@
         Last Schedule update: <strong>{{.SinceLastSchedule}}</strong>
         {{if .IsStale}}
         <span class="badge badge-danger">Stale</span>
-        {{else}}
-        <span class="badge badge-success">Up to date</span>
+        {{end}}
+        {{if .IsCurrent}}
+        <span class="badge badge-success">Current</span>
+        {{end}}
+        {{if .IsInProgress}}
+        <span class="badge badge-warning">In Progress</span>
         {{end}}
       </p>
     </div>

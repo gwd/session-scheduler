@@ -332,11 +332,62 @@ func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 	return nil
 }
 
+/*
+ * Schedule state:
+ * - StateCurrent
+ *   Invariant: schedule matches discussions / users/ preferences, no scheduling process
+ *   On modification of above: -> StateStale
+ *   On start of scheduling: -> StateInProgress
+ * - StateInProgress
+ *   Invariant: Local copy of state equivalent to global copy, scheduling routine in process
+ *   On modification: -> StateStale
+ *   On routine finishing: -> StateCurrent
+ * - StateStale
+ *   Invariant: Updates since last successful schedule
+ *   ON start of sheduling: -> StateInProgress
+ */
+
+type ScheduleState int
+
+const (
+	StateCurrent    = ScheduleState(0)
+	StateStale      = ScheduleState(1)
+	StateInProgress = ScheduleState(2)
+)
+
+func (state *ScheduleState) Modify() {
+	*state = StateStale
+}
+
+func (state *ScheduleState) StartSearch() {
+	*state = StateInProgress
+}
+
+func (state *ScheduleState) SearchSucceeded() {
+	if *state == StateInProgress {
+		log.Printf("No changes since start of scheduling, marking state clean")
+		*state = StateCurrent
+	} else {
+		log.Printf("Schedule done, but changes made since; not marking state clean")
+	}
+}
+
+// The search failed.  If the state is still InProgress, restore the state; otherwise,
+// leave it be.
+func (state *ScheduleState) SearchFailed(oldstate ScheduleState) {
+	if *state == StateInProgress {
+		log.Printf("No changes since start of scheduling, restoring old state")
+		*state = oldstate
+	} else {
+		log.Printf("Schedule done, but changes made since; not restoring old state")
+	}
+}
+
+
 // Pure scheduling: Only slots
 type Schedule struct {
 	Slots []*Slot
 	Created time.Time
-	IsStale bool
 	// Snapshot of user / discussion / locked data we can use without holding the lock
 	// This is only set while a search is going on
 	store *SearchStore
@@ -738,6 +789,7 @@ type SearchStore struct {
 	LockedSlots
 	ScheduleSlots int
 	CurrentSchedule *Schedule
+	OldState ScheduleState
 
 	// List of discussions that need to be placed.  NB some schedulers
 	// reorder this.
@@ -762,6 +814,7 @@ func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
 	}
 	ss.ScheduleSlots = event.ScheduleSlots
 	ss.CurrentSchedule = event.ScheduleV2
+	ss.OldState = event.ScheduleState
 
 	// All the schedule search functions need to know which discussions they need
 	// to place (i.e., which ones are not in locked slots).  Make that list once.
@@ -949,26 +1002,22 @@ var OptSearchAlgo string
 var OptSearchDurationString string
 var OptSearchDuration time.Duration
 
-func MakeSchedule() (error) {
-	ss := &SearchStore{}
-
-	if err := ss.Snapshot(&Event); err != nil {
-		return err
-	}
-
+// async indicates that MakeScheduleAsync should attempt to grab
+// the event mutex before updating the schedule
+func MakeScheduleAsync(ss *SearchStore, algo SearchAlgo, async bool) {
 	var Hscore, Hmissed, Sscore, Smissed int
-	var newH, newS *Schedule
+	var new, newS *Schedule
 	var err error
 
-	newH, err = MakeScheduleHeuristic(ss)
+	newH, err := MakeScheduleHeuristic(ss)
 	if err != nil {
-		log.Printf("Schedule generator failed")
-		return err
+		log.Printf("Schedule generator failed: %v", err)
+		goto out
 	}
 
 	Hscore, Hmissed = newH.Score()
 
-	switch SearchAlgo(OptSearchAlgo) {
+	switch algo {
 	case SearchGenetic:
 		newS, err = MakeScheduleGenetic(ss)
 	case SearchRandom:
@@ -976,8 +1025,8 @@ func MakeSchedule() (error) {
 	}
 	
 	if err != nil {
-		log.Printf("Schedule generator failed")
-		return err
+		log.Printf("Schedule generator failed: %v", err)
+		goto out
 	}
 
 	if newS != nil {
@@ -985,9 +1034,9 @@ func MakeSchedule() (error) {
 	}
 
 	log.Printf("Heuristic schedule happiness: %d, sadness %d", Hscore, Hmissed)
-	log.Printf("Genetic schedule happiness: %d, sadness %d", Sscore, Smissed)
+	log.Printf("Search (%s) schedule happiness: %d, sadness %d", algo, Sscore, Smissed)
 
-	new := newH
+	new = newH
 	if Sscore > Hscore {
 		new = newS
 	}
@@ -996,13 +1045,46 @@ func MakeSchedule() (error) {
 
 	// Temporary stores only used during search
 	new.store = nil
-	
-	Event.ScheduleV2 = new
 
-	Event.Timetable.Place(new)
+out:
+	if async {
+		log.Printf("MakeScheduleAsync: Grabbing mutex")
+		lock.Lock()
+		defer lock.Unlock()
+	}
+
+	if new != nil {
+		Event.ScheduleV2 = new
+		Event.Timetable.Place(new)
+		Event.ScheduleState.SearchSucceeded()
+	} else {
+		Event.ScheduleState.SearchFailed(ss.OldState)
+	}
 	
 	Event.Save()
 	
+	return
+}
+
+func MakeSchedule(algo SearchAlgo, async bool) (error) {
+	if Event.ScheduleState == StateInProgress {
+		return errInProgress
+	}
+	
+	ss := &SearchStore{}
+
+	if err := ss.Snapshot(&Event); err != nil {
+		return err
+	}
+
+	Event.ScheduleState.StartSearch()
+
+	if async {
+		go MakeScheduleAsync(ss, algo, async)
+	} else {
+		MakeScheduleAsync(ss, algo, async)
+	}
+
 	return nil
 }
 

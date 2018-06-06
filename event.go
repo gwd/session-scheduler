@@ -27,6 +27,7 @@ type EventStore struct {
 	LockedSlots
 	TestMode    bool
 	VerificationCode string
+	ScheduleState
 
 	ServeAddress string
 	filename    string
@@ -338,6 +339,7 @@ func (dstore DiscussionStore) Save(discussion *Discussion) error {
 
 func (dstore DiscussionStore) Delete(did DiscussionID) error {
 	delete(dstore, did)
+	Event.ScheduleState.Modify()
 	return Event.Save()
 }
 

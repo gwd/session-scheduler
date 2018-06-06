@@ -156,6 +156,7 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 
 	if pSlots != nil {
 		disc.PossibleSlots = pSlots
+		Event.ScheduleState.Modify()
 	}
 
 	if newOwnerID != "" && newOwnerID != disc.Owner {
@@ -169,7 +170,7 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 			log.Printf("Ignoring non-existing user %v", newOwnerID)
 		}
 	}
-	
+
 	err := Event.Discussions.Save(disc)
 
 	return disc, err

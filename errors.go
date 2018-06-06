@@ -20,6 +20,7 @@ var (
 	errInvalidVcode         = ValidationError(errors.New("Incorrect verification code"))
 	errTooManyDiscussions   = ValidationError(errors.New("You have too many discussions"))
 	errAllSlotsLocked       = ValidationError(errors.New("All slots are locked"))
+	errInProgress           = ValidationError(errors.New("Schedule already in progress"))
 )
 
 func IsValidationError(err error) bool {
