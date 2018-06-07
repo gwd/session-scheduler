@@ -155,6 +155,11 @@ func (store *EventStore) Load() error {
 		Event.Save()
 	}
 
+	// Clean up any stale 'running' data
+	if Event.ScheduleState.IsRunning() {
+		Event.ScheduleState.SearchFailed()
+	}
+
 	// Run timetable placement to update discussion info
 	if Event.ScheduleV2 != nil {
 		Event.ScheduleV2.LoadPost()

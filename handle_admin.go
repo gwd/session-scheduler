@@ -28,13 +28,13 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String()+" ago"
 		}
 		content["SinceLastSchedule"] = lastUpdate
-		switch Event.ScheduleState {
-		case StateStale:
-			content["IsStale"] = true
-		case StateCurrent:
-			content["IsCurrent"] = true
-		case StateInProgress:
+		switch {
+		case Event.ScheduleState.IsRunning():
 			content["IsInProgress"] = true
+		case Event.ScheduleState.IsModified():
+			content["IsStale"] = true
+		default:
+			content["IsCurrent"] = true
 		}
 		if Event.LockedSlots != nil {
 			content["LockedSlots"] = Event.Timetable.FillDisplaySlots(Event.LockedSlots)

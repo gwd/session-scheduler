@@ -332,57 +332,47 @@ func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 	return nil
 }
 
-/*
- * Schedule state:
- * - StateCurrent
- *   Invariant: schedule matches discussions / users/ preferences, no scheduling process
- *   On modification of above: -> StateStale
- *   On start of scheduling: -> StateInProgress
- * - StateInProgress
- *   Invariant: Local copy of state equivalent to global copy, scheduling routine in process
- *   On modification: -> StateStale
- *   On routine finishing: -> StateCurrent
- * - StateStale
- *   Invariant: Updates since last successful schedule
- *   ON start of sheduling: -> StateInProgress
- */
-
-type ScheduleState int
-
-const (
-	StateCurrent    = ScheduleState(0)
-	StateStale      = ScheduleState(1)
-	StateInProgress = ScheduleState(2)
-)
+type ScheduleState struct {
+	ChangesSinceLastSchedule      bool
+	ChangesSinceSchedulerSnapshot bool
+	SchedulerRunning              bool
+}
 
 func (state *ScheduleState) Modify() {
-	*state = StateStale
+	state.ChangesSinceLastSchedule = true
+	if state.SchedulerRunning {
+		state.ChangesSinceSchedulerSnapshot = true
+	}
 }
 
 func (state *ScheduleState) StartSearch() {
-	*state = StateInProgress
+	state.ChangesSinceSchedulerSnapshot = false
+	state.SchedulerRunning = true
 }
 
 func (state *ScheduleState) SearchSucceeded() {
-	if *state == StateInProgress {
-		log.Printf("No changes since start of scheduling, marking state clean")
-		*state = StateCurrent
-	} else {
-		log.Printf("Schedule done, but changes made since; not marking state clean")
+	state.SchedulerRunning = false
+	if !state.ChangesSinceSchedulerSnapshot {
+		state.ChangesSinceLastSchedule = false
 	}
+	state.ChangesSinceSchedulerSnapshot = false
 }
 
-// The search failed.  If the state is still InProgress, restore the state; otherwise,
-// leave it be.
-func (state *ScheduleState) SearchFailed(oldstate ScheduleState) {
-	if *state == StateInProgress {
-		log.Printf("No changes since start of scheduling, restoring old state")
-		*state = oldstate
-	} else {
-		log.Printf("Schedule done, but changes made since; not restoring old state")
-	}
+// The search failed, either due to an error or being cancelled..  If
+// the state is still InProgress, restore the state; otherwise, leave
+// it be.
+func (state *ScheduleState) SearchFailed() {
+	state.SchedulerRunning = false
+	state.ChangesSinceSchedulerSnapshot = false
 }
 
+func (state *ScheduleState) IsRunning() bool {
+	return state.SchedulerRunning
+}
+
+func (state *ScheduleState) IsModified() bool {
+	return state.ChangesSinceLastSchedule
+}
 
 // Pure scheduling: Only slots
 type Schedule struct {
@@ -418,6 +408,7 @@ func (sched *Schedule) LoadPost() {
 	for i := range sched.Slots {
 		sched.Slots[i].sched = sched
 	}
+
 	// NB that we specificaly do *not* initialize sched.store -- that should
 	// only be set during scheduling.
 }
@@ -787,7 +778,6 @@ type SearchStore struct {
 	LockedSlots
 	ScheduleSlots int
 	CurrentSchedule *Schedule
-	OldState ScheduleState
 
 	// List of discussions that need to be placed.  NB some schedulers
 	// reorder this.
@@ -812,7 +802,6 @@ func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
 	}
 	ss.ScheduleSlots = event.ScheduleSlots
 	ss.CurrentSchedule = event.ScheduleV2
-	ss.OldState = event.ScheduleState
 
 	// All the schedule search functions need to know which discussions they need
 	// to place (i.e., which ones are not in locked slots).  Make that list once.
@@ -1056,7 +1045,7 @@ out:
 		Event.Timetable.Place(new)
 		Event.ScheduleState.SearchSucceeded()
 	} else {
-		Event.ScheduleState.SearchFailed(ss.OldState)
+		Event.ScheduleState.SearchFailed()
 	}
 	
 	Event.Save()
@@ -1065,7 +1054,7 @@ out:
 }
 
 func MakeSchedule(algo SearchAlgo, async bool) (error) {
-	if Event.ScheduleState == StateInProgress {
+	if Event.ScheduleState.IsRunning() {
 		return errInProgress
 	}
 	
