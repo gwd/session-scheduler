@@ -34,7 +34,6 @@ type EventStore struct {
 }
 
 type EventOptions struct {
-	Slots            int
 	AdminPassword    string
 	VerificationCode string
 	ServeAddress     string
@@ -55,11 +54,12 @@ func (store *EventStore) Init(opt EventOptions) {
 	store.Users.Init()
 	store.Discussions.Init()
 	store.Timetable.Init()
+	store.ScheduleSlots = store.Timetable.GetSlots()
+
 	store.Locations.Init()
 	store.ScheduleV2 = nil
 
-	store.ScheduleSlots = opt.Slots
-	store.LockedSlots = make([]bool, opt.Slots)
+	store.LockedSlots = make([]bool, store.ScheduleSlots)
 
 	store.VerificationCode = opt.VerificationCode
 	if store.VerificationCode == "" {
@@ -93,6 +93,8 @@ func (store *EventStore) Init(opt EventOptions) {
 // Reset "event" data, without touching users or discussions
 func (store *EventStore) ResetEventData() {
 	store.Timetable.Init()
+	store.ScheduleSlots = store.Timetable.GetSlots()
+
 	store.Locations.Init()
 	store.ScheduleV2 = nil
 	store.LockedSlots = make([]bool, store.ScheduleSlots)
@@ -126,7 +128,6 @@ func (store *EventStore) Load() error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			store.Init(EventOptions{
-				Slots: DefaultSlots,
 				AdminPassword: OptAdminPassword,
 				ServeAddress: OptServeAddress})
 			return nil

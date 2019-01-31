@@ -116,7 +116,7 @@ func (tt *Timetable) Init() {
 		td := &TimetableDay{ DayName: day }
 		for _, time := range []string{"2:00", "2:50", "3:35", "4:10"} {
 			ts := &TimetableSlot{ Time: time, day: td }
-			if time == "3:25" {
+			if time == "3:35" {
 				ts.IsBreak = true
 			}
 			// FIXME: Init Discussions
