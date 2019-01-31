@@ -1,8 +1,31 @@
 {{define "index/home"}}
 <div class="container"><div class="row">
   <div class="col-sm">
-<h1>Welcome to the XenSummit Design Session Scheduler</h1>
+    <h1>Welcome to the XenSummit Design Session Scheduler</h1>
 
+<p>Design sessions are one of the most fruitful aspects of XenSummit.
+Anyone can propose a topic, even as the conference is going on, and
+interested people can get together to discuss it and hash out solutions.</p>
+
+{{if .IsActive}}
+  {{template "index/home-active"}}
+{{else}}
+  {{template "index/home-inactive"}}
+{{end}}
+    
+</div>
+</div></div>
+{{end}}
+
+{{define "index/home-inactive"}}
+
+<p>The session scheduler is still in progress, but will be up and running
+  in plenty of time for this year's XenSummit in Chicago.  Watch this space!
+  </p>
+
+{{end}}
+
+{{define "index/home-active"}}
 <p>Design sessions are one of the most fruitful aspects of XenSummit.
 Anyone can propose a topic, even as the conference is going on, and
 interested people can get together to discuss it and hash out solutions.</p>
@@ -46,7 +69,5 @@ You'll need the <strong>verification code</strong> to register.
 Contact Lars Kurth for more information.</p>
 <p><a href="register" class="btn btn-primary" role="button">Register
 now</a>
-</div>
-</div></div>
 {{end}}
 {{end}}

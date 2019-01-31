@@ -59,6 +59,17 @@
       </form>
       </li>
       <li class="list-group-item">
+	<form action="/admin/setactive" method="POST">
+	{{if .IsActive}}
+	<input type="hidden" name="active" value="0">
+        <input type="submit" value="Deactivate" class="btn btn-primary">
+	{{else}}
+	<input type="hidden" name="active" value="1">
+        <input type="submit" value="Activate" class="btn btn-secondary">
+	{{end}}
+      </form>
+      </li>
+      <li class="list-group-item">
       <form action="/admin/resetEventData" method="POST">
       <input type="submit" value="Reset Event Data" class="btn btn-primary">
       <span class="text-muted">Use to regenerate timetable / location data after schema change</span>

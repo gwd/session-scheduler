@@ -22,6 +22,7 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	tmpl := ps.ByName("template")
 	switch tmpl {
 	case "console":
+		content["IsActive"] = Event.Active
 		content["Vcode"] = Event.VerificationCode
 		lastUpdate := "Never"
 		if Event.ScheduleV2 != nil {
@@ -57,6 +58,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	action := ps.ByName("action")
 	if !(action == "runschedule" ||
 		action == "setvcode" ||
+		action == "setactive" ||
 		action == "resetEventData" ||
 		action == "setLocked") {
 		return
@@ -91,6 +93,29 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		Event.VerificationCode = newvcode
 		Event.Save()
 		http.Redirect(w, r, "console?flash=Verification+code+updated", http.StatusFound)
+		return
+	case "setactive":
+		newactive := r.FormValue("active")
+		flash := ""
+		switch newactive {
+		case "0":
+			Event.Active = false
+			flash="Website+Deactivated"
+		case "1":
+			Event.Active = true
+			flash="Website+Activated"
+		default:
+			RenderTemplate(w, r, "console?flash=Invalid+Activate+State",
+				map[string]interface{}{
+					"User": user,
+					"console": true,
+				})
+			return
+		}
+
+		log.Printf("New Activation state: %v", Event.Active)
+		Event.Save()
+		http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
 		return
 	case "setLocked":
 		r.ParseForm()

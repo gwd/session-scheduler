@@ -15,6 +15,7 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarContent">
 	      <ul class="navbar-nav mr-auto">
+	    {{if .ShowToolbar}}
 		<li class="nav-item">
 		<a class="nav-link" href="/list/discussion">Sessions</a></li>
 		<li class="nav-item">
@@ -23,6 +24,7 @@
 		<a class="nav-link" href="/schedule">Schedule</a></li>
 		<li class="nav-item">
 		<a class="nav-link" href="/list/user">Attendees</a></li>
+	    {{end}}
 	      </ul>
 		{{if .IsTestMode}}
 		<span class="badge badge-danger">Test Mode</span>
@@ -30,6 +32,11 @@
 	      <ul class="navbar-nav navbar-right">
 		{{if .CurrentUser}}
 		{{if .CurrentUser.IsAdmin}}
+		{{if .IsActive}}
+		<span class="badge badge-primary">Active</span>
+		{{else}}
+		<span class="badge badge-secondary">Inactive</span>
+		{{end}}
 		<li class="nav-item">
 		<a href="/admin/console" class="nav-link">Console</a><li>
 		{{end}}
@@ -37,9 +44,11 @@
 		<a href="/uid/user/self/view" class="nav-link">{{.CurrentUser.Username}}</a></li>
 		<li class="nav-item">
 		<a href="/sign-out" class="nav-link">Sign Out</a></li>
-	      {{else}}
+		{{else}}
+		{{if .IsActive}}
 		<li class="nav-item">
-		<a href="/register" class="nav-link">Register</a></li>
+		  <a href="/register" class="nav-link">Register</a></li>
+		{{end}}
 		<li class="nav-item">
 		<a href="/login" class="nav-link">Login</a></li>
 	      {{end}}

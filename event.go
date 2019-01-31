@@ -18,19 +18,25 @@ var deepCopyEncoder = gob.NewEncoder(&deepCopyBuffer)
 var deepCopyDecoder = gob.NewDecoder(&deepCopyBuffer)
 
 type EventStore struct {
+	ServeAddress string
+	filename    string
+
+	TestMode    bool
+	Active     bool
+	
+	Timetable   Timetable
+
+	VerificationCode string
+
 	Users       UserStore
 	Discussions DiscussionStore
 	Locations   LocationStore
+
 	ScheduleV2    *Schedule
-	Timetable   Timetable
 	ScheduleSlots int
 	LockedSlots
-	TestMode    bool
-	VerificationCode string
+	
 	ScheduleState
-
-	ServeAddress string
-	filename    string
 }
 
 type EventOptions struct {
