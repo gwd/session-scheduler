@@ -29,7 +29,7 @@ func handleSigs() {
 
 	// Block until a signal is received.
 	s := <-c
-	
+
 	log.Printf("Got signal %v, shutting down...", s)
 	lock.Lock()
 	os.Exit(0)
@@ -54,7 +54,7 @@ func LogRequest(w http.ResponseWriter, r *http.Request) {
 
 func serve() {
 	go handleSigs()
-	
+
 	router := NewRouter()
 
 	router.GET("/", HandleHome)
@@ -85,7 +85,6 @@ func serve() {
 
 	secureRouter.POST("/testaction/:action", HandleTestAction)
 
-	
 	middleware := Middleware{}
 	middleware.Add(http.HandlerFunc(LogRequest))
 	middleware.Add(router)

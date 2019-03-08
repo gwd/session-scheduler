@@ -23,7 +23,7 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// HACK: Only allow a single access at a time for now
 	lock.Lock()
 	defer lock.Unlock()
-	
+
 	// Loop through all of the registered handlers
 	for _, handler := range m.handlers {
 		// Call the handler with our MiddlewareResponseWriter

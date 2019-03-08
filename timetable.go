@@ -13,28 +13,28 @@ type UserScheduleDisplay struct {
 }
 
 type DiscussionScheduleDisplay struct {
-	ID DiscussionID
-	Title string
+	ID          DiscussionID
+	Title       string
 	Description string
-	Url string
-	Attending []UserScheduleDisplay
-	Missing []UserScheduleDisplay
+	Url         string
+	Attending   []UserScheduleDisplay
+	Missing     []UserScheduleDisplay
 }
 
 type TimetableDiscussion struct {
-	ID DiscussionID
-	Title string
+	ID        DiscussionID
+	Title     string
 	Attendees int
-	Score int
+	Score     int
 	// Copy of the "canonical" location, updated every time the
 	// schedule is run
 	LocationInfo Location
 }
 
 type TimetableSlot struct {
-	Time string
+	Time    string
 	IsBreak bool
-	day *TimetableDay
+	day     *TimetableDay
 
 	// Which room will each discussion be in?
 	// (Separate because placement and scheduling are separate steps)
@@ -47,17 +47,17 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 	for _, did := range slot.Discussions {
 		disc, _ := Event.Discussions.Find(did)
 		tdisc := TimetableDiscussion{
-			ID: did,
-			Title: disc.Title,
+			ID:        did,
+			Title:     disc.Title,
 			Attendees: slot.DiscussionAttendeeCount(did),
 		}
 		tdisc.Score, _ = slot.DiscussionScore(did)
-		
+
 		ts.Discussions = append(ts.Discussions, tdisc)
 
 		disc.slot = ts
 	}
-	
+
 	// Sort by number of attendees
 	sort.Slice(ts.Discussions, func(i, j int) bool {
 		return ts.Discussions[i].Attendees > ts.Discussions[j].Attendees
@@ -81,7 +81,7 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 			if loc.IsPlace {
 				lidx++
 			} else {
-				if lidx + 1 != len(locations) {
+				if lidx+1 != len(locations) {
 					log.Fatalf("Non-place not last in list! lidx %d len %d",
 						lidx, len(locations))
 				}
@@ -96,7 +96,7 @@ type TimetableDay struct {
 	DayName string
 	IsFinal bool
 	// Date?
-	
+
 	Slots []*TimetableSlot
 }
 
@@ -105,17 +105,16 @@ type Timetable struct {
 	Days []*TimetableDay
 }
 
-
 func (tt *Timetable) Init() {
 	// Clear out any old data which may be there
 	*tt = Timetable{}
-	
+
 	// For now, hardcode 3 days (W Th F), 3 time slots
-	// 4 locations: 
+	// 4 locations:
 	for _, day := range []string{"Wednesday", "Thursday", "Friday"} {
-		td := &TimetableDay{ DayName: day }
+		td := &TimetableDay{DayName: day}
 		for _, time := range []string{"2:00", "2:50", "3:35", "4:10"} {
-			ts := &TimetableSlot{ Time: time, day: td }
+			ts := &TimetableSlot{Time: time, day: td}
 			if time == "3:35" {
 				ts.IsBreak = true
 			}
@@ -164,7 +163,7 @@ func (tt *Timetable) Place(sched *Schedule) (err error) {
 			count++
 		}
 	}
-	
+
 	return
 }
 
@@ -200,12 +199,12 @@ func (tt *Timetable) FillDisplaySlots(bslot []bool) (dss []DisplaySlot) {
 
 			ds := DisplaySlot{
 				Checked: bslot[count],
-				Label: td.DayName+" "+ts.Time,
-				Index: count,
+				Label:   td.DayName + " " + ts.Time,
+				Index:   count,
 			}
 
 			dss = append(dss, ds)
-			
+
 			count++
 		}
 	}

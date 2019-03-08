@@ -52,14 +52,13 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			return
 		}
 	}
-	
-	// OK: discussion / user => view; discussion / user -> edit 
+
+	// OK: discussion / user => view; discussion / user -> edit
 	if !(((action == "view" || action == "edit") &&
 		(itype == "user" || itype == "discussion")) ||
-		(itype == "discussion" && action == "delete")){
+		(itype == "discussion" && action == "delete")) {
 		return
 	}
-		
 
 	var display interface{}
 
@@ -87,7 +86,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	//log.Printf("%s/%s: Display %v", itype, action, display)
-	
+
 	RenderTemplate(w, r, itype+"/"+action, map[string]interface{}{
 		"Display": display,
 	})
@@ -102,7 +101,7 @@ func FormCheckToBool(formData []string) (bslot []bool, err error) {
 		}
 		bslot[i] = true
 	}
-	return 
+	return
 }
 
 func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -121,11 +120,11 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			return
 		}
 	}
-	
+
 	action := ps.ByName("action")
 
 	//log.Printf("POST %s %s %s", uid, action, itype)
-	
+
 	if !((itype == "discussion" &&
 		(action == "setinterest" || action == "edit" || action == "delete")) ||
 		(itype == "user" && action == "edit")) {
@@ -168,7 +167,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			if tmp := r.FormValue("redirectURL"); tmp != "" {
 				redirectURL = tmp
 			}
-			
+
 		case "edit":
 			if !cur.MayEditDiscussion(disc) {
 				log.Printf("WARNING user %s doesn't have permission to edit discussion %s",
@@ -189,13 +188,12 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				}
 				owner = UserID(r.FormValue("owner"))
 			}
-			
-			
+
 			discussionNext, err := UpdateDiscussion(disc, title, description, possibleSlots, owner)
 			if err != nil {
 				if IsValidationError(err) {
 					RenderTemplate(w, r, "edit", map[string]interface{}{
-						"Error":      err.Error(),
+						"Error":   err.Error(),
 						"Display": discussionNext,
 					})
 					return
@@ -266,7 +264,7 @@ func HandleList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	itype := ps.ByName("itype")
 
 	templateArgs := make(map[string]interface{})
-	
+
 	switch itype {
 	case "discussion":
 		templateArgs["List"] = DiscussionGetList(cur)

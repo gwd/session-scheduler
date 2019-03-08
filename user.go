@@ -11,7 +11,7 @@ const (
 	hashCost       = 10
 	passwordLength = 6
 	userIDLength   = 16
-	InterestMax = 100
+	InterestMax    = 100
 )
 
 type UserID string
@@ -21,10 +21,10 @@ func (uid *UserID) generate() {
 }
 
 type UserProfile struct {
-	RealName       string
-	Email          string
-	Company        string
-	Description    string
+	RealName    string
+	Email       string
+	Company     string
+	Description string
 }
 
 type User struct {
@@ -34,17 +34,17 @@ type User struct {
 	IsAdmin        bool
 	Interest       map[DiscussionID]int
 	// Profile: Informational only
-	Profile        UserProfile
+	Profile UserProfile
 }
 
 type UserDisplay struct {
-	ID       UserID
-	Username string
-	IsAdmin  bool
-	MayEdit bool
-	Profile  *UserProfile
+	ID          UserID
+	Username    string
+	IsAdmin     bool
+	MayEdit     bool
+	Profile     *UserProfile
 	Description template.HTML
-	List []*DiscussionDisplay
+	List        []*DiscussionDisplay
 }
 
 func (u *User) MayEditUser(ID UserID) bool {
@@ -57,9 +57,9 @@ func (u *User) MayEditDiscussion(d *Discussion) bool {
 
 func (u *User) GetDisplay(cur *User, long bool) (ud *UserDisplay) {
 	ud = &UserDisplay{
-		ID: u.ID,
+		ID:       u.ID,
 		Username: u.Username,
-		IsAdmin: u.IsAdmin,
+		IsAdmin:  u.IsAdmin,
 	}
 	if cur != nil {
 		ud.MayEdit = cur.MayEditUser(u.ID)
@@ -74,17 +74,16 @@ func (u *User) GetDisplay(cur *User, long bool) (ud *UserDisplay) {
 func NewUser(username, password, vcode string, profile *UserProfile) (*User, error) {
 	user := &User{
 		Username: username,
-		Profile: *profile,
+		Profile:  *profile,
 	}
 
 	log.Printf("New user post: '%s'", username)
-		
 
 	if vcode != Event.VerificationCode {
 		log.Printf("New user failed: Bad vcode %s", vcode)
 		return user, errInvalidVcode
 	}
-	
+
 	if username == "" {
 		log.Printf("New user failed: no username")
 		return user, errNoUsername
@@ -149,7 +148,7 @@ func FindUser(username, password string) (*User, error) {
 
 // Use when you plan on setting a large sequence in a row and can save
 // the state yourself
-func (user *User) SetInterestNosave(disc *Discussion, interest int) (error) {
+func (user *User) SetInterestNosave(disc *Discussion, interest int) error {
 	log.Printf("Setinterest: %s '%s' %d", user.Username, disc.Title, interest)
 	if interest > InterestMax || interest < 0 {
 		log.Printf("SetInterest failed: Invalid interest")
@@ -184,7 +183,7 @@ func (user *User) SetPassword(newPassword string) error {
 	return nil
 }
 
-func UserRemoveDiscussion(did DiscussionID) (error) {
+func UserRemoveDiscussion(did DiscussionID) error {
 	return Event.Users.Iterate(func(u *User) error {
 		delete(u.Interest, did)
 		return nil
@@ -192,7 +191,7 @@ func UserRemoveDiscussion(did DiscussionID) (error) {
 }
 
 func UpdateUser(user *User, currentPassword, newPassword string,
-                 profile *UserProfile) (User, error) {
+	profile *UserProfile) (User, error) {
 	out := *user
 	out.Profile = *profile
 

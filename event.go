@@ -5,8 +5,8 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"log"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"sort"
@@ -19,12 +19,12 @@ var deepCopyDecoder = gob.NewDecoder(&deepCopyBuffer)
 
 type EventStore struct {
 	ServeAddress string
-	filename    string
+	filename     string
 
-	TestMode    bool
-	Active     bool
-	
-	Timetable   Timetable
+	TestMode bool
+	Active   bool
+
+	Timetable Timetable
 
 	VerificationCode string
 
@@ -35,7 +35,7 @@ type EventStore struct {
 	ScheduleV2    *Schedule
 	ScheduleSlots int
 	LockedSlots
-	
+
 	ScheduleState
 }
 
@@ -79,7 +79,7 @@ func (store *EventStore) Init(opt EventOptions) {
 		log.Printf("Administrator account: admin %s", pwd)
 	}
 	admin, err := NewUser(AdminUsername, pwd, Event.VerificationCode,
-		&UserProfile{ RealName: "Xen Schedule Administrator" })
+		&UserProfile{RealName: "Xen Schedule Administrator"})
 	if err != nil {
 		log.Fatalf("Error creating admin user: %v", err)
 	}
@@ -135,7 +135,7 @@ func (store *EventStore) Load() error {
 		if os.IsNotExist(err) {
 			store.Init(EventOptions{
 				AdminPassword: OptAdminPassword,
-				ServeAddress: OptServeAddress})
+				ServeAddress:  OptServeAddress})
 			return nil
 		}
 		return err
@@ -210,7 +210,7 @@ func (ustore UserStore) Find(id UserID) (*User, error) {
 	return nil, nil
 }
 
-func (ustore UserStore) FindRandom() (user * User, err error) {
+func (ustore UserStore) FindRandom() (user *User, err error) {
 	// Don't count the admin user
 	l := len(ustore) - 1
 
@@ -219,7 +219,7 @@ func (ustore UserStore) FindRandom() (user * User, err error) {
 		return
 	}
 
-	// Choose a random value from [0,l) and 
+	// Choose a random value from [0,l) and
 	i := rand.Int31n(int32(l))
 	for _, user = range ustore {
 		if user.Username == AdminUsername {
@@ -234,7 +234,7 @@ func (ustore UserStore) FindRandom() (user * User, err error) {
 	return
 }
 
-func (ustore UserStore) Iterate(f func (u *User) error) (err error) {
+func (ustore UserStore) Iterate(f func(u *User) error) (err error) {
 	for _, user := range ustore {
 		err = f(user)
 		if err != nil {
@@ -334,7 +334,7 @@ func (dstore DiscussionStore) Find(id DiscussionID) (*Discussion, error) {
 	return discussion, nil
 }
 
-func (dstore DiscussionStore) Iterate(f func (d *Discussion) error) (err error) {
+func (dstore DiscussionStore) Iterate(f func(d *Discussion) error) (err error) {
 	for _, disc := range dstore {
 		err = f(disc)
 		if err != nil {
@@ -356,7 +356,7 @@ func (dstore DiscussionStore) Delete(did DiscussionID) error {
 }
 
 func (dstore DiscussionStore) GetListUser(u *User, cur *User) (list []*DiscussionDisplay) {
-	dstore.Iterate(func (d *Discussion) error {
+	dstore.Iterate(func(d *Discussion) error {
 		if d.Owner == u.ID {
 			dd := d.GetDisplay(cur)
 			if dd != nil {
@@ -374,7 +374,7 @@ func (dstore DiscussionStore) GetListUser(u *User, cur *User) (list []*Discussio
 }
 
 func (dstore DiscussionStore) GetList(cur *User) (list []*DiscussionDisplay) {
-	dstore.Iterate(func (d *Discussion) error {
+	dstore.Iterate(func(d *Discussion) error {
 		dd := d.GetDisplay(cur)
 		if dd != nil {
 			list = append(list, dd)
@@ -385,7 +385,6 @@ func (dstore DiscussionStore) GetList(cur *User) (list []*DiscussionDisplay) {
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].ID < list[j].ID
 	})
-	
+
 	return
 }
-

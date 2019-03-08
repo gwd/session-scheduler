@@ -13,25 +13,22 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// This password should always be suitable 
+// This password should always be suitable
 const TestPassword = "xenuser"
 
 func NewTestUser() {
 	username := fake.UserName()
-	profile := &UserProfile {
-		RealName: fake.FullName(),
-		Company: fake.Company(),
-		Email: fake.EmailAddress(),
+	profile := &UserProfile{
+		RealName:    fake.FullName(),
+		Company:     fake.Company(),
+		Email:       fake.EmailAddress(),
 		Description: fake.Paragraphs(),
 	}
-	
-	
+
 	log.Printf("Creating test user %s %v", username, *profile)
 
-	for _, err := NewUser(username, TestPassword, Event.VerificationCode, profile);
-	           err != nil;
-               _, err = NewUser(username, TestPassword, Event.VerificationCode, profile) {
-     	if err == errUsernameExists {
+	for _, err := NewUser(username, TestPassword, Event.VerificationCode, profile); err != nil; _, err = NewUser(username, TestPassword, Event.VerificationCode, profile) {
+		if err == errUsernameExists {
 			username = fake.UserName()
 			log.Printf(" User exists!  Trying username %s instead", username)
 			continue
@@ -56,7 +53,7 @@ func NewTestDiscussion(owner *User) {
 	}
 
 	var disc *Discussion
-	
+
 	for {
 		var err error
 		log.Printf("Creating discussion with owner %s, title %s, desc %s",
@@ -84,7 +81,7 @@ func NewTestDiscussion(owner *User) {
 	if disc != nil && rand.Intn(4) == 0 {
 		// Make a continuous range where it's not schedulable
 		start := rand.Intn(len(disc.PossibleSlots))
-		end := rand.Intn(len(disc.PossibleSlots) - start) + 1
+		end := rand.Intn(len(disc.PossibleSlots)-start) + 1
 		if start != 0 || end != len(disc.PossibleSlots) {
 			for i := start; i < end; i++ {
 				disc.PossibleSlots[i] = false
@@ -142,18 +139,18 @@ func TestGenerateInterest() {
 
 const (
 	TestUsers = 8
-	TestDisc = 6
+	TestDisc  = 6
 	TestSlots = 4
 )
 
 func TestPopulate() {
 	Event.Init(EventOptions{
-		AdminPassword: "xenroot" })
+		AdminPassword: "xenroot"})
 	Event.TestMode = true
-	for i := 0; i < TestUsers ; i++ {
+	for i := 0; i < TestUsers; i++ {
 		NewTestUser()
 	}
-	for i := 0; i < TestDisc ; i++ {
+	for i := 0; i < TestDisc; i++ {
 		NewTestDiscussion(nil)
 	}
 }

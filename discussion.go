@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
 	"html/template"
+	"log"
 )
 
 const (
@@ -16,52 +16,52 @@ func (did *DiscussionID) generate() {
 }
 
 type Discussion struct {
-	ID          DiscussionID
-	Owner       UserID
-	Title       string
-	Description string
-	Interested   map[UserID]bool
+	ID            DiscussionID
+	Owner         UserID
+	Title         string
+	Description   string
+	Interested    map[UserID]bool
 	PossibleSlots []bool
 
 	// Cached information from a schedule
-	location    *Location
-	slot        *TimetableSlot
-	
+	location *Location
+	slot     *TimetableSlot
+
 	// Things to add at some point:
 	// Session Length (30m, 1hr, &c)
 	// Invitees?
 
-	maxScore    int
+	maxScore      int
 	maxScoreValid bool
 }
 
 // Annotated for display to an individual user
 
 type DisplaySlot struct {
-	Label string
-	Index int
+	Label   string
+	Index   int
 	Checked bool
 }
 
 type DiscussionDisplay struct {
-	ID          DiscussionID
-	Title       string
-	Description template.HTML
+	ID             DiscussionID
+	Title          string
+	Description    template.HTML
 	DescriptionRaw string
-	Owner       *User
-	Interested  []*User
+	Owner          *User
+	Interested     []*User
 	// IsUser: Used to determine whether to display 'interest'
-	IsUser      bool
+	IsUser bool
 	// MayEdit: Used to determine whether to show edit / delete buttons
-	MayEdit     bool
+	MayEdit bool
 	// IsAdmin: Used to determine whether to show slot scheduling options
-	IsAdmin     bool
-	Interest int
-	Location    Location
-	Time        string
-	IsFinal     bool
+	IsAdmin       bool
+	Interest      int
+	Location      Location
+	Time          string
+	IsFinal       bool
 	PossibleSlots []DisplaySlot
-	AllUsers   []*User
+	AllUsers      []*User
 }
 
 func (d *Discussion) GetURL() string {
@@ -95,10 +95,10 @@ func (d *Discussion) GetMaxScore() int {
 
 func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 	dd := &DiscussionDisplay{
-		ID:          d.ID,
-		Title:       d.Title,
+		ID:             d.ID,
+		Title:          d.Title,
 		DescriptionRaw: d.Description,
-		Description:  ProcessText(d.Description),
+		Description:    ProcessText(d.Description),
 	}
 
 	if d.location != nil {
@@ -109,7 +109,7 @@ func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
 		dd.IsFinal = d.slot.day.IsFinal
 		dd.Time = d.slot.day.DayName + " " + d.slot.Time
 	}
-	
+
 	dd.Owner, _ = Event.Users.Find(d.Owner)
 	if cur != nil {
 		if cur.Username != AdminUsername {
@@ -138,7 +138,7 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 
 	out.Title = title
 	out.Description = description
-	
+
 	log.Printf("Update discussion post: '%s'", title)
 
 	if title == "" {
@@ -189,9 +189,9 @@ func DeleteDiscussion(did DiscussionID) {
 		// possibly moving rooms as well.  Run the placement again.
 		Event.Timetable.Place(Event.ScheduleV2)
 	}
-	
+
 	UserRemoveDiscussion(did)
-	
+
 	Event.Discussions.Delete(did)
 }
 
@@ -205,9 +205,9 @@ func MakePossibleSlots(len int) []bool {
 
 func NewDiscussion(owner *User, title, description string) (*Discussion, error) {
 	disc := &Discussion{
-		Owner:       owner.ID,
-		Title:       title,
-		Description: description,
+		Owner:         owner.ID,
+		Title:         title,
+		Description:   description,
 		PossibleSlots: MakePossibleSlots(Event.ScheduleSlots),
 	}
 
@@ -228,7 +228,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 
 	// Check for duplicate titles and too many discussions (admins are exempt)
 	count := 0
-	err := Event.Discussions.Iterate(func(check* Discussion) error {
+	err := Event.Discussions.Iterate(func(check *Discussion) error {
 		if check.Title == title {
 			log.Printf("%s New discussion failed: duplicate title",
 				owner.Username)
@@ -247,7 +247,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 	if err != nil {
 		return disc, err
 	}
-		
+
 	disc.ID.generate()
 
 	disc.Interested = make(map[UserID]bool)

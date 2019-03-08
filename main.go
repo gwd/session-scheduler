@@ -17,29 +17,27 @@ func main() {
 	flag.BoolVar(&OptCrossover, "crossover", true, "Enable the crossover function")
 	flag.BoolVar(&OptValidate, "validate", false, "Extra validation of schedule consistency")
 
-	
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
-	
+
 	flag.Parse()
 
-    if *cpuprofile != "" {
-        f, err := os.Create(*cpuprofile)
-        if err != nil {
-            log.Fatal("could not create CPU profile: ", err)
-        }
-        if err := pprof.StartCPUProfile(f); err != nil {
-            log.Fatal("could not start CPU profile: ", err)
-        }
-        defer pprof.StopCPUProfile()
-    }
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
 	ScheduleInit()
-	
+
 	err := Event.Load()
 	if err != nil {
 		log.Fatalf("Loading schedule data: %v", err)
 	}
-
 
 	cmd := flag.Arg(0)
 	if cmd == "" {
@@ -60,11 +58,11 @@ func main() {
 	case "serve":
 		serve()
 	case "testuser":
-		for ; *count > 0 ; *count-- {
+		for ; *count > 0; *count-- {
 			NewTestUser()
 		}
 	case "testdisc":
-		for ; *count > 0 ; *count-- {
+		for ; *count > 0; *count-- {
 			NewTestDiscussion(nil)
 		}
 	case "testpopulate":
@@ -79,6 +77,5 @@ func main() {
 	default:
 		log.Fatalf("Unknown command: %s", cmd)
 	}
-	
-}
 
+}

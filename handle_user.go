@@ -12,9 +12,9 @@ func HandleUserNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 
 func parseProfile(r *http.Request) (profile *UserProfile) {
 	profile = &UserProfile{
-		RealName: r.FormValue("RealName"),
-		Company: r.FormValue("Company"),
-		Email: r.FormValue("Email"),
+		RealName:    r.FormValue("RealName"),
+		Company:     r.FormValue("Company"),
+		Email:       r.FormValue("Email"),
 		Description: r.FormValue("Description"),
 	}
 	return

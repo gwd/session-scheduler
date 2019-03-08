@@ -3,9 +3,9 @@ package main
 type LocationID string
 
 type Location struct {
-	ID LocationID
-	Name string
-	IsPlace bool
+	ID       LocationID
+	Name     string
+	IsPlace  bool
 	Capacity int
 }
 
@@ -15,7 +15,6 @@ type LocationDisplay struct {
 func (location *Location) GetDisplay(cur *User) (ld *LocationDisplay) {
 	return &LocationDisplay{}
 }
-
 
 type LocationStore []*Location
 
@@ -27,29 +26,29 @@ func (lstore *LocationStore) Init() {
 	*lstore = make([]*Location, 0)
 	// For now, hardcode 3 actual rooms, and one "generic"
 	lstore.Save(&Location{
-		ID: LocationID(GenerateID("loc", locationIDLength)),
-		Name: "Jiangning",
-		IsPlace: true,
+		ID:       LocationID(GenerateID("loc", locationIDLength)),
+		Name:     "Jiangning",
+		IsPlace:  true,
 		Capacity: 100,
 	})
 	lstore.Save(&Location{
-		ID: LocationID(GenerateID("loc", locationIDLength)),
-		Name: "Meeting Room 4",
-		IsPlace: true,
+		ID:       LocationID(GenerateID("loc", locationIDLength)),
+		Name:     "Meeting Room 4",
+		IsPlace:  true,
 		Capacity: 50,
 	})
 	lstore.Save(&Location{
-		ID: LocationID(GenerateID("loc", locationIDLength)),
-		Name: "Meeting Room 5",
-		IsPlace: true,
+		ID:       LocationID(GenerateID("loc", locationIDLength)),
+		Name:     "Meeting Room 5",
+		IsPlace:  true,
 		Capacity: 50,
 	})
 	lstore.Save(&Location{
-		ID: LocationID(GenerateID("loc", locationIDLength)),
-		Name: "Ad-hoc meetings",
+		ID:      LocationID(GenerateID("loc", locationIDLength)),
+		Name:    "Ad-hoc meetings",
 		IsPlace: false,
 	})
-		
+
 }
 
 func (lstore LocationStore) Find(id LocationID) (*Location, error) {
@@ -67,7 +66,7 @@ func (lstore *LocationStore) Save(location *Location) error {
 	return Event.Save()
 }
 
-func (lstore LocationStore) GetLocations() ([]*Location) {
+func (lstore LocationStore) GetLocations() []*Location {
 	return []*Location(lstore)
 }
 

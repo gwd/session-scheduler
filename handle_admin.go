@@ -17,7 +17,7 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		return
 	}
 
-	content := map[string]interface{}{ "User": user }
+	content := map[string]interface{}{"User": user}
 
 	tmpl := ps.ByName("template")
 	switch tmpl {
@@ -26,7 +26,7 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		content["Vcode"] = Event.VerificationCode
 		lastUpdate := "Never"
 		if Event.ScheduleV2 != nil {
-			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String()+" ago"
+			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String() + " ago"
 		}
 		content["SinceLastSchedule"] = lastUpdate
 		switch {
@@ -82,9 +82,9 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		if newvcode == "" {
 			RenderTemplate(w, r, "console?flash=Invalid+Vcode",
 				map[string]interface{}{
-					"User": user,
+					"User":    user,
 					"console": true,
-					"Vcode": Event.VerificationCode,
+					"Vcode":   Event.VerificationCode,
 				})
 			return
 		}
@@ -100,14 +100,14 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		switch newactive {
 		case "0":
 			Event.Active = false
-			flash="Website+Deactivated"
+			flash = "Website+Deactivated"
 		case "1":
 			Event.Active = true
-			flash="Website+Activated"
+			flash = "Website+Activated"
 		default:
 			RenderTemplate(w, r, "console?flash=Invalid+Activate+State",
 				map[string]interface{}{
-					"User": user,
+					"User":    user,
 					"console": true,
 				})
 			return
@@ -138,7 +138,7 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 
 	flash := "Success"
-	
+
 	action := ps.ByName("action")
 
 	if !Event.TestMode {
@@ -152,7 +152,7 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 			})
 			return
 		}
-		
+
 		Event.TestMode = true
 		Event.Save()
 
@@ -171,24 +171,24 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		case "genuser":
 			countString := r.FormValue("count")
 			count, err := strconv.Atoi(countString)
-			if err != nil || !(count > 0){
+			if err != nil || !(count > 0) {
 				flash = "Bad+input"
 			} else {
 				for i := 0; i < count; i++ {
 					NewTestUser()
 				}
-				flash = countString+" users generated"
+				flash = countString + " users generated"
 			}
 		case "gendiscussion":
 			countString := r.FormValue("count")
 			count, err := strconv.Atoi(countString)
-			if err != nil || !(count > 0){
+			if err != nil || !(count > 0) {
 				flash = "Bad+input"
 			} else {
 				for i := 0; i < count; i++ {
 					NewTestDiscussion(nil)
 				}
-				flash = countString+" discussions generated"
+				flash = countString + " discussions generated"
 			}
 		case "geninterest":
 			TestGenerateInterest()
