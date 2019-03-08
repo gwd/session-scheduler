@@ -98,18 +98,16 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		newactive := r.FormValue("active")
 		flash := ""
 		switch newactive {
-		case "0":
+		case "":
 			Event.Active = false
 			flash = "Website+Deactivated"
-		case "1":
+		case "active":
 			Event.Active = true
 			flash = "Website+Activated"
 		default:
-			RenderTemplate(w, r, "console?flash=Invalid+Activate+State",
-				map[string]interface{}{
-					"User":    user,
-					"console": true,
-				})
+			log.Printf("Unexpected setactive value: %v", newactive)
+			flash = "Invalid form result: Report this error to the admin"
+			http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
 			return
 		}
 

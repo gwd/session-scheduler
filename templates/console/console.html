@@ -60,14 +60,15 @@
       </li>
       <li class="list-group-item">
 	<form action="/admin/setactive" method="POST">
-	{{if .IsActive}}
-	<input type="hidden" name="active" value="0">
-        <input type="submit" value="Deactivate" class="btn btn-primary">
-	{{else}}
-	<input type="hidden" name="active" value="1">
-        <input type="submit" value="Activate" class="btn btn-secondary">
-	{{end}}
-      </form>
+          <div class="custom-control custom-switch">
+	    <input type="checkbox" class="custom-control-input" name="active" value="active" id="active" {{if .IsActive}} checked{{end}} onChange="this.form.submit()">
+	    <label class="custom-control-label" for="active">Website 'Active'</label>
+	  </div>
+	  <input type="submit" value="Set" class="btn btn-primary noscript">
+	  <script>
+	  $('.noscript').hide();
+	  </script>
+	</form>
       </li>
       <li class="list-group-item">
       <form action="/admin/resetEventData" method="POST">
