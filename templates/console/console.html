@@ -59,10 +59,14 @@
       </form>
       </li>
       <li class="list-group-item">
-	<form action="/admin/setactive" method="POST">
+	<form action="/admin/setstatus" method="POST">
           <div class="custom-control custom-switch">
-	    <input type="checkbox" class="custom-control-input" name="active" value="active" id="active" {{if .IsActive}} checked{{end}} onChange="this.form.submit()">
-	    <label class="custom-control-label" for="active">Website 'Active'</label>
+	    <input type="checkbox" class="custom-control-input" name="status" value="websiteActive" id="website" {{if .IsWebsiteActive}} checked{{end}} onChange="this.form.submit()">
+	    <label class="custom-control-label" for="website">Website 'Active'</label>
+	  </div>
+          <div class="custom-control custom-switch">
+	    <input type="checkbox" class="custom-control-input" name="status" value="scheduleActive" id="schedule" {{if .IsScheduleActive}} checked{{end}} onChange="this.form.submit()">
+	    <label class="custom-control-label" for="schedule">Schedule 'Active'</label>
 	  </div>
 	  <input type="submit" value="Set" class="btn btn-primary noscript">
 	  <script>

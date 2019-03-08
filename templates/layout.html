@@ -20,8 +20,10 @@
 		<a class="nav-link" href="/list/discussion">Sessions</a></li>
 		<li class="nav-item">
 		<a class="nav-link" href="/discussion/new">Propose</a></li>
+		{{if .IsScheduleActive}}
 		<li class="nav-item">
 		<a class="nav-link" href="/schedule">Schedule</a></li>
+		{{end}}
 		<li class="nav-item">
 		<a class="nav-link" href="/list/user">Attendees</a></li>
 	    {{end}}
@@ -32,7 +34,7 @@
 	      <ul class="navbar-nav navbar-right">
 		{{if .CurrentUser}}
 		{{if .CurrentUser.IsAdmin}}
-		{{if .IsActive}}
+		{{if .IsWebsiteActive}}
 		<span class="badge badge-primary">Active</span>
 		{{else}}
 		<span class="badge badge-secondary">Inactive</span>
@@ -45,7 +47,7 @@
 		<li class="nav-item">
 		<a href="/sign-out" class="nav-link">Sign Out</a></li>
 		{{else}}
-		{{if .IsActive}}
+		{{if .IsWebsiteActive}}
 		<li class="nav-item">
 		  <a href="/register" class="nav-link">Register</a></li>
 		{{end}}

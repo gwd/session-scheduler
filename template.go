@@ -70,7 +70,8 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, name string, data ma
 	data["CurrentUser"] = cur
 	data["Flash"] = r.URL.Query().Get("flash")
 	data["IsTestMode"] = Event.TestMode
-	data["IsActive"] = Event.Active
+	data["IsWebsiteActive"] = Event.Active
+	data["IsScheduleActive"] = Event.ScheduleActive
 	data["ShowToolbar"] = Event.Active || (cur != nil && cur.IsAdmin)
 
 	funcs := template.FuncMap{

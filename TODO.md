@@ -5,7 +5,6 @@
 
 # Priority improvements
 
-* Allow enabling / disabling schedule
 * Deal with account creation restriction
  - Have session 'moderation' for 'unverified' accounts
 * Having a place to take notes during the session

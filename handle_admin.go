@@ -22,7 +22,6 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	tmpl := ps.ByName("template")
 	switch tmpl {
 	case "console":
-		content["IsActive"] = Event.Active
 		content["Vcode"] = Event.VerificationCode
 		lastUpdate := "Never"
 		if Event.ScheduleV2 != nil {
@@ -58,7 +57,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	action := ps.ByName("action")
 	if !(action == "runschedule" ||
 		action == "setvcode" ||
-		action == "setactive" ||
+		action == "setstatus" ||
 		action == "resetEventData" ||
 		action == "setLocked") {
 		return
@@ -94,21 +93,42 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		Event.Save()
 		http.Redirect(w, r, "console?flash=Verification+code+updated", http.StatusFound)
 		return
-	case "setactive":
-		newactive := r.FormValue("active")
+	case "setstatus":
+		r.ParseForm()
+		statuses := r.Form["status"]
 		flash := ""
-		switch newactive {
-		case "":
-			Event.Active = false
-			flash = "Website+Deactivated"
-		case "active":
-			Event.Active = true
-			flash = "Website+Activated"
-		default:
-			log.Printf("Unexpected setactive value: %v", newactive)
-			flash = "Invalid form result: Report this error to the admin"
-			http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
-			return
+		newval := map[string]bool{"website": false, "schedule": false}
+		for _, status := range statuses {
+			switch status {
+			case "websiteActive":
+				newval["website"] = true
+			case "scheduleActive":
+				newval["schedule"] = true
+			default:
+				log.Printf("Unexpected status value: %v", status)
+				flash = "Invalid form result: Report this error to the admin"
+				http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
+				return
+			}
+		}
+		if newval["website"] != Event.Active {
+			Event.Active = newval["website"]
+			if Event.Active {
+				flash += "Website+Activated"
+			} else {
+				flash += "Website+Deactivated"
+			}
+		}
+		if newval["schedule"] != Event.ScheduleActive {
+			Event.ScheduleActive = newval["schedule"]
+			if flash != "" {
+				flash += ", "
+			}
+			if Event.ScheduleActive {
+				flash += "Schedule+Activated"
+			} else {
+				flash += "Schedule+Deactivated"
+			}
 		}
 
 		log.Printf("New Activation state: %v", Event.Active)
