@@ -16,9 +16,9 @@
 {{define "admin/slots-form"}}
 <form action="/admin/setLocked" class="form-group col" method="POST">
   {{range .}}
-  <div class="form-check{{if .Checked}} bg-success{{end}}">
-    <input type="checkbox" name="locked" value="{{.Index}}"{{if .Checked}} checked{{end}}>
-    <label>{{.Label}}</label>
+  <div class="custom-control custom-switch{{if .Checked}} bg-success{{end}}">
+    <input type="checkbox" class="custom-control-input" name="locked" value="{{.Index}}" id="locked{{.Index}}"{{if .Checked}} checked{{end}}>
+    <label class="custom-control-label" for="locked{{.Index}}">{{.Label}}</label>
   </div>
   {{end}}
   <input type="submit" value="Update locked slots" class="btn btn-primary">
