@@ -182,8 +182,9 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 		}
 	}
 
-	// Editing a discussion takes it non-public
-	disc.IsPublic = false
+	// Editing a discussion takes it non-public unless the owner is verified.
+	owner, _ := Event.Users.Find(disc.Owner)
+	disc.IsPublic = (owner != nil && owner.IsVerified)
 
 	err := Event.Discussions.Save(disc)
 
@@ -271,8 +272,8 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 	// SetInterest will mark the schedule stale
 	owner.SetInterest(disc, 100)
 
-	// New discussions are non-public by default
-	disc.IsPublic = false
+	// New discussions are non-public by default unless owner is verified
+	disc.IsPublic = owner.IsVerified
 
 	return disc, Event.Discussions.Save(disc)
 }

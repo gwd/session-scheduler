@@ -32,6 +32,7 @@ type User struct {
 	HashedPassword string
 	Username       string
 	IsAdmin        bool
+	IsVerified     bool // Has entered the verification code
 	Interest       map[DiscussionID]int
 	// Profile: Informational only
 	Profile UserProfile
@@ -41,6 +42,7 @@ type UserDisplay struct {
 	ID          UserID
 	Username    string
 	IsAdmin     bool
+	IsVerified  bool // Has entered the verification code
 	MayEdit     bool
 	Profile     *UserProfile
 	Description template.HTML
@@ -57,9 +59,10 @@ func (u *User) MayEditDiscussion(d *Discussion) bool {
 
 func (u *User) GetDisplay(cur *User, long bool) (ud *UserDisplay) {
 	ud = &UserDisplay{
-		ID:       u.ID,
-		Username: u.Username,
-		IsAdmin:  u.IsAdmin,
+		ID:         u.ID,
+		Username:   u.Username,
+		IsAdmin:    u.IsAdmin,
+		IsVerified: u.IsVerified,
 	}
 	if cur != nil {
 		ud.MayEdit = cur.MayEditUser(u.ID)

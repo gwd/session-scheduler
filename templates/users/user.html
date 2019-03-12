@@ -27,9 +27,45 @@
 {{define "user/item-short"}}
 <div class="container">
   <div class="row">
+    {{with .User}}  
     <div class="col-sm"><h5>{{template "user/link" .}}</h5></div>
     <div class="col-sm">{{if .Profile}}{{if .Profile.RealName}}{{.Profile.RealName}}{{end}}{{end}}</div>
     <div class="col-sm">{{if .Profile}}{{if .Profile.Company}}{{.Profile.Company}}{{end}}{{end}}</div>
+    {{end}}
+    <div class="col-1">
+      <div class="row">
+      {{if .CurrentUser}}
+        {{if .CurrentUser.IsAdmin}}
+          <form action="/uid/user/{{.User.ID}}/setverified" method="POST">
+            <div class="custom-control custom-switch">
+	      <input type="checkbox" class="custom-control-input"
+	       name="verified" value="{{.User.ID}}" id="p{{.User.ID}}"
+	       {{if .User.IsVerified}} checked{{end}}
+	       onChange="this.form.submit()">
+	      <label class="custom-control-label" for="p{{.User.ID}}"> </label>
+	      <input type="hidden" name="newvalue" value={{if .User.IsVerified}}"false"{{else}}"true"{{end}}>
+	    </div>
+	    <input type="submit" value="Set" class="btn btn-primary noscript">
+	    <script>
+	    $('.noscript').hide();
+	    </script>
+            {{with .redirectURL}}
+            <input type="hidden" name="redirectURL" value="{{.}}">
+            {{else}}
+            <input type="hidden" name="redirectURL" value="/list/user#{{.User.ID}}">
+            {{end}}
+	  </form>
+	{{end}}
+	{{if .CurrentUser.IsAdmin}}
+	{{if .User.IsVerified}}
+	  <span class="badge badge-primary">Verified</span>
+	{{else}}
+	  <span class="badge badge-danger">Not Verified</span>
+	{{end}}
+	{{end}}
+      {{end}}
+      </div>
+    </div>
   </div>
 </div>
 {{end}}
@@ -49,8 +85,9 @@
 
 {{define "user/list"}}
 <ul class="list-group">
+  {{$CurrentUser := .CurrentUser}}
   {{range .List}}
-  <li class="list-group-item">{{template "user/item-short" .}}</li>
+  <li class="list-group-item">{{template "user/item-short" dict "User" . "CurrentUser" $CurrentUser}}</li>
   {{else}}
   <p>No users registered yet</p>
   {{end}}

@@ -127,7 +127,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 	if !((itype == "discussion" &&
 		(action == "setinterest" || action == "edit" || action == "delete" || action == "setpublic")) ||
-		(itype == "user" && action == "edit")) {
+		(itype == "user" && (action == "edit" || action == "setverified"))) {
 		log.Printf(" Disallowed action")
 		return
 	}
@@ -242,14 +242,14 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			return
 		}
 
+		user, _ := Event.Users.Find(UserID(uid))
+		if user == nil {
+			log.Printf("Invalid user: %s", uid)
+			return
+		}
+
 		switch action {
 		case "edit":
-			user, _ := Event.Users.Find(UserID(uid))
-			if user == nil {
-				log.Printf("Invalid user: %s", uid)
-				return
-			}
-
 			currentPassword := r.FormValue("currentPassword")
 			newPassword := r.FormValue("newPassword")
 			profile := parseProfile(r)
@@ -268,6 +268,25 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				}
 				panic(err)
 			}
+		case "setverified":
+			// Only administrators can change verification status
+			if !cur.IsAdmin {
+				log.Printf("%s isn't an admin")
+				return
+			}
+
+			newValueString := r.FormValue("newvalue")
+			if newValueString == "true" {
+				user.IsVerified = true
+			} else {
+				user.IsVerified = false
+			}
+
+			if tmp := r.FormValue("redirectURL"); tmp != "" {
+				redirectURL = tmp
+			}
+
+			Event.Users.Save(user)
 		}
 
 	default:
