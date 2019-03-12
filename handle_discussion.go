@@ -127,7 +127,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 	if !((itype == "discussion" &&
 		(action == "setinterest" || action == "edit" || action == "delete" || action == "setpublic")) ||
-		(itype == "user" && (action == "edit" || action == "setverified"))) {
+		(itype == "user" && (action == "edit" || action == "setverified" || action == "verify"))) {
 		log.Printf(" Disallowed action")
 		return
 	}
@@ -287,6 +287,16 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			}
 
 			Event.Users.Save(user)
+		case "verify":
+			vcode := r.FormValue("Vcode")
+
+			if vcode != Event.VerificationCode {
+				redirectURL = "view?flash=Invalid+Validation+Code"
+			} else {
+				user.IsVerified = true
+				Event.Users.Save(user)
+				redirectURL = "view?flash=Account+Verified"
+			}
 		}
 
 	default:

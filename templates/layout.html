@@ -43,7 +43,9 @@
 		<a href="/admin/console" class="nav-link">Console</a><li>
 		{{end}}
 		<li class="nav-item">
-		<a href="/uid/user/self/view" class="nav-link">{{.CurrentUser.Username}}</a></li>
+		<a href="/uid/user/self/view" class="nav-link">
+		{{if and (not .CurrentUser.IsVerified) (not .CurrentUser.IsAdmin)}}<span class="badge badge-warning">Unverified</span>{{end}}
+		{{.CurrentUser.Username}}</a></li>
 		<li class="nav-item">
 		<a href="/sign-out" class="nav-link">Sign Out</a></li>
 		{{else}}
