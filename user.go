@@ -61,11 +61,11 @@ func (u *User) GetDisplay(cur *User, long bool) (ud *UserDisplay) {
 	ud = &UserDisplay{
 		ID:         u.ID,
 		Username:   u.Username,
-		IsAdmin:    u.IsAdmin,
 		IsVerified: u.IsVerified,
 	}
 	if cur != nil {
 		ud.MayEdit = cur.MayEditUser(u.ID)
+		ud.IsAdmin = cur.IsAdmin
 		// Only display profile information to people who are logged in
 		ud.Profile = &u.Profile
 		ud.Description = ProcessText(u.Profile.Description)
