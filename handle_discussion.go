@@ -126,7 +126,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	//log.Printf("POST %s %s %s", uid, action, itype)
 
 	if !((itype == "discussion" &&
-		(action == "setinterest" || action == "edit" || action == "delete")) ||
+		(action == "setinterest" || action == "edit" || action == "delete" || action == "setpublic")) ||
 		(itype == "user" && action == "edit")) {
 		log.Printf(" Disallowed action")
 		return
@@ -212,6 +212,26 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			// Can't redirect to 'view' as it's been deleted
 			http.Redirect(w, r, "/list/discussion", http.StatusFound)
 			return
+		case "setpublic":
+			// Only administrators can change public
+			if !cur.IsAdmin {
+				log.Printf("%s isn't an admin")
+				return
+			}
+
+			newValueString := r.FormValue("newvalue")
+			if newValueString == "true" {
+				disc.IsPublic = true
+			} else {
+				disc.IsPublic = false
+			}
+
+			if tmp := r.FormValue("redirectURL"); tmp != "" {
+				redirectURL = tmp
+			}
+
+			Event.Discussions.Save(disc)
+
 		default:
 			return
 		}

@@ -22,6 +22,7 @@ type Discussion struct {
 	Description   string
 	Interested    map[UserID]bool
 	PossibleSlots []bool
+	IsPublic      bool // Is this discussion publicly visible?
 
 	// Cached information from a schedule
 	location *Location
@@ -50,6 +51,7 @@ type DiscussionDisplay struct {
 	DescriptionRaw string
 	Owner          *User
 	Interested     []*User
+	IsPublic       bool
 	// IsUser: Used to determine whether to display 'interest'
 	IsUser bool
 	// MayEdit: Used to determine whether to show edit / delete buttons
@@ -94,11 +96,20 @@ func (d *Discussion) GetMaxScore() int {
 }
 
 func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
+	// Only display a discussion if:
+	// 1. It's pulbic, or...
+	// 2. The current user is admin, or the discussion owner
+	if !d.IsPublic &&
+		(cur == nil || (!cur.IsAdmin && cur.ID != d.Owner)) {
+		return nil
+	}
+
 	dd := &DiscussionDisplay{
 		ID:             d.ID,
 		Title:          d.Title,
 		DescriptionRaw: d.Description,
 		Description:    ProcessText(d.Description),
+		IsPublic:       d.IsPublic,
 	}
 
 	if d.location != nil {
@@ -171,6 +182,9 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 		}
 	}
 
+	// Editing a discussion takes it non-public
+	disc.IsPublic = false
+
 	err := Event.Discussions.Save(disc)
 
 	return disc, err
@@ -236,6 +250,8 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 		}
 		if !owner.IsAdmin && disc.Owner == check.Owner {
 			count++
+			// Normal users are not allowed to propose more
+			// discussions than they can personally attend
 			if count > Event.ScheduleSlots {
 				log.Printf("%s New discussion failed: Too many discussions (%d)",
 					owner.Username, count)
@@ -254,6 +270,9 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 
 	// SetInterest will mark the schedule stale
 	owner.SetInterest(disc, 100)
+
+	// New discussions are non-public by default
+	disc.IsPublic = false
 
 	return disc, Event.Discussions.Save(disc)
 }

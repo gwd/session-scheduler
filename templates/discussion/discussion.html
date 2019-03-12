@@ -87,6 +87,40 @@
       </form>
     </div>
     {{end}}
+    <div class="col-1">
+      <div class="row">
+      {{if .CurrentUser}}
+        {{if .CurrentUser.IsAdmin}}
+          <form action="/uid/discussion/{{.Discussion.ID}}/setpublic" method="POST">
+            <div class="custom-control custom-switch">
+	      <input type="checkbox" class="custom-control-input"
+	       name="public" value="{{.Discussion.ID}}" id="p{{.Discussion.ID}}"
+	       {{if .Discussion.IsPublic}} checked{{end}}
+	       onChange="this.form.submit()">
+	      <label class="custom-control-label" for="p{{.Discussion.ID}}"> </label>
+	      <input type="hidden" name="newvalue" value={{if .Discussion.IsPublic}}"false"{{else}}"true"{{end}}>
+	    </div>
+	    <input type="submit" value="Set" class="btn btn-primary noscript">
+	    <script>
+	    $('.noscript').hide();
+	    </script>
+            {{with .redirectURL}}
+            <input type="hidden" name="redirectURL" value="{{.}}">
+            {{else}}
+            <input type="hidden" name="redirectURL" value="/list/discussion#{{.Discussion.ID}}">
+            {{end}}
+	  </form>
+	{{end}}
+	{{if or .CurrentUser.IsAdmin (eq .Discussion.Owner.ID .CurrentUser.ID)}}
+	{{if .Discussion.IsPublic}}
+	  <span class="badge badge-primary">Public</span>
+	{{else}}
+	  <span class="badge badge-warning">Not Public</span>
+	{{end}}
+	{{end}}
+      {{end}}
+      </div>
+    </div>
   </div>
 </div>
 {{end}}
@@ -94,6 +128,7 @@
 {{define "discussion/list"}}
 <div class="container">
   {{$redirectURL := .redirectURL}}
+  {{$CurrentUser := .CurrentUser}}
   <ul class="list-group">
     {{if .CurrentUser}}{{if not .CurrentUser.IsAdmin}}
     <div class="container m-3">How interested are you in attending the
@@ -101,7 +136,7 @@
     {{end}}{{end}}
     {{range .List}}
       <li class="list-group-item">
-      {{template "discussion/item-short"  dict "Discussion" . "redirectURL" $redirectURL }}
+      {{template "discussion/item-short"  dict "Discussion" . "redirectURL" $redirectURL "CurrentUser" $CurrentUser}}
       </li>
     {{else}}
       <p>No discussions registered yet</p>

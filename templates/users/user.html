@@ -42,7 +42,7 @@
     <a href="edit" class="btn btn-primary" role="button">Edit</a>
     {{end}}
     {{$redirectURL := printf "/uid/user/%s/view" .Display.ID}}
-    {{template "discussion/list" dict "List" .Display.List "redirectURL" $redirectURL}}
+    {{template "discussion/list" dict "List" .Display.List "redirectURL" $redirectURL "CurrentUser" .CurrentUser}}
   </div>
 </div>
 {{end}}
