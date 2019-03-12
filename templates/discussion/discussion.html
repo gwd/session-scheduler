@@ -95,10 +95,10 @@
 <div class="container">
   {{$redirectURL := .redirectURL}}
   <ul class="list-group">
-    {{if .CurrentUser}}
+    {{if .CurrentUser}}{{if not .CurrentUser.IsAdmin}}
     <div class="container m-3">How interested are you in attending the
     following discussions?</div>
-    {{end}}
+    {{end}}{{end}}
     {{range .List}}
       <li class="list-group-item">
       {{template "discussion/item-short"  dict "Discussion" . "redirectURL" $redirectURL }}
