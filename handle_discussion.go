@@ -236,7 +236,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 			log.Printf(" new profile %v", *profile)
 
-			userNext, err := UpdateUser(user, currentPassword, newPassword, profile)
+			userNext, err := UpdateUser(user, cur, currentPassword, newPassword, profile)
 
 			if err != nil {
 				if IsValidationError(err) {

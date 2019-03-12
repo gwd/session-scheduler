@@ -190,7 +190,7 @@ func UserRemoveDiscussion(did DiscussionID) error {
 	})
 }
 
-func UpdateUser(user *User, currentPassword, newPassword string,
+func UpdateUser(user, modifier *User, currentPassword, newPassword string,
 	profile *UserProfile) (User, error) {
 	out := *user
 	out.Profile = *profile
@@ -202,7 +202,7 @@ func UpdateUser(user *User, currentPassword, newPassword string,
 		}
 
 		if bcrypt.CompareHashAndPassword(
-			[]byte(user.HashedPassword),
+			[]byte(modifier.HashedPassword),
 			[]byte(currentPassword),
 		) != nil {
 			return out, errPasswordIncorrect
