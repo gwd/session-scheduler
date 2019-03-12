@@ -68,6 +68,10 @@
 	    <input type="checkbox" class="custom-control-input" name="status" value="scheduleActive" id="schedule" {{if .IsScheduleActive}} checked{{end}} onChange="this.form.submit()">
 	    <label class="custom-control-label" for="schedule">Schedule 'Active'</label>
 	  </div>
+          <div class="custom-control custom-switch">
+	    <input type="checkbox" class="custom-control-input" name="status" value="requireVerification" id="verification" {{if .RequireVerification}} checked{{end}} onChange="this.form.submit()">
+	    <label class="custom-control-label" for="verification">Require verification for new accounts and sessions</label>
+	  </div>
 	  <input type="submit" value="Set" class="btn btn-primary noscript">
 	  <script>
 	  $('.noscript').hide();

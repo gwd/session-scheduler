@@ -97,13 +97,15 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		r.ParseForm()
 		statuses := r.Form["status"]
 		flash := ""
-		newval := map[string]bool{"website": false, "schedule": false}
+		newval := map[string]bool{"website": false, "schedule": false, "verification": false}
 		for _, status := range statuses {
 			switch status {
 			case "websiteActive":
 				newval["website"] = true
 			case "scheduleActive":
 				newval["schedule"] = true
+			case "requireVerification":
+				newval["verification"] = true
 			default:
 				log.Printf("Unexpected status value: %v", status)
 				flash = "Invalid form result: Report this error to the admin"
@@ -130,8 +132,20 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 				flash += "Schedule+Deactivated"
 			}
 		}
+		if newval["verification"] != Event.RequireVerification {
+			Event.RequireVerification = newval["verification"]
+			if flash != "" {
+				flash += ", "
+			}
+			if Event.RequireVerification {
+				flash += "Verification+Required"
+			} else {
+				flash += "Verificaiton+Not+Required"
+			}
+		}
 
-		log.Printf("New Activation state: %v", Event.Active)
+		log.Printf("New state: Active %v ScheduleActive %v RequireVerification $%v",
+			Event.Active, Event.ScheduleActive, Event.RequireVerification)
 		Event.Save()
 		http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
 		return

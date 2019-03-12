@@ -21,9 +21,10 @@ type EventStore struct {
 	ServeAddress string
 	filename     string
 
-	TestMode       bool
-	Active         bool
-	ScheduleActive bool
+	TestMode            bool
+	Active              bool
+	ScheduleActive      bool
+	RequireVerification bool
 
 	Timetable Timetable
 

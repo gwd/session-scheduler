@@ -82,7 +82,9 @@ func NewUser(username, password, vcode string, profile *UserProfile) (*User, err
 
 	log.Printf("New user post: '%s'", username)
 
-	if vcode != Event.VerificationCode {
+	if vcode == Event.VerificationCode {
+		user.IsVerified = true
+	} else if Event.RequireVerification {
 		log.Printf("New user failed: Bad vcode %s", vcode)
 		return user, errInvalidVcode
 	}

@@ -72,6 +72,7 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, name string, data ma
 	data["IsTestMode"] = Event.TestMode
 	data["IsWebsiteActive"] = Event.Active
 	data["IsScheduleActive"] = Event.ScheduleActive
+	data["RequireVerification"] = Event.RequireVerification
 	data["ShowToolbar"] = Event.Active || (cur != nil && cur.IsAdmin)
 
 	funcs := template.FuncMap{
