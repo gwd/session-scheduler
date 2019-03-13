@@ -210,6 +210,13 @@ func DeleteDiscussion(did DiscussionID) {
 	Event.Discussions.Delete(did)
 }
 
+func DiscussionRemoveUser(uid UserID) error {
+	return Event.Discussions.Iterate(func(d *Discussion) error {
+		delete(d.Interested, uid)
+		return nil
+	})
+}
+
 func MakePossibleSlots(len int) []bool {
 	pslots := make([]bool, len)
 	for i := range pslots {

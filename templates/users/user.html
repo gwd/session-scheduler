@@ -23,8 +23,11 @@
     <div>Description: {{.Description}}</div>
     {{end}}
     {{if .MayEdit}}
-    <div class="m-1"><a href="edit" class="btn btn-primary" role="button">Edit</a></div>
-    
+    <div class="m-1"><a href="edit" class="btn btn-primary" role="button">Edit</a>
+    {{if .IsAdmin}}
+    <a href="delete" class="btn btn-danger" role="button">Delete</a>
+    {{end}}
+    </div>
       {{if and (not .IsVerified) (not .IsAdmin)}}
       <div class="m-1"> This account is unverified.  New sessions and
 	edits to existing sessions will be moderated (visible only to
@@ -172,6 +175,17 @@
 </div>
 {{end}}
 
+{{define "user/delete"}}
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <h1>Delete user</h1>
+    <div class="m-1">Really delete user "{{.Display.Username}}" and all their sessions?</div>
+    <form action="delete" method="POST">
+    <input type="submit" value="Delete" class="btn btn-danger">
+    </form>
+  </div>
+</div>
+{{end}}
 
 {{define "user/new"}}
 <div class="col-md-6 col-md-offset-3">
@@ -210,3 +224,4 @@
   </form>
 </div>
 {{end}}
+

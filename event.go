@@ -311,6 +311,12 @@ func (ustore *UserStore) DeepCopy(ucopy *UserStore) (err error) {
 	return nil
 }
 
+func (ustore UserStore) Delete(uid UserID) error {
+	delete(ustore, uid)
+	Event.ScheduleState.Modify()
+	return Event.Save()
+}
+
 func (dstore *DiscussionStore) DeepCopy(dcopy *DiscussionStore) (err error) {
 	if err = deepCopyEncoder.Encode(dstore); err != nil {
 		return err
@@ -370,6 +376,17 @@ func (dstore DiscussionStore) GetListUser(u *User, cur *User) (list []*Discussio
 
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].ID < list[j].ID
+	})
+
+	return
+}
+
+func (dstore DiscussionStore) GetDidListUser(uid UserID) (list []DiscussionID) {
+	dstore.Iterate(func(d *Discussion) error {
+		if d.Owner == uid {
+			list = append(list, d.ID)
+		}
+		return nil
 	})
 
 	return

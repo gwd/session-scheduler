@@ -256,6 +256,11 @@ func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 	for uid := range disc.Interested {
 		// Find out how much each user was interested in it
 		user, _ := us.Find(uid)
+		if user == nil {
+			log.Printf("INTERNAL ERROR: disc.ID %v has interest from non-existent user %v",
+				disc.ID, uid)
+			continue
+		}
 
 		interest := user.Interest[disc.ID]
 

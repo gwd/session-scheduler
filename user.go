@@ -229,3 +229,17 @@ func UpdateUser(user, modifier *User, currentPassword, newPassword string,
 
 	return out, nil
 }
+
+func DeleteUser(uid UserID) error {
+	dlist := Event.Discussions.GetDidListUser(uid)
+
+	for _, did := range dlist {
+		DeleteDiscussion(did)
+	}
+
+	DiscussionRemoveUser(uid)
+
+	Event.Users.Delete(uid)
+
+	return nil
+}

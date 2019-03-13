@@ -66,10 +66,8 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 	}
 
-	// OK: discussion / user => view; discussion / user -> edit
-	if !(((action == "view" || action == "edit") &&
-		(itype == "user" || itype == "discussion")) ||
-		(itype == "discussion" && action == "delete")) {
+	if !((action == "view" || action == "edit" || action == "delete") &&
+		(itype == "user" || itype == "discussion")) {
 		return
 	}
 
@@ -151,7 +149,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 	if !((itype == "discussion" &&
 		(action == "setinterest" || action == "edit" || action == "delete" || action == "setpublic")) ||
-		(itype == "user" && (action == "edit" || action == "setverified" || action == "verify"))) {
+		(itype == "user" && (action == "edit" || action == "setverified" || action == "verify" || action == "delete"))) {
 		log.Printf(" Disallowed action")
 		return
 	}
@@ -328,6 +326,17 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				Event.Users.Save(user)
 				redirectURL = "view?flash=Account+Verified"
 			}
+		case "delete":
+			if !cur.IsAdmin {
+				log.Printf("WARNING user %s isn't an admin", cur.Username)
+				return
+			}
+
+			DeleteUser(user.ID)
+
+			// Can't redirect to 'view' as it's been deleted
+			http.Redirect(w, r, "/list/user", http.StatusFound)
+			return
 		}
 
 	default:
