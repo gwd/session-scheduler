@@ -4,6 +4,10 @@
 
 {{define "user/item-full"}}
 <div class="container flex-column">
+  {{if and (not .Display.IsVerified) (not .Display.IsAdmin) .RequireVerification}}
+  <div class="alert alert-warning">Account verification is now required to create or edit sessions.</div>
+  {{end}}
+  {{with .Display}}
   <h5>{{template "user/link" .}}</h5>
   {{if .Profile}}
     {{if .Profile.RealName}}
@@ -40,6 +44,7 @@
     {{end}}
   {{else}}
     <div class="text-muted">Full profile information only available when logged in</div>
+    {{end}}
   {{end}}
 </div>
 {{end}}
@@ -93,7 +98,7 @@
 {{define "user/view"}}
 <div class="row">
   <div class="col-9 col-offset-3">
-      {{template "user/item-full" .Display}}
+      {{template "user/item-full" dict "Display" .Display "RequireVerification" .RequireVerification}}
     {{$redirectURL := printf "/uid/user/%s/view" .Display.ID}}
     {{template "discussion/list" dict "List" .Display.List "redirectURL" $redirectURL "CurrentUser" .CurrentUser}}
   </div>

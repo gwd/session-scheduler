@@ -8,6 +8,14 @@ import (
 )
 
 func HandleDiscussionNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if Event.RequireVerification {
+		cur := RequestUser(r)
+		if cur == nil || !cur.IsVerified {
+			http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
+			return
+		}
+	}
+
 	RenderTemplate(w, r, "discussion/new", nil)
 }
 
@@ -17,6 +25,11 @@ func HandleDiscussionNotFound(w http.ResponseWriter, r *http.Request, _ httprout
 
 func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	owner := RequestUser(r)
+
+	if Event.RequireVerification && (owner == nil || !owner.IsVerified) {
+		http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
+		return
+	}
 
 	disc, err := NewDiscussion(
 		owner,
@@ -65,6 +78,17 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	switch itype {
 	case "discussion":
 		disc, _ := DiscussionFindById(uid)
+
+		if disc == nil {
+			break
+		}
+
+		// Unverified accounts can't create or edit sessions
+		if action == "edit" && Event.RequireVerification &&
+			(cur == nil || !cur.IsVerified) {
+			http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
+			return
+		}
 
 		if disc != nil && (action != "edit" || cur.MayEditDiscussion(disc)) {
 			display = disc.GetDisplay(cur)
@@ -172,6 +196,13 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			if !cur.MayEditDiscussion(disc) {
 				log.Printf("WARNING user %s doesn't have permission to edit discussion %s",
 					cur.Username, disc.ID)
+				return
+			}
+
+			// Unverified accounts can't create or edit sessions
+			if Event.RequireVerification &&
+				(cur == nil || !cur.IsVerified) {
+				http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 				return
 			}
 
