@@ -55,51 +55,54 @@ func LogRequest(w http.ResponseWriter, r *http.Request) {
 func serve() {
 	go handleSigs()
 
-	router := NewRouter()
+	public := NewRouter()
 
-	router.GET("/", HandleHome)
-	router.GET("/register", HandleUserNew)
-	router.POST("/register", HandleUserCreate)
-	router.GET("/login", HandleSessionNew)
-	router.POST("/login", HandleSessionCreate)
+	public.GET("/", HandleHome)
+	public.GET("/register", HandleUserNew)
+	public.POST("/register", HandleUserCreate)
+	public.GET("/login", HandleSessionNew)
+	public.POST("/login", HandleSessionCreate)
 
-	router.GET("/discussion/notfound", HandleDiscussionNotFound)
+	public.GET("/discussion/notfound", HandleDiscussionNotFound)
 
-	router.GET("/schedule", HandleScheduleView)
+	public.GET("/schedule", HandleScheduleView)
 
-	router.GET("/list/:itype", HandleList)
-	router.GET("/uid/:itype/:uid/:action", HandleUid)
-	router.POST("/uid/:itype/:uid/:action", HandleUidPost)
+	public.GET("/list/:itype", HandleList)
+	public.GET("/uid/:itype/:uid/:action", HandleUid)
+	public.POST("/uid/:itype/:uid/:action", HandleUidPost)
 
-	router.ServeFiles(
+	public.ServeFiles(
 		"/assets/*filepath",
 		http.Dir("assets/"),
 	)
 
-	router.GET("/robots.txt", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	public.GET("/robots.txt", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		http.ServeFile(w, r, "assets/robots.txt")
 	})
 
-	secureRouter := NewRouter()
-	secureRouter.GET("/sign-out", HandleSessionDestroy)
-	secureRouter.GET("/discussion/new", HandleDiscussionNew)
-	secureRouter.POST("/discussion/new", HandleDiscussionCreate)
-	secureRouter.GET("/admin/:template", HandleAdminConsole)
-	secureRouter.POST("/admin/:action", HandleAdminAction)
+	userAuth := NewRouter()
+	userAuth.GET("/sign-out", HandleSessionDestroy)
+	userAuth.GET("/discussion/new", HandleDiscussionNew)
+	userAuth.POST("/discussion/new", HandleDiscussionCreate)
 
-	secureRouter.POST("/testaction/:action", HandleTestAction)
+	admin := NewRouter()
+	admin.GET("/admin/:template", HandleAdminConsole)
+	admin.POST("/admin/:action", HandleAdminAction)
 
-	middleware := Middleware{}
-	middleware.Add(http.HandlerFunc(LogRequest))
-	middleware.Add(router)
-	middleware.Add(http.HandlerFunc(RequireLogin))
-	middleware.Add(secureRouter)
+	admin.POST("/testaction/:action", HandleTestAction)
+
+	middleware := Middleware{
+		Logger:   LogRequest,
+		Public:   public,
+		UserAuth: userAuth,
+		Admin:    admin,
+	}
 
 	log.Printf("Listening on %s", Event.ServeAddress)
 	log.Fatal(http.ListenAndServe(Event.ServeAddress, middleware))
 }
 
-// Creates a new router
+// Creates a new public
 func NewRouter() *httprouter.Router {
 	router := httprouter.New()
 	router.NotFound = http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})

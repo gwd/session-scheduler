@@ -3,37 +3,69 @@ package main
 import (
 	"net/http"
 	"sync"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 // This has to be global because ServeHTTP cannot have a pointer receiver.
 var lock sync.Mutex
 
 type Middleware struct {
-	handlers []http.Handler
-}
+	Logger http.HandlerFunc
+	// Public: No cookie required
+	Public *httprouter.Router
 
-func (m *Middleware) Add(handler http.Handler) {
-	m.handlers = append(m.handlers, handler)
+	// Logged-in users only: Will be redirected to login if no cookie detected
+	UserAuth *httprouter.Router
+
+	// Admin only: Will be 404 if the logged-in user isnt' an admin
+	Admin *httprouter.Router
 }
 
 func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Wrap the supplied ResponseWriter
 	mw := NewMiddlewareResponseWriter(w)
 
 	// HACK: Only allow a single access at a time for now
 	lock.Lock()
 	defer lock.Unlock()
 
-	// Loop through all of the registered handlers
-	for _, handler := range m.handlers {
-		// Call the handler with our MiddlewareResponseWriter
-		handler.ServeHTTP(mw, r)
+	if m.Logger != nil {
+		m.Logger(w, r)
+	}
 
-		// If there was a write, stop processing
+	// First, look for public paths
+	if handler, params, _ := m.Public.Lookup(r.Method, r.URL.Path); handler != nil {
+		handler(mw, r, params)
 		if mw.written {
 			return
 		}
 	}
+
+	u := RequestUser(r)
+
+	// Then, look for 'requires login' paths
+	if handler, params, _ := m.UserAuth.Lookup(r.Method, r.URL.Path); handler != nil {
+		if u == nil {
+			RequireLogin(mw, r)
+		} else {
+			handler(mw, r, params)
+		}
+		if mw.written {
+			return
+		}
+	}
+
+	// Then, look for 'admin-only' paths; only respond if we're
+	// actually logged in as an admin
+	if handler, params, _ := m.Admin.Lookup(r.Method, r.URL.Path); handler != nil {
+		if u != nil && u.IsAdmin {
+			handler(mw, r, params)
+			if mw.written {
+				return
+			}
+		}
+	}
+
 	// If no handlers wrote to the response, it’s a 404
 	http.NotFound(w, r)
 }

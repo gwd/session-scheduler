@@ -84,11 +84,6 @@ func RequestUser(r *http.Request) *User {
 }
 
 func RequireLogin(w http.ResponseWriter, r *http.Request) {
-	// Let the request pass if we've got a user
-	if RequestUser(r) != nil {
-		return
-	}
-
 	query := url.Values{}
 	query.Add("next", url.QueryEscape(r.URL.String()))
 
