@@ -71,6 +71,12 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
+	// Editing always requires a login
+	if action == "edit" && cur == nil {
+		RequireLogin(w, r)
+		return
+	}
+
 	var display interface{}
 
 	switch itype {
@@ -82,8 +88,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 
 		// Unverified accounts can't create or edit sessions
-		if action == "edit" && Event.RequireVerification &&
-			(cur == nil || !cur.IsVerified) {
+		if action == "edit" && Event.RequireVerification && !cur.IsVerified {
 			http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 			return
 		}
