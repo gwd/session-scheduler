@@ -79,6 +79,9 @@ func serve() {
 	public.GET("/robots.txt", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		http.ServeFile(w, r, "assets/robots.txt")
 	})
+	public.GET("/favicon.ico", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		http.ServeFile(w, r, "assets/favicon.ico")
+	})
 
 	userAuth := NewRouter()
 	userAuth.GET("/sign-out", HandleSessionDestroy)
