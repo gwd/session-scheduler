@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -56,6 +57,11 @@ func HandleSessionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 
 	if next == "" {
 		next = "/"
+	} else {
+		next, err = url.QueryUnescape(next)
+		if err != nil {
+			next = "/"
+		}
 	}
 
 	http.Redirect(w, r, next+"?flash=Signed+in", http.StatusFound)
