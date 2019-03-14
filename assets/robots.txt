@@ -1,0 +1,4 @@
+User-Agent: *
+Disallow: /uid/user/
+Disallow: /list/user
+Disallow: /discussion/new

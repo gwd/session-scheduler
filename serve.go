@@ -76,6 +76,10 @@ func serve() {
 		http.Dir("assets/"),
 	)
 
+	router.GET("/robots.txt", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		http.ServeFile(w, r, "assets/robots.txt")
+	})
+
 	secureRouter := NewRouter()
 	secureRouter.GET("/sign-out", HandleSessionDestroy)
 	secureRouter.GET("/discussion/new", HandleDiscussionNew)
