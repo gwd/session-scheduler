@@ -12,8 +12,11 @@ var lock sync.Mutex
 
 type Middleware struct {
 	Logger http.HandlerFunc
-	// Public: No cookie required
-	Public *httprouter.Router
+	// Always: Available always, no login required
+	Always *httprouter.Router
+
+	// Active: Only available when the website is active, no login required
+	Active *httprouter.Router
 
 	// Logged-in users only: Will be redirected to login if no cookie detected
 	UserAuth *httprouter.Router
@@ -34,7 +37,7 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// First, look for public paths
-	if handler, params, _ := m.Public.Lookup(r.Method, r.URL.Path); handler != nil {
+	if handler, params, _ := m.Always.Lookup(r.Method, r.URL.Path); handler != nil {
 		handler(mw, r, params)
 		if mw.written {
 			return
@@ -42,6 +45,18 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u := RequestUser(r)
+
+	// Then, look for paths which are available only when active, or for admins
+	if handler, params, _ := m.Active.Lookup(r.Method, r.URL.Path); handler != nil {
+		if Event.Active || u != nil {
+			handler(mw, r, params)
+		} else {
+			http.Redirect(w, r, "/", http.StatusFound)
+		}
+		if mw.written {
+			return
+		}
+	}
 
 	// Then, look for 'requires login' paths
 	if handler, params, _ := m.UserAuth.Lookup(r.Method, r.URL.Path); handler != nil {

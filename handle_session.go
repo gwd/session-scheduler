@@ -42,6 +42,11 @@ func HandleSessionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		panic(err)
 	}
 
+	if !Event.Active && !user.IsAdmin {
+		http.Redirect(w, r, "/login?flash=Website+Inactive", http.StatusFound)
+		return
+	}
+
 	session := FindOrCreateSession(w, r)
 	session.UserID = user.ID
 	err = globalSessionStore.Save(session)

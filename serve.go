@@ -55,13 +55,26 @@ func LogRequest(w http.ResponseWriter, r *http.Request) {
 func serve() {
 	go handleSigs()
 
-	public := NewRouter()
+	always := NewRouter()
 
-	public.GET("/", HandleHome)
+	always.GET("/", HandleHome)
+	always.GET("/login", HandleSessionNew)
+	always.POST("/login", HandleSessionCreate)
+
+	always.GET("/robots.txt", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		http.ServeFile(w, r, "assets/robots.txt")
+	})
+	always.GET("/favicon.ico", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		http.ServeFile(w, r, "assets/favicon.ico")
+	})
+	always.ServeFiles(
+		"/assets/*filepath",
+		http.Dir("assets/"),
+	)
+
+	public := NewRouter()
 	public.GET("/register", HandleUserNew)
 	public.POST("/register", HandleUserCreate)
-	public.GET("/login", HandleSessionNew)
-	public.POST("/login", HandleSessionCreate)
 
 	public.GET("/discussion/notfound", HandleDiscussionNotFound)
 
@@ -70,18 +83,6 @@ func serve() {
 	public.GET("/list/:itype", HandleList)
 	public.GET("/uid/:itype/:uid/:action", HandleUid)
 	public.POST("/uid/:itype/:uid/:action", HandleUidPost)
-
-	public.ServeFiles(
-		"/assets/*filepath",
-		http.Dir("assets/"),
-	)
-
-	public.GET("/robots.txt", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		http.ServeFile(w, r, "assets/robots.txt")
-	})
-	public.GET("/favicon.ico", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		http.ServeFile(w, r, "assets/favicon.ico")
-	})
 
 	userAuth := NewRouter()
 	userAuth.GET("/sign-out", HandleSessionDestroy)
@@ -96,7 +97,8 @@ func serve() {
 
 	middleware := Middleware{
 		Logger:   LogRequest,
-		Public:   public,
+		Always:   always,
+		Active:   public,
 		UserAuth: userAuth,
 		Admin:    admin,
 	}
