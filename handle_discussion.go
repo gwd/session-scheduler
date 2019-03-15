@@ -4,6 +4,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 )
 
@@ -146,7 +147,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	if display == nil {
+	if reflect.ValueOf(display).IsNil() {
 		RenderTemplate(w, r, "uid/notfound", map[string]interface{}{
 			"Utype": itype,
 		})
