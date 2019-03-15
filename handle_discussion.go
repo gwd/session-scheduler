@@ -41,7 +41,7 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 		if IsValidationError(err) {
 			RenderTemplate(w, r, "discussion/new", map[string]interface{}{
 				"Error":      err.Error(),
-				"Discussion": disc.GetDisplay(nil),
+				"Discussion": disc.GetDisplay(owner),
 			})
 			return
 		}
