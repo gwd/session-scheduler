@@ -1,6 +1,9 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"unicode"
+)
 
 type ValidationError error
 
@@ -26,4 +29,13 @@ var (
 func IsValidationError(err error) bool {
 	_, ok := err.(ValidationError)
 	return ok
+}
+
+func AllWhitespace(s string) bool {
+	for _, ch := range s {
+		if !unicode.IsSpace(ch) {
+			return false
+		}
+	}
+	return true
 }

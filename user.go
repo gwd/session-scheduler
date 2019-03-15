@@ -89,7 +89,7 @@ func NewUser(username, password, vcode string, profile *UserProfile) (*User, err
 		return user, errInvalidVcode
 	}
 
-	if username == "" {
+	if username == "" || AllWhitespace(username) {
 		log.Printf("New user failed: no username")
 		return user, errNoUsername
 	}

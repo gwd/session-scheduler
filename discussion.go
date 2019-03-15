@@ -236,13 +236,13 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 	log.Printf("%s New discussion post: '%s'",
 		owner.Username, title)
 
-	if title == "" {
+	if title == "" || AllWhitespace(title) {
 		log.Printf("%s New discussion failed: no title",
-			owner.Username, title)
+			owner.Username)
 		return disc, errNoTitle
 	}
 
-	if description == "" {
+	if description == "" || AllWhitespace(description) {
 		log.Printf("%s New discussion failed: no description",
 			owner.Username)
 		return disc, errNoDesc
