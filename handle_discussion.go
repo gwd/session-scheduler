@@ -51,6 +51,29 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 	http.Redirect(w, r, disc.GetURL()+"?flash=Session+Created", http.StatusFound)
 }
 
+// A safety catch to DTRT if either user or discussion are nil
+func MayEditDiscussion(u *User, d *Discussion) bool {
+	if u == nil || d == nil {
+		return false
+	}
+	return u.MayEditDiscussion(d)
+}
+
+func MayEditUser(cur *User, tgt *User) bool {
+	if cur == nil || tgt == nil {
+		return false
+	}
+	return cur.MayEditUser(tgt)
+}
+
+func IsAdmin(u *User) bool {
+	return u != nil && u.IsAdmin
+}
+
+func IsVerified(u *User) bool {
+	return u != nil && u.IsVerified
+}
+
 func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cur := RequestUser(r)
 
@@ -71,8 +94,8 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	// Editing always requires a login
-	if action == "edit" && cur == nil {
+	// Modifying things always requires a login
+	if (action == "edit" || action == "delete") && cur == nil {
 		RequireLogin(w, r)
 		return
 	}
@@ -88,19 +111,37 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 
 		// Unverified accounts can't create or edit sessions
-		if action == "edit" && Event.RequireVerification && !cur.IsVerified {
+		if action == "edit" && Event.RequireVerification && !IsVerified(cur) {
 			http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 			return
 		}
 
-		if disc != nil && (action != "edit" || cur.MayEditDiscussion(disc)) {
-			display = disc.GetDisplay(cur)
+		// Only display edit or delete confirmation pages if the
+		// current user can perform that action
+		if (action == "edit" || action == "delete") &&
+			!MayEditDiscussion(cur, disc) {
+			break
 		}
+
+		display = disc.GetDisplay(cur)
 	case "user":
 		user, _ := Event.Users.Find(UserID(uid))
-		if user != nil && (action != "edit" || cur.MayEditUser(UserID(uid))) {
-			display = user.GetDisplay(cur, true)
+
+		if user == nil {
+			break
 		}
+
+		// Only display edit confirmation page if the current user can edit.
+		if action == "edit" && !MayEditUser(cur, user) {
+			break
+		}
+
+		// Only display a delete confirmation page for admins
+		if action == "delete" && !IsAdmin(cur) {
+			break
+		}
+
+		display = user.GetDisplay(cur, true)
 	default:
 		return
 	}
@@ -270,15 +311,15 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			return
 		}
 	case "user":
-		// Only allowed to edit our own profile unless you're an admin
-		if !cur.MayEditUser(UserID(uid)) {
-			log.Printf(" uid %s tried to edit uid %s", string(cur.ID), uid)
-			return
-		}
-
 		user, _ := Event.Users.Find(UserID(uid))
 		if user == nil {
 			log.Printf("Invalid user: %s", uid)
+			return
+		}
+
+		// Only allowed to edit our own profile unless you're an admin
+		if !cur.MayEditUser(user) {
+			log.Printf(" uid %s tried to edit uid %s", string(cur.ID), uid)
 			return
 		}
 

@@ -49,8 +49,8 @@ type UserDisplay struct {
 	List        []*DiscussionDisplay
 }
 
-func (u *User) MayEditUser(ID UserID) bool {
-	return u.IsAdmin || u.ID == ID
+func (u *User) MayEditUser(tgt *User) bool {
+	return u.IsAdmin || u.ID == tgt.ID
 }
 
 func (u *User) MayEditDiscussion(d *Discussion) bool {
@@ -64,7 +64,7 @@ func (u *User) GetDisplay(cur *User, long bool) (ud *UserDisplay) {
 		IsVerified: u.IsVerified,
 	}
 	if cur != nil {
-		ud.MayEdit = cur.MayEditUser(u.ID)
+		ud.MayEdit = cur.MayEditUser(u)
 		ud.IsAdmin = cur.IsAdmin
 		// Only display profile information to people who are logged in
 		ud.Profile = &u.Profile
