@@ -21,7 +21,10 @@
 
 {{define "discussion/item-full"}}
 <div class="row">
-  <div class="col-9 col-offset-3">
+<div class="col-9 col-offset-3">
+  {{if not .IsPublic}}
+  <div class="alert alert-warning">This discussion has changes awaiting moderation</div>
+  {{end}}
     <h5 class="card-title">{{template "discussion/link" .}}</h5>
     <span class="text-muted">Owner: {{template "user/link" .Owner}}</span>
     {{if .Time}}
@@ -112,13 +115,22 @@
 	  </form>
 	{{end}}
 	{{if or .CurrentUser.IsAdmin (eq .Discussion.Owner.ID .CurrentUser.ID)}}
-	{{if .Discussion.IsPublic}}
+	  {{if .Discussion.IsPublic}}
 	  <span class="badge badge-primary">Public</span>
-	{{else}}
+	  {{else}}
 	  <span class="badge badge-warning">Not Public</span>
-	{{end}}
-	{{end}}
+	  {{end}}
+	{{else}}
+	  {{if not .Discussion.IsPublic}}
+	    <span class="badge badge-warning">Moderated</span>
+          {{end}}
+	    {{end}}
+      {{else}}
+	  {{if not .Discussion.IsPublic}}
+	    <span class="badge badge-warning">Moderated</span>
+          {{end}}
       {{end}}
+
       </div>
     </div>
   </div>

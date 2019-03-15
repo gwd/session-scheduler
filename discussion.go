@@ -16,13 +16,23 @@ func (did *DiscussionID) generate() {
 }
 
 type Discussion struct {
-	ID            DiscussionID
-	Owner         UserID
-	Title         string
-	Description   string
+	ID    DiscussionID
+	Owner UserID
+
+	Title               string
+	Description         string
+	ApprovedTitle       string
+	ApprovedDescription string
+
 	Interested    map[UserID]bool
 	PossibleSlots []bool
-	IsPublic      bool // Is this discussion publicly visible?
+
+	// Is this discussion publicly visible?
+	// If true, 'Title' and 'Description' should be shown to everyone.
+	// If false:
+	//   admin and owner should see 'Title' and 'Description'
+	//   Everyone else should either see 'Approved*', or nothing at all (if nothing has been approved)
+	IsPublic bool
 
 	// Cached information from a schedule
 	location *Location
@@ -96,21 +106,33 @@ func (d *Discussion) GetMaxScore() int {
 }
 
 func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
+	showMain := true
+
 	// Only display a discussion if:
 	// 1. It's pulbic, or...
 	// 2. The current user is admin, or the discussion owner
 	if !d.IsPublic &&
 		(cur == nil || (!cur.IsAdmin && cur.ID != d.Owner)) {
-		return nil
+		if d.ApprovedTitle == "" {
+			return nil
+		} else {
+			showMain = false
+		}
 	}
 
 	dd := &DiscussionDisplay{
-		ID:             d.ID,
-		Title:          d.Title,
-		DescriptionRaw: d.Description,
-		Description:    ProcessText(d.Description),
-		IsPublic:       d.IsPublic,
+		ID:       d.ID,
+		IsPublic: d.IsPublic,
 	}
+
+	if showMain {
+		dd.Title = d.Title
+		dd.DescriptionRaw = d.Description
+	} else {
+		dd.Title = d.ApprovedTitle
+		dd.DescriptionRaw = d.ApprovedDescription
+	}
+	dd.Description = ProcessText(dd.DescriptionRaw)
 
 	if d.location != nil {
 		dd.Location = *d.location

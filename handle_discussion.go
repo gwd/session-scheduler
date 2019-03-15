@@ -297,9 +297,17 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 			newValueString := r.FormValue("newvalue")
 			if newValueString == "true" {
+				// When making something public, keep track of the
+				// "approved" value
 				disc.IsPublic = true
+				disc.ApprovedTitle = disc.Title
+				disc.ApprovedDescription = disc.Description
 			} else {
+				// To actually hide something, the ApprovedTitle needs
+				// to be false as well.
 				disc.IsPublic = false
+				disc.ApprovedTitle = ""
+				disc.ApprovedDescription = ""
 			}
 
 			if tmp := r.FormValue("redirectURL"); tmp != "" {
