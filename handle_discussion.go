@@ -147,7 +147,8 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	if reflect.ValueOf(display).IsNil() {
+	// Check for nil return values from GetDisplay functions, as will as nil interface value
+	if display == nil || reflect.ValueOf(display).IsNil() {
 		RenderTemplate(w, r, "uid/notfound", map[string]interface{}{
 			"Utype": itype,
 		})
