@@ -200,6 +200,17 @@
       <label for="newUsername">Username</label> (Required)
       <input type="text" name="Username" value="{{.User.Username}}" id="newUsername" class="form-control">
     </div>
+    <div class="text-muted">
+      Note that email addresses as a username is not allowed.
+      <details><summary>Why?</summary>  Usernames are displayed
+	publicly on discussion proposals, as well as on an "attendee
+	list", even if a user doesn't propose any discussions.  To
+	avoid accidentally exposing email addresses to spammers, we
+	decided to prohibit anything that looks like an email addess
+	as a username.  Suggested usernames include initials,
+	firstnamelastname, or IRC handle.
+	</details>
+	</div>
     <div class="form-group">
       <label for="newPassword">Password</label>
       <input type="password" name="Password" id="newPassword" class="form-control">

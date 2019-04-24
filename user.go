@@ -94,6 +94,10 @@ func NewUser(username, password, vcode string, profile *UserProfile) (*User, err
 		return user, errNoUsername
 	}
 
+	if IsEmailAddress(username) {
+		return user, errUsernameIsEmail
+	}
+
 	if password == "" {
 		log.Printf("New user failed: no password")
 		return user, errNoPassword

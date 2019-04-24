@@ -3,12 +3,14 @@ package main
 import (
 	"errors"
 	"unicode"
+	"regexp"
 )
 
 type ValidationError error
 
 var (
 	errNoUsername           = ValidationError(errors.New("You must supply a username"))
+	errUsernameIsEmail      = ValidationError(errors.New("Username cannot be an email address"))
 	errNoEmail              = ValidationError(errors.New("You must supply an email"))
 	errNoPassword           = ValidationError(errors.New("You must supply a password"))
 	errPasswordTooShort     = ValidationError(errors.New("Your password is too short"))
@@ -38,4 +40,9 @@ func AllWhitespace(s string) bool {
 		}
 	}
 	return true
+}
+
+var emailRE = regexp.MustCompile("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$")
+func IsEmailAddress(s string) bool {
+	return emailRE.MatchString(s)
 }
