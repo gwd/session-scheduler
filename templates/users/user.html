@@ -138,10 +138,6 @@
 			<input type="text" name="Company" value="{{.Company}}" id="newCompany" class="form-control" placeholder="XYZ Corporation, Ltd">
 		</div>
 		<div class="form-group">
-			<label for="newEmail">Email</label>
-			<input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com">
-		</div>
-		<div class="form-group">
 			<label for="newDescription">Description</label>
 			<textarea name="Description" id="newProfile" class="form-control"
 		         placeholder="Breifly describe who you are, what you do, and what you're looking for from the conference">{{.Description}}</textarea>
@@ -167,6 +163,10 @@
 			<div class="form-group">
 				<label for="newPassword">New Password</label>
 				<input type="password" name="newPassword" id="newPassword" class="form-control">
+			</div>
+			<div class="form-group">
+			  <label for="newEmail">Email (Optional)</label>
+			  <input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com">
 			</div>
 			{{template "user/profile/form" .Display.Profile}}
 			<input type="submit" value="Save" class="btn btn-primary">
@@ -200,17 +200,13 @@
       <label for="newUsername">Username</label> (Required)
       <input type="text" name="Username" value="{{.User.Username}}" id="newUsername" class="form-control">
     </div>
-    <div class="text-muted">
-      Note that email addresses as a username is not allowed.
-      <details><summary>Why?</summary>  Usernames are displayed
+    <div class="alert alert-primary">Usernames are displayed
 	publicly on discussion proposals, as well as on an "attendee
-	list", even if a user doesn't propose any discussions.  To
-	avoid accidentally exposing email addresses to spammers, we
-	decided to prohibit anything that looks like an email addess
-	as a username.  Suggested usernames include initials,
-	firstnamelastname, or IRC handle.
-	</details>
-	</div>
+	list", even if a user doesn't propose any discussions.</div>
+    <div class="form-group">
+      <label for="newEmail">Email (Optional)</label>
+      <input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com">
+    </div>
     <div class="form-group">
       <label for="newPassword">Password</label>
       <input type="password" name="Password" id="newPassword" class="form-control">
@@ -221,14 +217,6 @@
       <input type="text" name="Vcode" id="vcode" class="form-control">
       <p class="text-muted">Please contact lars dot kurth at citrix dot com if you haven't received a verification code</p>
     </div>
-    {{else}}
-
-    <div class="alert alert-primary"> New accounts will be
-      <emph>unverified</emph> until a verification code (sent upon
-      registering for the conference) is entered.  Session proposals
-      created or modified by unverified accounts will be moderated by
-      site administrators.</div>
-
     {{end}}
     {{template "user/profile/form" .User.Profile}}
     <input type="submit" value="Register" class="btn btn-primary">

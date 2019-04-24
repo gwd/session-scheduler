@@ -95,6 +95,7 @@ func NewUser(username, password, vcode string, profile *UserProfile) (*User, err
 	}
 
 	if IsEmailAddress(username) {
+		log.Printf("New user failed: Username looks like an email address")
 		return user, errUsernameIsEmail
 	}
 
