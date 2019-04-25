@@ -131,11 +131,11 @@
 
 		<div class="form-group">
 		  <label for="newName">Name</label>
-		  <input type="text" name="RealName" id="newName" value ="{{.RealName}}" class="form-control" placeholder="e.g., John Smith">
+		  <input type="text" name="RealName" id="newName" value ="{{.RealName}}" class="form-control" placeholder="e.g., John Smith" autocomplete="name">
 		</div>
 		<div class="form-group">
 			<label for="newCompany">Company / Affiliation</label>
-			<input type="text" name="Company" value="{{.Company}}" id="newCompany" class="form-control" placeholder="XYZ Corporation, Ltd">
+			<input type="text" name="Company" value="{{.Company}}" id="newCompany" class="form-control" placeholder="XYZ Corporation, Ltd" autocomplete="organization work">
 		</div>
 		<div class="form-group">
 			<label for="newDescription">Description</label>
@@ -158,15 +158,15 @@
 			<h4>Change Password <small>optional</small></h4>
 			<div class="form-group">
 				<label for="currentPassword">Current Password</label>
-				<input type="password" name="currentPassword" id="currentPassword" class="form-control">
+				<input type="password" name="currentPassword" id="currentPassword" class="form-control" autocomplete="current-password">
 			</div>
 			<div class="form-group">
 				<label for="newPassword">New Password</label>
-				<input type="password" name="newPassword" id="newPassword" class="form-control">
+				<input type="password" name="newPassword" id="newPassword" class="form-control" autocomplete="new-password">
 			</div>
 			<div class="form-group">
 			  <label for="newEmail">Email (Optional)</label>
-			  <input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com">
+			  <input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com" autocomplete="email work">
 			</div>
 			{{template "user/profile/form" .Display.Profile}}
 			<input type="submit" value="Save" class="btn btn-primary">
@@ -198,18 +198,18 @@
   <form action="/register" method="POST">
     <div class="form-group">
       <label for="newUsername">Username</label> (Required)
-      <input type="text" name="Username" value="{{.User.Username}}" id="newUsername" class="form-control">
+      <input type="text" name="Username" value="{{.User.Username}}" id="newUsername" class="form-control" autocomplete="username">
     </div>
     <div class="alert alert-primary">Usernames are displayed
 	publicly on discussion proposals, as well as on an "attendee
 	list", even if a user doesn't propose any discussions.</div>
     <div class="form-group">
       <label for="newEmail">Email (Optional)</label>
-      <input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com">
+      <input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com" autocomplete="email work">
     </div>
     <div class="form-group">
       <label for="newPassword">Password</label>
-      <input type="password" name="Password" id="newPassword" class="form-control">
+      <input type="password" name="Password" id="newPassword" class="form-control" autocomplete="new-password">
     </div>
     {{if .RequireVerification}}
     <div class="form-group">
