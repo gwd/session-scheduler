@@ -69,6 +69,10 @@
 	    <label class="custom-control-label" for="schedule">Schedule 'Active'</label>
 	  </div>
           <div class="custom-control custom-switch">
+	    <input type="checkbox" class="custom-control-input" name="status" value="vcodeSent" id="vcodesent" {{if .IsVcodeSent}} checked{{end}} onChange="this.form.submit()">
+	    <label class="custom-control-label" for="vcodesent">Verification Code Sent</label>
+	  </div>
+          <div class="custom-control custom-switch">
 	    <input type="checkbox" class="custom-control-input" name="status" value="requireVerification" id="verification" {{if .RequireVerification}} checked{{end}} onChange="this.form.submit()">
 	    <label class="custom-control-label" for="verification">Require verification for new accounts and sessions</label>
 	  </div>

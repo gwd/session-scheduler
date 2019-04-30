@@ -7,6 +7,7 @@
   {{if and (not .Display.IsVerified) (not .Display.IsAdmin) .RequireVerification}}
   <div class="alert alert-warning">Account verification is now required to create or edit sessions.</div>
   {{end}}
+  {{$VcodeSent := .VcodeSent}}
   {{with .Display}}
   <h5>{{template "user/link" .}}</h5>
   {{if .Profile}}
@@ -37,9 +38,10 @@
       <div class="m-1">
 	<form action="verify" method="POST">
           <div class="form-inline">
-	    <label for="vcode">Verification Code</label>
-	    <input type="text" name="Vcode" id="vcode" class="form-control">
-	    <input type="submit" value="Verify" class="btn btn-primary">
+	    <label for="vcode"{{if not $VcodeSent}}class="text-muted"{{end}}>Verification Code</label>
+	    <input type="text" name="Vcode" id="vcode" class="form-control mx-2">
+	    <input type="submit" value="Verify" class="btn btn-primary mx-2" {{if not $VcodeSent}}disabled{{end}}>
+	    {{if not $VcodeSent}}<span class="mx-2 text-muted font-italic">Note: Verifcation code hasn't been sent yet</span>{{end}}
 	  </div>
 	</form>
       </div>
@@ -101,7 +103,7 @@
 {{define "user/view"}}
 <div class="row">
   <div class="col-9 col-offset-3">
-      {{template "user/item-full" dict "Display" .Display "RequireVerification" .RequireVerification}}
+      {{template "user/item-full" dict "Display" .Display "RequireVerification" .RequireVerification "VcodeSent" .IsVcodeSent}}
     {{$redirectURL := printf "/uid/user/%s/view" .Display.ID}}
     {{template "discussion/list" dict "List" .Display.List "redirectURL" $redirectURL "CurrentUser" .CurrentUser}}
   </div>

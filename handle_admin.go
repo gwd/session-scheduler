@@ -97,13 +97,19 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		r.ParseForm()
 		statuses := r.Form["status"]
 		flash := ""
-		newval := map[string]bool{"website": false, "schedule": false, "verification": false}
+		newval := map[string]bool{
+			"website": false,
+			"schedule": false,
+			"verification": false,
+			"vcodesent": false}
 		for _, status := range statuses {
 			switch status {
 			case "websiteActive":
 				newval["website"] = true
 			case "scheduleActive":
 				newval["schedule"] = true
+			case "vcodeSent":
+				newval["vcodesent"] = true
 			case "requireVerification":
 				newval["verification"] = true
 			default:
@@ -132,6 +138,17 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 				flash += "Schedule+Deactivated"
 			}
 		}
+		if newval["vcodesent"] != Event.VerificationCodeSent {
+			Event.VerificationCodeSent = newval["vcodesent"]
+			if flash != "" {
+				flash += ", "
+			}
+			if Event.VerificationCodeSent {
+				flash += "Verification+Code+Sent"
+			} else {
+				flash += "Verificaiton+Code+Not+Sent"
+			}
+		}
 		if newval["verification"] != Event.RequireVerification {
 			Event.RequireVerification = newval["verification"]
 			if flash != "" {
@@ -144,8 +161,9 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			}
 		}
 
-		log.Printf("New state: Active %v ScheduleActive %v RequireVerification $%v",
-			Event.Active, Event.ScheduleActive, Event.RequireVerification)
+		log.Printf("New state: Active %v ScheduleActive %v RequireVerification %v VerificationCodeSent %v",
+			Event.Active, Event.ScheduleActive, Event.RequireVerification,
+			Event.VerificationCodeSent)
 		Event.Save()
 		http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
 		return
