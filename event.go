@@ -107,6 +107,7 @@ func (store *EventStore) ResetEventData() {
 	store.Locations.Init()
 	store.ScheduleV2 = nil
 	store.LockedSlots = make([]bool, store.ScheduleSlots)
+	store.Discussions.ResetEventData()
 
 	Event.Save()
 }
@@ -332,6 +333,14 @@ type DiscussionStore map[DiscussionID]*Discussion
 
 func (dstore *DiscussionStore) Init() {
 	*dstore = DiscussionStore(make(map[DiscussionID]*Discussion))
+}
+
+// Update PossibleSlot size while retaining other information
+func (dstore *DiscussionStore) ResetEventData() {
+	dstore.Iterate(func(disc *Discussion) error {
+		disc.PossibleSlots = MakePossibleSlots(Event.ScheduleSlots)
+		return nil
+	})
 }
 
 func (dstore DiscussionStore) Find(id DiscussionID) (*Discussion, error) {
