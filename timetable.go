@@ -109,20 +109,52 @@ func (tt *Timetable) Init() {
 	// Clear out any old data which may be there
 	*tt = Timetable{}
 
-	// For now, hardcode 3 days (W Th F), 3 time slots
-	// 4 locations:
-	for _, day := range []string{"Wednesday", "Thursday", "Friday"} {
-		td := &TimetableDay{DayName: day}
-		for _, time := range []string{"2:00", "2:50", "3:35", "4:10"} {
-			ts := &TimetableSlot{Time: time, day: td}
-			if time == "3:35" {
-				ts.IsBreak = true
-			}
-			// FIXME: Init Discussions
-			td.Slots = append(td.Slots, ts)
-		}
-		tt.Days = append(tt.Days, td)
-	}
+	// Tuesday: 1:50, 2:40, 3:25 [break], 3:55, 4:45
+	td := &TimetableDay{DayName: "Tuesday"}
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "1:50", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "2:40", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "3:25", day: td, IsBreak: true})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "3:55", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "4:45", day: td, IsBreak: false})
+
+	tt.Days = append(tt.Days, td)
+
+	// Wednesday: 4:35
+	td = &TimetableDay{DayName: "Wednesday"}
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "4:35", day: td, IsBreak: false})
+
+	tt.Days = append(tt.Days, td)
+
+	// Thursday: 9:50, 10:35 [b], 11:05, 11:55, 12:40 [b] 1:40, 2:30, 3:15 [b], 3:45, 4:30
+	td = &TimetableDay{DayName: "Thursday"}
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "9:50", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "10:35", day: td, IsBreak: true})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "11:05", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "11:55", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "12:40", day: td, IsBreak: true})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "1:40", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "2:30", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "3:15", day: td, IsBreak: true})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "3:45", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "4:30", day: td, IsBreak: false})
+
+	tt.Days = append(tt.Days, td)
 }
 
 func (tt *Timetable) GetSlots() int {
