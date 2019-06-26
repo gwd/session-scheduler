@@ -1066,6 +1066,17 @@ func MakeSchedule(algo SearchAlgo, async bool) error {
 		return errInProgress
 	}
 
+	err := Event.Discussions.Iterate(func(disc *Discussion) error {
+		if !disc.IsPublic {
+			return errModeratedDiscussions
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+	
 	ss := &SearchStore{}
 
 	if err := ss.Snapshot(&Event); err != nil {

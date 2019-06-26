@@ -70,7 +70,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			http.Redirect(w, r, "console?flash=Schedule+Started", http.StatusFound)
 		} else {
 			log.Printf("Error generating schedule: %v", err)
-			http.Redirect(w, r, "console?flash=Error+starting+schedule", http.StatusFound)
+			http.Redirect(w, r, "console?flash=Error+starting+schedule: See Log", http.StatusFound)
 		}
 	case "resetEventData":
 		Event.ResetEventData()

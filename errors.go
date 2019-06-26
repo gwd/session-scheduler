@@ -26,6 +26,7 @@ var (
 	errTooManyDiscussions   = ValidationError(errors.New("You have too many discussions"))
 	errAllSlotsLocked       = ValidationError(errors.New("All slots are locked"))
 	errInProgress           = ValidationError(errors.New("Schedule already in progress"))
+	errModeratedDiscussions = ValidationError(errors.New("Moderated discussions present: Please unmoderate or delete"))
 )
 
 func IsValidationError(err error) bool {
