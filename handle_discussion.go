@@ -11,7 +11,7 @@ import (
 func HandleDiscussionNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if Event.RequireVerification {
 		cur := RequestUser(r)
-		if cur == nil || !cur.IsVerified {
+		if !IsVerified(cur) {
 			http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 			return
 		}
@@ -27,7 +27,7 @@ func HandleDiscussionNotFound(w http.ResponseWriter, r *http.Request, _ httprout
 func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	owner := RequestUser(r)
 
-	if Event.RequireVerification && (owner == nil || !owner.IsVerified) {
+	if Event.RequireVerification && !IsVerified(owner) {
 		http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 		return
 	}
@@ -72,7 +72,7 @@ func IsAdmin(u *User) bool {
 }
 
 func IsVerified(u *User) bool {
-	return u != nil && u.IsVerified
+	return u != nil && (u.IsVerified || u.IsAdmin)
 }
 
 func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -247,7 +247,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 			// Unverified accounts can't create or edit sessions
 			if Event.RequireVerification &&
-				(cur == nil || !cur.IsVerified) {
+				!IsVerified(cur) {
 				http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 				return
 			}
