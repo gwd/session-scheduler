@@ -35,7 +35,7 @@ func (lstore *LocationStore) Init() {
 		ID:       LocationID(GenerateID("loc", locationIDLength)),
 		Name:     "Contemporary, 6th Floor",
 		IsPlace:  true,
-		Capacity: 100,
+		Capacity: 45,
 	})
 	lstore.Save(&Location{
 		ID:      LocationID(GenerateID("loc", locationIDLength)),
