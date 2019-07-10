@@ -109,30 +109,10 @@ func (tt *Timetable) Init() {
 	// Clear out any old data which may be there
 	*tt = Timetable{}
 
-	// Tuesday: 1:50, 2:40, 3:25 [break], 3:55, 4:45
-	td := &TimetableDay{DayName: "Tuesday"}
+	// Thursday: 9:00, 9:50, 10:35 [b], 11:05, 11:55, 12:40 [b] 1:40, 2:30, 3:15 [b], 3:45, 4:30, 5:15
+	td := &TimetableDay{DayName: "Thursday"}
 	td.Slots = append(td.Slots, &TimetableSlot{
-		Time: "1:50", day: td, IsBreak: false})
-	td.Slots = append(td.Slots, &TimetableSlot{
-		Time: "2:40", day: td, IsBreak: false})
-	td.Slots = append(td.Slots, &TimetableSlot{
-		Time: "3:25", day: td, IsBreak: true})
-	td.Slots = append(td.Slots, &TimetableSlot{
-		Time: "3:55", day: td, IsBreak: false})
-	td.Slots = append(td.Slots, &TimetableSlot{
-		Time: "4:45", day: td, IsBreak: false})
-
-	tt.Days = append(tt.Days, td)
-
-	// Wednesday: 4:35
-	td = &TimetableDay{DayName: "Wednesday"}
-	td.Slots = append(td.Slots, &TimetableSlot{
-		Time: "4:35", day: td, IsBreak: false})
-
-	tt.Days = append(tt.Days, td)
-
-	// Thursday: 9:50, 10:35 [b], 11:05, 11:55, 12:40 [b] 1:40, 2:30, 3:15 [b], 3:45, 4:30
-	td = &TimetableDay{DayName: "Thursday"}
+		Time: "9:00", day: td, IsBreak: false})
 	td.Slots = append(td.Slots, &TimetableSlot{
 		Time: "9:50", day: td, IsBreak: false})
 	td.Slots = append(td.Slots, &TimetableSlot{
@@ -153,6 +133,8 @@ func (tt *Timetable) Init() {
 		Time: "3:45", day: td, IsBreak: false})
 	td.Slots = append(td.Slots, &TimetableSlot{
 		Time: "4:30", day: td, IsBreak: false})
+	td.Slots = append(td.Slots, &TimetableSlot{
+		Time: "5:15", day: td, IsBreak: false})
 
 	tt.Days = append(tt.Days, td)
 }
