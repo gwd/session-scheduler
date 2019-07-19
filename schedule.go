@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/MaxHalford/gago"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -498,14 +497,6 @@ func (sched *Schedule) RemoveDiscussion(did DiscussionID) error {
 	return nil
 }
 
-// type Genome interface {
-//     Evaluate() (float64, error)
-//     Mutate(rng *rand.Rand)
-//     Crossover(genome Genome, rng *rand.Rand)
-//     Clone() Genome
-// }
-// type NewGenome func(rng *rand.Rand) Genome
-
 func (sched *Schedule) AssignRandom(disc *Discussion, rng *rand.Rand) {
 	// First check to make sure there are at least some possible slots
 	found := false
@@ -549,11 +540,11 @@ func ScheduleFactoryTemplate(ss *SearchStore) (sched *Schedule) {
 	return
 }
 
-func ScheduleFactoryInner(ss *SearchStore, rng *rand.Rand) gago.Genome {
+func ScheduleFactoryInner(ss *SearchStore, rng *rand.Rand) (sched *Schedule) {
 	SchedDebug.Printf("Making new random schedule")
 
 	// Clone the locked discussions
-	sched := ScheduleFactoryTemplate(ss)
+	sched = ScheduleFactoryTemplate(ss)
 
 	// Put each non-locked discussion in a random slot
 	for _, disc := range ss.dList {
@@ -563,12 +554,12 @@ func ScheduleFactoryInner(ss *SearchStore, rng *rand.Rand) gago.Genome {
 
 	sched.Validate()
 
-	return gago.Genome(sched)
+	return
 }
 
-func (sched *Schedule) Clone() gago.Genome {
+func (sched *Schedule) Clone() (new *Schedule) {
 	SchedDebug.Print("Clone")
-	new := &Schedule{store: sched.store}
+	new = &Schedule{store: sched.store}
 	for i := range sched.Slots {
 		new.Slots = append(new.Slots, sched.Slots[i].Clone(new))
 	}
@@ -584,7 +575,7 @@ func (sched *Schedule) Clone() gago.Genome {
 		}
 	}
 
-	return gago.Genome(new)
+	return
 }
 
 func (sched *Schedule) Evaluate() (float64, error) {
@@ -651,129 +642,6 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 			SchedDebug.Printf("Mutated from %d to %d mplus", sScore, eScore)
 		} else {
 			SchedDebug.Printf("Mutated from %d to %d", sScore, eScore)
-		}
-	}
-}
-
-var OptCrossover = true
-
-func (sched *Schedule) Crossover(Genome gago.Genome, rng *rand.Rand) {
-	if !OptCrossover {
-		return
-	}
-
-	var sScore int
-	if OptSchedDebug {
-		sScore, _ = sched.Score()
-		SchedDebug.Print("Crossover")
-	}
-
-	osched := Genome.(*Schedule)
-
-	// Keep track of the discussions that don't get placed.  Keep a
-	// pointer so we don't have to look it up again when we decide to
-	// use it.
-	displaced := SlotDiscussions{}
-
-	// For each slot, replace a random number of discussions
-	for i := range sched.Slots {
-		slot := sched.Slots[i]
-		oslot := osched.Slots[i]
-
-		// Nothing to do for slots with no discussions already, or locked slots
-		if len(slot.Discussions) == 0 ||
-			(Event.LockedSlots != nil && Event.LockedSlots[i]) {
-			continue
-		}
-
-		maxIndex := 64
-		if len(slot.Discussions) < maxIndex {
-			maxIndex = len(slot.Discussions)
-		}
-
-		var remIndexes uint64
-		remDisc := []*Discussion{}
-
-		toRemove := rng.Intn(len(slot.Discussions))
-
-		// Choose a random set of "indexes" to remove
-		for n := 0; n < toRemove; n++ {
-			for {
-				i := uint(rng.Intn(maxIndex))
-				if remIndexes&(1<<i) == 0 {
-					remIndexes |= 1 << i
-
-					did := slot.Discussions[i]
-					disc, _ := Event.Discussions.Find(did)
-					displaced.InsertOnce(did)
-					remDisc = append(remDisc, disc)
-					break
-				}
-			}
-		}
-
-		var addIndexes uint64
-		toMove := toRemove
-		if toMove > len(oslot.Discussions) {
-			toMove = len(oslot.Discussions)
-		}
-
-		maxIndex = 64
-		if len(oslot.Discussions) < maxIndex {
-			maxIndex = len(oslot.Discussions)
-		}
-
-		// And a set to move from the other parent
-		for n := 0; n < toMove; n++ {
-			for {
-				i := uint(rng.Intn(maxIndex))
-				if addIndexes&(1<<i) == 0 {
-					addIndexes |= 1 << i
-					break
-				}
-			}
-		}
-
-		// Do the same for the discussions to add, but add the
-		// non-added ones to the 'displaced' discussion list
-		addDisc := []*Discussion{}
-		for i, did := range slot.Discussions {
-			disc, _ := Event.Discussions.Find(did)
-			if addIndexes&(1<<uint(i)) != 0 {
-				addDisc = append(addDisc, disc)
-			} else {
-				displaced.InsertOnce(did)
-			}
-		}
-
-		// Now remove the removed ones, add the added ones
-		for _, disc := range remDisc {
-			slot.Remove(disc, true)
-		}
-		for _, disc := range addDisc {
-			slot.Assign(disc, true)
-		}
-
-		// And finally, go through the list cleaning out the 'displaced' list
-		for _, did := range slot.Discussions {
-			displaced.Delete(did)
-		}
-	}
-
-	// Finally, put all the displaced discussions somewhere random
-	for _, did := range displaced {
-		disc, _ := Event.Discussions.Find(did)
-		sched.AssignRandom(disc, rng)
-	}
-
-	sched.Validate()
-
-	if OptSchedDebug {
-		eScore, _ := sched.Score()
-		if eScore > sScore {
-			SchedDebug.Printf("Crossover from %d to %d cplus", sScore, eScore)
-		} else {
-			SchedDebug.Printf("Crossover from %d to %d", sScore, eScore)
 		}
 	}
 }
@@ -867,13 +735,13 @@ func MakeScheduleRandom(ss *SearchStore) (best *Schedule, err error) {
 	stop := start.Add(OptSearchDuration)
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	best = ScheduleFactoryInner(ss, rng).(*Schedule)
+	best = ScheduleFactoryInner(ss, rng)
 	bestScore, _ := best.Score()
 	bestTime := time.Now()
 
 	log.Printf("Random schedule time %v score %d", bestTime.Sub(start), bestScore)
 	for time.Now().Before(stop) {
-		next := ScheduleFactoryInner(ss, rng).(*Schedule)
+		next := ScheduleFactoryInner(ss, rng)
 		nextScore, _ := next.Score()
 		if nextScore > bestScore {
 			best = next
@@ -884,53 +752,6 @@ func MakeScheduleRandom(ss *SearchStore) (best *Schedule, err error) {
 	}
 
 	return
-}
-
-func MakeScheduleGenetic(ss *SearchStore) (*Schedule, error) {
-	ScheduleFactory := func(rng *rand.Rand) gago.Genome {
-		return ScheduleFactoryInner(ss, rng)
-	}
-
-	ga := gago.GA{
-		NewGenome: ScheduleFactory,
-		NPops:     2,
-		PopSize:   200,
-		Model: gago.ModDownToSize{
-			NOffsprings: 100,
-			SelectorA:   gago.SelElitism{},
-			SelectorB:   gago.SelElitism{},
-			MutRate:     0.5,
-			CrossRate:   0.7,
-		},
-	}
-	ga.Logger = SchedDebug
-
-	start := time.Now()
-	stop := start.Add(OptSearchDuration)
-
-	if err := ga.Initialize(); err != nil {
-		log.Printf("Error initalizing ga: %v", err)
-		return nil, err
-	}
-
-	bestScore := ga.HallOfFame[0].Fitness
-	bestTime := time.Now()
-	log.Printf("Genetic schedule time %v generations %v score %v\n", bestTime.Sub(start),
-		ga.Generations, bestScore)
-	for time.Now().Before(stop) {
-		if err := ga.Evolve(); err != nil {
-			log.Println("Error evolving: %v", err)
-			return nil, err
-		}
-		if ga.HallOfFame[0].Fitness < bestScore {
-			bestScore = ga.HallOfFame[0].Fitness
-			bestTime = time.Now()
-			log.Printf("Genetic schedule time %v generations %v score %v\n", bestTime.Sub(start),
-				ga.Generations, bestScore)
-		}
-	}
-
-	return ga.HallOfFame[0].Genome.(*Schedule), nil
 }
 
 func MakeScheduleHeuristic(ss *SearchStore) (*Schedule, error) {
@@ -1013,10 +834,11 @@ func MakeScheduleAsync(ss *SearchStore, algo SearchAlgo, async bool) {
 	Hscore, Hmissed = newH.Score()
 
 	switch algo {
-	case SearchGenetic:
-		newS, err = MakeScheduleGenetic(ss)
 	case SearchRandom:
 		newS, err = MakeScheduleRandom(ss)
+	default:
+		log.Printf("ERROR: Unknown search algorithm %s", algo)
+		goto out
 	}
 
 	if err != nil {

@@ -14,7 +14,6 @@ func main() {
 	flag.BoolVar(&OptSchedDebug, "sched-debug", false, "Enanable scheduler debug logging")
 	flag.StringVar(&OptSearchAlgo, "searchalgo", string(SearchRandom), "Search algorithm.  Options are heuristic, genetic, and random.")
 	flag.StringVar(&OptSearchDurationString, "searchtime", "60s", "Duration to run search")
-	flag.BoolVar(&OptCrossover, "crossover", true, "Enable the crossover function")
 	flag.BoolVar(&OptValidate, "validate", false, "Extra validation of schedule consistency")
 
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
