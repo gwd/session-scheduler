@@ -25,11 +25,12 @@ const (
 func (lstore *LocationStore) Init() {
 	*lstore = make([]*Location, 0)
 	// For now, hardcode 3 actual rooms, and one "generic"
+	// NB these must be in capacity order, from highest to lowest.
 	lstore.Save(&Location{
 		ID:       LocationID(GenerateID("loc", locationIDLength)),
-		Name:     "Gallery 1, 5th Floor",
+		Name:     "Contemporary, 6th Floor",
 		IsPlace:  true,
-		Capacity: 20,
+		Capacity: 45,
 	})
 	lstore.Save(&Location{
 		ID:       LocationID(GenerateID("loc", locationIDLength)),
@@ -39,9 +40,9 @@ func (lstore *LocationStore) Init() {
 	})
 	lstore.Save(&Location{
 		ID:       LocationID(GenerateID("loc", locationIDLength)),
-		Name:     "Contemporary, 6th Floor",
+		Name:     "Gallery 1, 5th Floor",
 		IsPlace:  true,
-		Capacity: 45,
+		Capacity: 20,
 	})
 	lstore.Save(&Location{
 		ID:      LocationID(GenerateID("loc", locationIDLength)),
