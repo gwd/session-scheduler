@@ -53,7 +53,7 @@ func NewSession(w http.ResponseWriter, uid string) (*Session, error) {
 
 	http.SetCookie(w, &cookie)
 
-	err := globalSessionStore.Save(session)
+	err := store.Save(session)
 
 	return session, err
 }
@@ -64,7 +64,7 @@ func RequestSession(r *http.Request) *Session {
 		return nil
 	}
 
-	session, err := globalSessionStore.Find(cookie.Value)
+	session, err := store.Find(cookie.Value)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +74,7 @@ func RequestSession(r *http.Request) *Session {
 	}
 
 	if session.Expired() {
-		globalSessionStore.Delete(session)
+		store.Delete(session)
 		return nil
 	}
 	return session
@@ -93,7 +93,7 @@ func FindOrCreateSession(w http.ResponseWriter, r *http.Request, uid string) (*S
 
 func DeleteSessionByRequest(r *http.Request) error {
 	if session := RequestSession(r); session != nil {
-		if err := globalSessionStore.Delete(session); err != nil {
+		if err := store.Delete(session); err != nil {
 			return err
 		}
 	}

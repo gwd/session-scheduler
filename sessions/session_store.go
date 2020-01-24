@@ -2,7 +2,6 @@ package sessions
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -13,22 +12,14 @@ type SessionStore interface {
 	Delete(*Session) error
 }
 
-var globalSessionStore SessionStore
-
-func init() {
-	sessionStore, err := NewFileSessionStore("./data/sessions.json")
-	if err != nil {
-		panic(fmt.Errorf("Error creating session store: %s", err))
-	}
-	globalSessionStore = sessionStore
-}
+var store SessionStore
 
 type FileSessionStore struct {
 	filename string
 	Sessions map[string]Session
 }
 
-func NewFileSessionStore(name string) (*FileSessionStore, error) {
+func newFileSessionStore(name string) (*FileSessionStore, error) {
 	store := &FileSessionStore{
 		Sessions: map[string]Session{},
 		filename: name,
@@ -77,4 +68,10 @@ func (store *FileSessionStore) Delete(session *Session) error {
 	}
 
 	return ioutil.WriteFile(store.filename, contents, 0660)
+}
+
+func NewSessionStore(name string) error {
+	var err error
+	store, err = newFileSessionStore(name)
+	return err
 }

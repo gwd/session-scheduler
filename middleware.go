@@ -13,6 +13,10 @@ import (
 // This has to be global because ServeHTTP cannot have a pointer receiver.
 var lock sync.Mutex
 
+func init() {
+	sessions.NewSessionStore("./data/sessions.json")
+}
+
 func RequestUser(r *http.Request) *User {
 	session := sessions.RequestSession(r)
 	if session == nil || session.UserID == "" {
