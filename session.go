@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/gwd/session-scheduler/id"
 )
 
 const (
@@ -16,7 +18,7 @@ const (
 type SessionID string
 
 func (sid *SessionID) generate() {
-	*sid = SessionID(GenerateID("sess", sessionIDLength))
+	*sid = SessionID(id.GenerateID("sess", sessionIDLength))
 }
 
 type Session struct {

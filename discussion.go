@@ -3,6 +3,8 @@ package main
 import (
 	"html/template"
 	"log"
+
+	"github.com/gwd/session-scheduler/id"
 )
 
 const (
@@ -12,7 +14,7 @@ const (
 type DiscussionID string
 
 func (did *DiscussionID) generate() {
-	*did = DiscussionID(GenerateID("disc", discussionIDLength))
+	*did = DiscussionID(id.GenerateID("disc", discussionIDLength))
 }
 
 type Discussion struct {

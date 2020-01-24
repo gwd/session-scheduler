@@ -16,3 +16,7 @@ require (
 	github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 )
+
+go 1.13
+
+replace github.com/gwd/session-scheduler/id => ./id

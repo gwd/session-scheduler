@@ -1,5 +1,7 @@
 package main
 
+import "github.com/gwd/session-scheduler/id"
+
 type LocationID string
 
 type Location struct {
@@ -27,25 +29,25 @@ func (lstore *LocationStore) Init() {
 	// For now, hardcode 3 actual rooms, and one "generic"
 	// NB these must be in capacity order, from highest to lowest.
 	lstore.Save(&Location{
-		ID:       LocationID(GenerateID("loc", locationIDLength)),
+		ID:       LocationID(id.GenerateID("loc", locationIDLength)),
 		Name:     "Contemporary, 6th Floor",
 		IsPlace:  true,
 		Capacity: 45,
 	})
 	lstore.Save(&Location{
-		ID:       LocationID(GenerateID("loc", locationIDLength)),
+		ID:       LocationID(id.GenerateID("loc", locationIDLength)),
 		Name:     "Gallery 2/3, 5th Floor",
 		IsPlace:  true,
 		Capacity: 40,
 	})
 	lstore.Save(&Location{
-		ID:       LocationID(GenerateID("loc", locationIDLength)),
+		ID:       LocationID(id.GenerateID("loc", locationIDLength)),
 		Name:     "Gallery 1, 5th Floor",
 		IsPlace:  true,
 		Capacity: 20,
 	})
 	lstore.Save(&Location{
-		ID:      LocationID(GenerateID("loc", locationIDLength)),
+		ID:      LocationID(id.GenerateID("loc", locationIDLength)),
 		Name:    "Ad-hoc meetings",
 		IsPlace: false,
 	})

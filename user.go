@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/gwd/session-scheduler/id"
 )
 
 const (
@@ -17,7 +19,7 @@ const (
 type UserID string
 
 func (uid *UserID) generate() {
-	*uid = UserID(GenerateID("usr", userIDLength))
+	*uid = UserID(id.GenerateID("usr", userIDLength))
 }
 
 type UserProfile struct {

@@ -11,6 +11,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/gwd/session-scheduler/id"
 )
 
 var deepCopyBuffer bytes.Buffer
@@ -72,13 +74,13 @@ func (store *EventStore) Init(opt EventOptions) {
 
 	store.VerificationCode = opt.VerificationCode
 	if store.VerificationCode == "" {
-		store.VerificationCode = GenerateRawID(8)
+		store.VerificationCode = id.GenerateRawID(8)
 	}
 
 	// Create the admin user
 	pwd := opt.AdminPassword
 	if pwd == "" {
-		pwd = GenerateRawID(12)
+		pwd = id.GenerateRawID(12)
 		log.Printf("Administrator account: admin %s", pwd)
 	}
 	admin, err := NewUser(AdminUsername, pwd, Event.VerificationCode,
