@@ -10,6 +10,7 @@ type SessionStore interface {
 	Find(string) (*Session, error)
 	Save(*Session) error
 	Delete(*Session) error
+	Close()
 }
 
 var store SessionStore
@@ -70,8 +71,16 @@ func (store *FileSessionStore) Delete(session *Session) error {
 	return ioutil.WriteFile(store.filename, contents, 0660)
 }
 
-func NewSessionStore(name string) error {
+func (store *FileSessionStore) Close() {
+}
+
+func OpenSessionStore(name string) error {
 	var err error
 	store, err = newFileSessionStore(name)
 	return err
+}
+
+func CloseSessionStore() {
+	store.Close()
+	store = nil
 }

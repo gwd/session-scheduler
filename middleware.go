@@ -14,7 +14,7 @@ import (
 var lock sync.Mutex
 
 func init() {
-	sessions.NewSessionStore("./data/sessions.json")
+	sessions.OpenSessionStore("./data/sessions.json")
 }
 
 func RequestUser(r *http.Request) *User {

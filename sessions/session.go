@@ -31,6 +31,10 @@ type Session struct {
 	Expiry time.Time
 }
 
+type GetCookier interface {
+	Cookie(string) (*http.Cookie, error)
+}
+
 func (session *Session) Expired() bool {
 	return session.Expiry.Before(time.Now())
 }
@@ -58,7 +62,8 @@ func NewSession(w http.ResponseWriter, uid string) (*Session, error) {
 	return session, err
 }
 
-func RequestSession(r *http.Request) *Session {
+// Typically you would pass your *http.Request
+func RequestSession(r GetCookier) *Session {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		return nil
@@ -80,7 +85,7 @@ func RequestSession(r *http.Request) *Session {
 	return session
 }
 
-func FindOrCreateSession(w http.ResponseWriter, r *http.Request, uid string) (*Session, error) {
+func FindOrCreateSession(w http.ResponseWriter, r GetCookier, uid string) (*Session, error) {
 	err := error(nil)
 
 	session := RequestSession(r)
@@ -91,7 +96,7 @@ func FindOrCreateSession(w http.ResponseWriter, r *http.Request, uid string) (*S
 	return session, err
 }
 
-func DeleteSessionByRequest(r *http.Request) error {
+func DeleteSessionByRequest(r GetCookier) error {
 	if session := RequestSession(r); session != nil {
 		if err := store.Delete(session); err != nil {
 			return err
