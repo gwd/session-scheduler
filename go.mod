@@ -4,7 +4,9 @@ require (
 	github.com/corpix/uarand v0.1.0 // indirect
 	github.com/hako/durafmt v0.0.0-20190612201238-650ed9f29a84
 	github.com/icrowley/fake v0.0.0-20180203215853-4178557ae428
+	github.com/jmoiron/sqlx v1.2.0
 	github.com/julienschmidt/httprouter v1.2.0
+	github.com/mattn/go-sqlite3 v2.0.2+incompatible
 	github.com/microcosm-cc/bluemonday v1.0.2
 	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/shurcooL/github_flavored_markdown v0.0.0-20181002035957-2122de532470
