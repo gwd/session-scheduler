@@ -2,13 +2,36 @@ package main
 
 import (
 	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/gwd/session-scheduler/sessions"
 )
 
 // This has to be global because ServeHTTP cannot have a pointer receiver.
 var lock sync.Mutex
+
+func RequestUser(r *http.Request) *User {
+	session := sessions.RequestSession(r)
+	if session == nil || session.UserID == "" {
+		return nil
+	}
+
+	user, err := Event.Users.Find(UserID(session.UserID))
+	if err != nil {
+		panic(err)
+	}
+	return user
+}
+
+func RequireLogin(w http.ResponseWriter, r *http.Request) {
+	query := url.Values{}
+	query.Add("next", url.QueryEscape(r.URL.String()))
+
+	http.Redirect(w, r, "/login?"+query.Encode(), http.StatusFound)
+}
 
 type Middleware struct {
 	Logger http.HandlerFunc

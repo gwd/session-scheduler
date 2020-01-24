@@ -1,8 +1,7 @@
-package main
+package sessions
 
 import (
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/gwd/session-scheduler/id"
@@ -21,9 +20,14 @@ func (sid *SessionID) generate() {
 	*sid = SessionID(id.GenerateID("sess", sessionIDLength))
 }
 
+type StringMarshaler interface {
+	String() string
+	FromString(string)
+}
+
 type Session struct {
 	ID     SessionID
-	UserID UserID
+	UserID string
 	Expiry time.Time
 }
 
@@ -31,11 +35,12 @@ func (session *Session) Expired() bool {
 	return session.Expiry.Before(time.Now())
 }
 
-func NewSession(w http.ResponseWriter) *Session {
+func NewSession(w http.ResponseWriter, uid string) (*Session, error) {
 	expiry := time.Now().Add(sessionLength)
 
 	session := &Session{
 		Expiry: expiry,
+		UserID: uid,
 	}
 
 	session.ID.generate()
@@ -47,7 +52,10 @@ func NewSession(w http.ResponseWriter) *Session {
 	}
 
 	http.SetCookie(w, &cookie)
-	return session
+
+	err := globalSessionStore.Save(session)
+
+	return session, err
 }
 
 func RequestSession(r *http.Request) *Session {
@@ -72,31 +80,23 @@ func RequestSession(r *http.Request) *Session {
 	return session
 }
 
-func RequestUser(r *http.Request) *User {
+func FindOrCreateSession(w http.ResponseWriter, r *http.Request, uid string) (*Session, error) {
+	err := error(nil)
+
 	session := RequestSession(r)
-	if session == nil || session.UserID == "" {
-		return nil
+	if session == nil || session.UserID != uid {
+		session, err = NewSession(w, uid)
 	}
 
-	user, err := Event.Users.Find(session.UserID)
-	if err != nil {
-		panic(err)
-	}
-	return user
+	return session, err
 }
 
-func RequireLogin(w http.ResponseWriter, r *http.Request) {
-	query := url.Values{}
-	query.Add("next", url.QueryEscape(r.URL.String()))
-
-	http.Redirect(w, r, "/login?"+query.Encode(), http.StatusFound)
-}
-
-func FindOrCreateSession(w http.ResponseWriter, r *http.Request) *Session {
-	session := RequestSession(r)
-	if session == nil {
-		session = NewSession(w)
+func DeleteSessionByRequest(r *http.Request) error {
+	if session := RequestSession(r); session != nil {
+		if err := globalSessionStore.Delete(session); err != nil {
+			return err
+		}
 	}
 
-	return session
+	return nil
 }

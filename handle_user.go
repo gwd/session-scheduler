@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/gwd/session-scheduler/sessions"
 )
 
 func HandleUserNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -47,9 +49,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	}
 
 	// Create a new session
-	session := NewSession(w)
-	session.UserID = user.ID
-	err = globalSessionStore.Save(session)
+	_, err = sessions.NewSession(w, string(user.ID))
 	if err != nil {
 		panic(err)
 	}

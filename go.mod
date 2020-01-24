@@ -19,4 +19,7 @@ require (
 
 go 1.13
 
-replace github.com/gwd/session-scheduler/id => ./id
+replace (
+	github.com/gwd/session-scheduler/id => ./id
+	github.com/gwd/session-scheduler/sessions => ./sessions
+)

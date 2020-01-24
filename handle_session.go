@@ -5,15 +5,13 @@ import (
 	"net/url"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/gwd/session-scheduler/sessions"
 )
 
 func HandleSessionDestroy(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	session := RequestSession(r)
-	if session != nil {
-		err := globalSessionStore.Delete(session)
-		if err != nil {
-			panic(err)
-		}
+	if err := sessions.DeleteSessionByRequest(r); err != nil {
+		panic(err)
 	}
 	RenderTemplate(w, r, "sessions/destroy", nil)
 }
@@ -48,9 +46,7 @@ func HandleSessionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		return
 	}
 
-	session := FindOrCreateSession(w, r)
-	session.UserID = user.ID
-	err = globalSessionStore.Save(session)
+	_, err = sessions.FindOrCreateSession(w, r, string(user.ID))
 	if err != nil {
 		panic(err)
 	}
