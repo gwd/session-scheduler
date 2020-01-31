@@ -1,7 +1,6 @@
-package main
+package discussions
 
 import (
-	"html/template"
 	"log"
 
 	"github.com/gwd/session-scheduler/id"
@@ -56,28 +55,6 @@ type DisplaySlot struct {
 	Checked bool
 }
 
-type DiscussionDisplay struct {
-	ID             DiscussionID
-	Title          string
-	Description    template.HTML
-	DescriptionRaw string
-	Owner          *User
-	Interested     []*User
-	IsPublic       bool
-	// IsUser: Used to determine whether to display 'interest'
-	IsUser bool
-	// MayEdit: Used to determine whether to show edit / delete buttons
-	MayEdit bool
-	// IsAdmin: Used to determine whether to show slot scheduling options
-	IsAdmin       bool
-	Interest      int
-	Location      Location
-	Time          string
-	IsFinal       bool
-	PossibleSlots []DisplaySlot
-	AllUsers      []*User
-}
-
 func (d *Discussion) GetURL() string {
 	return "/uid/discussion/" + string(d.ID) + "/view"
 }
@@ -107,64 +84,19 @@ func (d *Discussion) GetMaxScore() int {
 	return d.maxScore
 }
 
-func (d *Discussion) GetDisplay(cur *User) *DiscussionDisplay {
-	showMain := true
-
-	// Only display a discussion if:
-	// 1. It's pulbic, or...
-	// 2. The current user is admin, or the discussion owner
-	if !d.IsPublic &&
-		(cur == nil || (!cur.IsAdmin && cur.ID != d.Owner)) {
-		if d.ApprovedTitle == "" {
-			return nil
-		} else {
-			showMain = false
-		}
-	}
-
-	dd := &DiscussionDisplay{
-		ID:       d.ID,
-		IsPublic: d.IsPublic,
-	}
-
-	if showMain {
-		dd.Title = d.Title
-		dd.DescriptionRaw = d.Description
-	} else {
-		dd.Title = d.ApprovedTitle
-		dd.DescriptionRaw = d.ApprovedDescription
-	}
-	dd.Description = ProcessText(dd.DescriptionRaw)
-
+func (d *Discussion) Location() Location {
 	if d.location != nil {
-		dd.Location = *d.location
+		return *d.location
 	}
+	return Location{}
+}
 
+func (d *Discussion) Slot() (IsFinal bool, Time string) {
 	if d.slot != nil {
-		dd.IsFinal = d.slot.day.IsFinal
-		dd.Time = d.slot.day.DayName + " " + d.slot.Time
+		IsFinal = d.slot.day.IsFinal
+		Time = d.slot.day.DayName + " " + d.slot.Time
 	}
-
-	dd.Owner, _ = Event.Users.Find(d.Owner)
-	if cur != nil {
-		if cur.Username != AdminUsername {
-			dd.IsUser = true
-			dd.Interest = cur.Interest[d.ID]
-		}
-		dd.MayEdit = cur.MayEditDiscussion(d)
-		if cur.IsAdmin {
-			dd.IsAdmin = true
-			dd.PossibleSlots = Event.Timetable.FillDisplaySlots(d.PossibleSlots)
-			dd.AllUsers = Event.Users.GetUsers()
-		}
-	}
-	for uid := range d.Interested {
-		a, _ := Event.Users.Find(uid)
-		if a != nil {
-			dd.Interested = append(dd.Interested, a)
-		}
-	}
-	return dd
+	return IsFinal, Time
 }
 
 func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool,
@@ -311,8 +243,4 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 
 func DiscussionFindById(id string) (*Discussion, error) {
 	return Event.Discussions.Find(DiscussionID(id))
-}
-
-func DiscussionGetList(cur *User) (list []*DiscussionDisplay) {
-	return Event.Discussions.GetList(cur)
 }

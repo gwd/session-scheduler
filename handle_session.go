@@ -6,6 +6,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
+	disc "github.com/gwd/session-scheduler/discussions"
 	"github.com/gwd/session-scheduler/sessions"
 )
 
@@ -28,9 +29,9 @@ func HandleSessionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	password := r.FormValue("password")
 	next := r.FormValue("next")
 
-	user, err := FindUser(username, password)
+	user, err := disc.FindUser(username, password)
 	if err != nil {
-		if IsValidationError(err) {
+		if disc.IsValidationError(err) {
 			RenderTemplate(w, r, "sessions/new", map[string]interface{}{
 				"Error": err,
 				"User":  user,

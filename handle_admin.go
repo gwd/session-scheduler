@@ -8,6 +8,8 @@ import (
 
 	"github.com/hako/durafmt"
 	"github.com/julienschmidt/httprouter"
+
+	disc "github.com/gwd/session-scheduler/discussions"
 )
 
 func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -47,6 +49,8 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 }
 
+var OptSearchAlgo string
+
 func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := RequestUser(r)
 
@@ -65,7 +69,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 	switch action {
 	case "runschedule":
-		err := MakeSchedule(SearchAlgo(OptSearchAlgo), true)
+		err := disc.MakeSchedule(disc.SearchAlgo(OptSearchAlgo), true)
 		if err == nil {
 			http.Redirect(w, r, "console?flash=Schedule+Started", http.StatusFound)
 		} else {
@@ -98,10 +102,10 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		statuses := r.Form["status"]
 		flash := ""
 		newval := map[string]bool{
-			"website": false,
-			"schedule": false,
+			"website":      false,
+			"schedule":     false,
 			"verification": false,
-			"vcodesent": false}
+			"vcodesent":    false}
 		for _, status := range statuses {
 			switch status {
 			case "websiteActive":
@@ -225,7 +229,7 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 				flash = "Bad+input"
 			} else {
 				for i := 0; i < count; i++ {
-					NewTestUser()
+					disc.NewTestUser()
 				}
 				flash = countString + " users generated"
 			}
@@ -236,12 +240,12 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 				flash = "Bad+input"
 			} else {
 				for i := 0; i < count; i++ {
-					NewTestDiscussion(nil)
+					disc.NewTestDiscussion(nil)
 				}
 				flash = countString + " discussions generated"
 			}
 		case "geninterest":
-			TestGenerateInterest()
+			disc.TestGenerateInterest()
 			flash = "Interest generated"
 		default:
 			return

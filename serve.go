@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -103,8 +105,14 @@ func serve() {
 		Admin:    admin,
 	}
 
-	log.Printf("Listening on %s", Event.ServeAddress)
-	log.Fatal(http.ListenAndServe(Event.ServeAddress, middleware))
+	if OptServeAddress == "" {
+		// Generate a raw port between 1024 and 32768
+		OptServeAddress = fmt.Sprintf("localhost:%d",
+			rand.Int31n(32768-1024)+1024)
+	}
+
+	log.Printf("Listening on %s", OptServeAddress)
+	log.Fatal(http.ListenAndServe(OptServeAddress, middleware))
 }
 
 // Creates a new public

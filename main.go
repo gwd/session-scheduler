@@ -5,16 +5,21 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+
+	disc "github.com/gwd/session-scheduler/discussions"
 )
+
+// FIXME GROSS HACK!
+var Event = &disc.Event
 
 func main() {
 	count := flag.Int("count", -1, "Number of times to iterate (tests only)")
-	flag.StringVar(&OptAdminPassword, "admin-password", "", "Set admin password")
+	flag.StringVar(&disc.OptAdminPassword, "admin-password", "", "Set admin password")
 	flag.StringVar(&OptServeAddress, "address", OptServeAddress, "Address to serve http from")
-	flag.BoolVar(&OptSchedDebug, "sched-debug", false, "Enanable scheduler debug logging")
-	flag.StringVar(&OptSearchAlgo, "searchalgo", string(SearchRandom), "Search algorithm.  Options are heuristic, genetic, and random.")
-	flag.StringVar(&OptSearchDurationString, "searchtime", "60s", "Duration to run search")
-	flag.BoolVar(&OptValidate, "validate", false, "Extra validation of schedule consistency")
+	flag.BoolVar(&disc.OptSchedDebug, "sched-debug", false, "Enanable scheduler debug logging")
+	flag.StringVar(&OptSearchAlgo, "searchalgo", string(disc.SearchRandom), "Search algorithm.  Options are heuristic, genetic, and random.")
+	flag.StringVar(&disc.OptSearchDurationString, "searchtime", "60s", "Duration to run search")
+	flag.BoolVar(&disc.OptValidate, "validate", false, "Extra validation of schedule consistency")
 
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
 
@@ -31,7 +36,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	ScheduleInit()
+	disc.ScheduleInit()
 
 	err := Event.Load()
 	if err != nil {
@@ -56,23 +61,8 @@ func main() {
 	switch cmd {
 	case "serve":
 		serve()
-	case "testuser":
-		for ; *count > 0; *count-- {
-			NewTestUser()
-		}
-	case "testdisc":
-		for ; *count > 0; *count-- {
-			NewTestDiscussion(nil)
-		}
-	case "testpopulate":
-		if *count != -500 {
-			log.Fatal("WARNING: populate will erase the current database.  If you really want to do this, pass a count value of -500.")
-		}
-		TestPopulate()
-	case "testinterest":
-		TestGenerateInterest()
 	case "schedule":
-		MakeSchedule(SearchAlgo(OptSearchAlgo), false)
+		disc.MakeSchedule(disc.SearchAlgo(OptSearchAlgo), false)
 	default:
 		log.Fatalf("Unknown command: %s", cmd)
 	}

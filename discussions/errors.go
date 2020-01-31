@@ -1,9 +1,9 @@
-package main
+package discussions
 
 import (
 	"errors"
-	"unicode"
 	"regexp"
+	"unicode"
 )
 
 type ValidationError error
@@ -44,6 +44,7 @@ func AllWhitespace(s string) bool {
 }
 
 var emailRE = regexp.MustCompile("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$")
+
 func IsEmailAddress(s string) bool {
 	return emailRE.MatchString(s)
 }

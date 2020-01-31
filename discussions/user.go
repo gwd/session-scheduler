@@ -1,7 +1,6 @@
-package main
+package discussions
 
 import (
-	"html/template"
 	"log"
 
 	"golang.org/x/crypto/bcrypt"
@@ -40,40 +39,12 @@ type User struct {
 	Profile UserProfile
 }
 
-type UserDisplay struct {
-	ID          UserID
-	Username    string
-	IsAdmin     bool
-	IsVerified  bool // Has entered the verification code
-	MayEdit     bool
-	Profile     *UserProfile
-	Description template.HTML
-	List        []*DiscussionDisplay
-}
-
 func (u *User) MayEditUser(tgt *User) bool {
 	return u.IsAdmin || u.ID == tgt.ID
 }
 
 func (u *User) MayEditDiscussion(d *Discussion) bool {
 	return u.IsAdmin || u.ID == d.Owner
-}
-
-func (u *User) GetDisplay(cur *User, long bool) (ud *UserDisplay) {
-	ud = &UserDisplay{
-		ID:         u.ID,
-		Username:   u.Username,
-		IsVerified: u.IsVerified,
-	}
-	if cur != nil {
-		ud.MayEdit = cur.MayEditUser(u)
-		ud.IsAdmin = cur.IsAdmin
-		// Only display profile information to people who are logged in
-		ud.Profile = &u.Profile
-		ud.Description = ProcessText(u.Profile.Description)
-		ud.List = Event.Discussions.GetListUser(u, cur)
-	}
-	return
 }
 
 func NewUser(username, password, vcode string, profile *UserProfile) (*User, error) {

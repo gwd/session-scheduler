@@ -1,4 +1,4 @@
-package main
+package discussions
 
 import (
 	"io/ioutil"
@@ -814,13 +814,10 @@ const (
 	SearchRandom        = SearchAlgo("random")
 )
 
-var OptSearchAlgo string
 var OptSearchDurationString string
 var OptSearchDuration time.Duration
 
-// async indicates that MakeScheduleAsync should attempt to grab
-// the event mutex before updating the schedule
-func MakeScheduleAsync(ss *SearchStore, algo SearchAlgo, async bool) {
+func makeScheduleAsync(ss *SearchStore, algo SearchAlgo) {
 	var Hscore, Hmissed, Sscore, Smissed int
 	var new, newS *Schedule
 	var err error
@@ -864,12 +861,6 @@ func MakeScheduleAsync(ss *SearchStore, algo SearchAlgo, async bool) {
 	new.store = nil
 
 out:
-	if async {
-		log.Printf("MakeScheduleAsync: Grabbing mutex")
-		lock.Lock()
-		defer lock.Unlock()
-	}
-
 	if new != nil {
 		Event.ScheduleV2 = new
 		Event.Timetable.Place(new)
@@ -888,6 +879,8 @@ func MakeSchedule(algo SearchAlgo, async bool) error {
 		return errInProgress
 	}
 
+	// FIXME: Ignore async for now
+
 	err := Event.Discussions.Iterate(func(disc *Discussion) error {
 		if !disc.IsPublic {
 			return errModeratedDiscussions
@@ -898,7 +891,7 @@ func MakeSchedule(algo SearchAlgo, async bool) error {
 	if err != nil {
 		return err
 	}
-	
+
 	ss := &SearchStore{}
 
 	if err := ss.Snapshot(&Event); err != nil {
@@ -907,11 +900,7 @@ func MakeSchedule(algo SearchAlgo, async bool) error {
 
 	Event.ScheduleState.StartSearch()
 
-	if async {
-		go MakeScheduleAsync(ss, algo, async)
-	} else {
-		MakeScheduleAsync(ss, algo, async)
-	}
+	makeScheduleAsync(ss, algo)
 
 	return nil
 }

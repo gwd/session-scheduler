@@ -1,4 +1,4 @@
-package main
+package discussions
 
 import "github.com/gwd/session-scheduler/id"
 

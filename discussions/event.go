@@ -1,4 +1,4 @@
-package main
+package discussions
 
 import (
 	"bytes"
@@ -20,8 +20,7 @@ var deepCopyEncoder = gob.NewEncoder(&deepCopyBuffer)
 var deepCopyDecoder = gob.NewDecoder(&deepCopyBuffer)
 
 type EventStore struct {
-	ServeAddress string
-	filename     string
+	filename string
 
 	TestMode             bool
 	Active               bool
@@ -47,7 +46,6 @@ type EventStore struct {
 type EventOptions struct {
 	AdminPassword    string
 	VerificationCode string
-	ServeAddress     string
 }
 
 var Event EventStore
@@ -91,13 +89,6 @@ func (store *EventStore) Init(opt EventOptions) {
 	admin.IsAdmin = true
 	Event.Users.Save(admin)
 
-	Event.ServeAddress = opt.ServeAddress
-	if Event.ServeAddress == "" {
-		// Generate a raw port between 1024 and 32768
-		Event.ServeAddress = fmt.Sprintf("localhost:%d",
-			rand.Int31n(32768-1024)+1024)
-	}
-
 	Event.Save()
 }
 
@@ -139,9 +130,7 @@ func (store *EventStore) Load() error {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			store.Init(EventOptions{
-				AdminPassword: OptAdminPassword,
-				ServeAddress:  OptServeAddress})
+			store.Init(EventOptions{AdminPassword: OptAdminPassword})
 			return nil
 		}
 		return err
@@ -159,13 +148,6 @@ func (store *EventStore) Load() error {
 		}
 		log.Printf("Resetting admin password")
 		admin.SetPassword(OptAdminPassword)
-	}
-
-	if OptServeAddress != "" && OptServeAddress != Event.ServeAddress {
-		log.Printf("Changing default serve address to %s",
-			OptServeAddress)
-		Event.ServeAddress = OptServeAddress
-		Event.Save()
 	}
 
 	// Clean up any stale 'running' data
@@ -265,20 +247,6 @@ func (ustore UserStore) GetUsers() (users []*User) {
 	return
 }
 
-func (ustore UserStore) GetUsersDisplay(cur *User) (users []*UserDisplay) {
-	ustore.Iterate(func(u *User) error {
-		if u.Username != AdminUsername {
-			users = append(users, u.GetDisplay(cur, false))
-		}
-		return nil
-	})
-
-	sort.Slice(users, func(i, j int) bool {
-		return users[i].ID < users[j].ID
-	})
-	return
-}
-
 func (ustore UserStore) FindByUsername(username string) (*User, error) {
 	if username == "" {
 		return nil, nil
@@ -375,46 +343,12 @@ func (dstore DiscussionStore) Delete(did DiscussionID) error {
 	return Event.Save()
 }
 
-func (dstore DiscussionStore) GetListUser(u *User, cur *User) (list []*DiscussionDisplay) {
-	dstore.Iterate(func(d *Discussion) error {
-		if d.Owner == u.ID {
-			dd := d.GetDisplay(cur)
-			if dd != nil {
-				list = append(list, dd)
-			}
-		}
-		return nil
-	})
-
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].ID < list[j].ID
-	})
-
-	return
-}
-
 func (dstore DiscussionStore) GetDidListUser(uid UserID) (list []DiscussionID) {
 	dstore.Iterate(func(d *Discussion) error {
 		if d.Owner == uid {
 			list = append(list, d.ID)
 		}
 		return nil
-	})
-
-	return
-}
-
-func (dstore DiscussionStore) GetList(cur *User) (list []*DiscussionDisplay) {
-	dstore.Iterate(func(d *Discussion) error {
-		dd := d.GetDisplay(cur)
-		if dd != nil {
-			list = append(list, dd)
-		}
-		return nil
-	})
-
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].ID < list[j].ID
 	})
 
 	return
