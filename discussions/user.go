@@ -55,7 +55,12 @@ func NewUser(username, password, vcode string, profile *UserProfile) (*User, err
 
 	log.Printf("New user post: '%s'", username)
 
-	if vcode == Event.VerificationCode {
+	evcode, err := Event.kvs.Get(EventVerificationCode)
+	if err != nil {
+		log.Printf("INTERNAL ERROR: Couldn't get event verification code: %v", err)
+		return user, err
+	}
+	if vcode == evcode {
 		user.IsVerified = true
 	} else if Event.RequireVerification {
 		log.Printf("New user failed: Bad vcode %s", vcode)

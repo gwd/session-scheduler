@@ -378,7 +378,8 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		case "verify":
 			vcode := r.FormValue("Vcode")
 
-			if vcode != Event.VerificationCode {
+			evcode, _ := kvs.Get(disc.EventVerificationCode)
+			if vcode != evcode {
 				redirectURL = "view?flash=Invalid+Validation+Code"
 			} else {
 				user.IsVerified = true

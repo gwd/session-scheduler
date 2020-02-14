@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/gwd/session-scheduler/id"
+	"github.com/gwd/session-scheduler/keyvalue"
 )
 
 var deepCopyBuffer bytes.Buffer
@@ -21,6 +22,7 @@ var deepCopyDecoder = gob.NewDecoder(&deepCopyBuffer)
 
 type EventStore struct {
 	filename string
+	kvs      *keyvalue.KeyValueStore
 
 	TestMode             bool
 	Active               bool
@@ -29,8 +31,6 @@ type EventStore struct {
 	RequireVerification  bool
 
 	Timetable Timetable
-
-	VerificationCode string
 
 	Users       UserStore
 	Discussions DiscussionStore
@@ -44,8 +44,8 @@ type EventStore struct {
 }
 
 type EventOptions struct {
-	AdminPassword    string
-	VerificationCode string
+	KeyValueStore *keyvalue.KeyValueStore
+	AdminPwd      string
 }
 
 var Event EventStore
@@ -57,9 +57,15 @@ const (
 	DefaultSlots = 9
 )
 
-var OptAdminPassword string
+const (
+	EventVerificationCode = "EventVerificationCode"
+	EventScheduleDebug    = "EventScheduleDebug"
+	EventSearchAlgo       = "EventSearchAlgo"
+	EventSearchDuration   = "EventSearchDuration"
+	EventValidate         = "EventValidate"
+)
 
-func (store *EventStore) Init(opt EventOptions) {
+func (store *EventStore) Init(adminPwd string) {
 	store.Users.Init()
 	store.Discussions.Init()
 	store.Timetable.Init()
@@ -70,24 +76,29 @@ func (store *EventStore) Init(opt EventOptions) {
 
 	store.LockedSlots = make([]bool, store.ScheduleSlots)
 
-	store.VerificationCode = opt.VerificationCode
-	if store.VerificationCode == "" {
-		store.VerificationCode = id.GenerateRawID(8)
+	vcode, err := store.kvs.Get(EventVerificationCode)
+	switch {
+	case err == keyvalue.ErrNoRows:
+		vcode = id.GenerateRawID(8)
+		if err = store.kvs.Set(EventVerificationCode, vcode); err != nil {
+			log.Fatalf("Setting Event Verification Code: %v", err)
+		}
+	case err != nil:
+		log.Fatalf("Getting Event Verification Code: %v", err)
 	}
 
-	// Create the admin user
-	pwd := opt.AdminPassword
-	if pwd == "" {
-		pwd = id.GenerateRawID(12)
-		log.Printf("Administrator account: admin %s", pwd)
+	if adminPwd == "" {
+		adminPwd = id.GenerateRawID(12)
 	}
-	admin, err := NewUser(AdminUsername, pwd, Event.VerificationCode,
+
+	admin, err := NewUser(AdminUsername, adminPwd, vcode,
 		&UserProfile{RealName: "Xen Schedule Administrator"})
 	if err != nil {
 		log.Fatalf("Error creating admin user: %v", err)
 	}
 	admin.IsAdmin = true
 	Event.Users.Save(admin)
+	log.Printf("Administrator account: admin %s", adminPwd)
 
 	Event.Save()
 }
@@ -122,7 +133,8 @@ func (store *EventStore) ResetUserData() {
 	Event.Users.Save(admin)
 }
 
-func (store *EventStore) Load() error {
+func (store *EventStore) Load(opt EventOptions) error {
+	store.kvs = opt.KeyValueStore
 	if store.filename == "" {
 		store.filename = StoreFilename
 	}
@@ -130,24 +142,25 @@ func (store *EventStore) Load() error {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			store.Init(EventOptions{AdminPassword: OptAdminPassword})
+			store.Init(opt.AdminPwd)
 			return nil
 		}
 		return err
 	}
+
+	// Restoring from an existing file at this point
 	err = json.Unmarshal(contents, store)
 	if err != nil {
 		return err
 	}
 
-	// Someone has request resetting the admin password
-	if OptAdminPassword != "" {
+	if opt.AdminPwd != "" {
 		admin, err := store.Users.FindByUsername(AdminUsername)
 		if err != nil || admin == nil {
 			log.Fatal("Can't find admin user: %v", err)
 		}
 		log.Printf("Resetting admin password")
-		admin.SetPassword(OptAdminPassword)
+		admin.SetPassword(opt.AdminPwd)
 	}
 
 	// Clean up any stale 'running' data

@@ -7,19 +7,29 @@ import (
 	"runtime/pprof"
 
 	disc "github.com/gwd/session-scheduler/discussions"
+	"github.com/gwd/session-scheduler/keyvalue"
 )
 
 // FIXME GROSS HACK!
 var Event = &disc.Event
 
+var kvs *keyvalue.KeyValueStore
+
 func main() {
-	count := flag.Int("count", -1, "Number of times to iterate (tests only)")
-	flag.StringVar(&disc.OptAdminPassword, "admin-password", "", "Set admin password")
-	flag.StringVar(&OptServeAddress, "address", OptServeAddress, "Address to serve http from")
-	flag.BoolVar(&disc.OptSchedDebug, "sched-debug", false, "Enanable scheduler debug logging")
-	flag.StringVar(&OptSearchAlgo, "searchalgo", string(disc.SearchRandom), "Search algorithm.  Options are heuristic, genetic, and random.")
-	flag.StringVar(&disc.OptSearchDurationString, "searchtime", "60s", "Duration to run search")
-	flag.BoolVar(&disc.OptValidate, "validate", false, "Extra validation of schedule consistency")
+	var err error
+
+	kvs, err = keyvalue.OpenFile("data/serverconfig.db")
+	if err != nil {
+		log.Fatal("Opening serverconfig: %v", err)
+	}
+
+	adminPwd := flag.String("admin-password", "", "Set admin password")
+
+	flag.Var(kvs.GetFlagValue(KeyServeAddress), "address", "Address to serve http from")
+	flag.Var(kvs.GetFlagValue(disc.EventScheduleDebug), "sched-debug", "Enanable scheduler debug logging")
+	flag.Var(kvs.GetFlagValue(disc.EventSearchAlgo), "searchalgo", "Search algorithm.  Options are heuristic, genetic, and random.")
+	flag.Var(kvs.GetFlagValue(disc.EventSearchDuration), "searchtime", "Duration to run search")
+	flag.Var(kvs.GetFlagValue(disc.EventValidate), "validate", "Extra validation of schedule consistency")
 
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
 
@@ -36,9 +46,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	disc.ScheduleInit()
-
-	err := Event.Load()
+	err = Event.Load(disc.EventOptions{KeyValueStore: kvs, AdminPwd: *adminPwd})
 	if err != nil {
 		log.Fatalf("Loading schedule data: %v", err)
 	}
@@ -48,21 +56,18 @@ func main() {
 		cmd = "serve"
 	}
 
-	if cmd == "serve" {
-		if *count != -1 {
-			log.Fatal("Cannot use -count with serve")
-		}
-	} else {
-		if *count == -1 {
-			*count = 0
-		}
-	}
-
 	switch cmd {
 	case "serve":
 		serve()
 	case "schedule":
-		disc.MakeSchedule(disc.SearchAlgo(OptSearchAlgo), false)
+		algostring, err := kvs.Get("EventSearchAlgo")
+		algo := disc.SearchAlgo(algostring)
+		if err == keyvalue.ErrNoRows {
+			algo = disc.SearchRandom
+		} else if err != nil {
+			log.Fatalf("Error getting keyvalue: %v", err)
+		}
+		disc.MakeSchedule(disc.SearchAlgo(algo), false)
 	default:
 		log.Fatalf("Unknown command: %s", cmd)
 	}

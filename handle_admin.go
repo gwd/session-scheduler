@@ -24,7 +24,7 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	tmpl := ps.ByName("template")
 	switch tmpl {
 	case "console":
-		content["Vcode"] = Event.VerificationCode
+		content["Vcode"], _ = kvs.Get(disc.EventVerificationCode)
 		lastUpdate := "Never"
 		if Event.ScheduleV2 != nil {
 			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String() + " ago"
@@ -83,19 +83,24 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	case "setvcode":
 		newvcode := r.FormValue("vcode")
 		if newvcode == "" {
+			vcode, _ := kvs.Get(disc.EventVerificationCode)
 			RenderTemplate(w, r, "console?flash=Invalid+Vcode",
 				map[string]interface{}{
 					"User":    user,
 					"console": true,
-					"Vcode":   Event.VerificationCode,
+					"Vcode":   vcode,
 				})
 			return
 		}
 
 		log.Printf("New vcode: %s", newvcode)
-		Event.VerificationCode = newvcode
-		Event.Save()
-		http.Redirect(w, r, "console?flash=Verification+code+updated", http.StatusFound)
+		err := kvs.Set(disc.EventVerificationCode, newvcode)
+		flash := "Verification+code+updated"
+		if err != nil {
+			flash = "Verification+code+not+updated"
+			log.Printf("Error setting verification code: %v", err)
+		}
+		http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
 		return
 	case "setstatus":
 		r.ParseForm()

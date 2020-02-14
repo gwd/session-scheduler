@@ -110,21 +110,29 @@ func (slot *Slot) Clone(sched *Schedule) (nslot *Slot) {
 }
 
 // Change this to os.Stderr to enable
-var SchedDebug *log.Logger
-var OptSchedDebug = false
-var OptSchedDebugVerbose = false
+var schedDebug *log.Logger
+var optSchedDebugVerbose bool
+var optSchedDebug bool
 
-func ScheduleInit() {
-	if OptSchedDebug {
-		SchedDebug = log.New(os.Stderr, "schedule.go ", log.LstdFlags)
-	} else {
-		SchedDebug = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
+func getSearchDuration() time.Duration {
+	durationString, err := Event.kvs.Get(EventSearchDuration)
+	var duration time.Duration
+	if err != nil {
+		duration, err = time.ParseDuration(durationString)
 	}
 
-	var err error
-	OptSearchDuration, err = time.ParseDuration(OptSearchDurationString)
 	if err != nil {
-		log.Fatalf("Error parsing search time: %v", err)
+		// Default search time 5 seconds
+		return time.Second * 5
+	}
+	return duration
+}
+
+func scheduleInit() {
+	if val, _ := Event.kvs.Get(EventScheduleDebug); val == "true" {
+		schedDebug = log.New(os.Stderr, "schedule.go ", log.LstdFlags)
+	} else {
+		schedDebug = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
 	}
 }
 
@@ -163,12 +171,12 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 			if commit {
 				slot.Users.Set(uid, disc.ID)
 			}
-			if OptSchedDebugVerbose {
-				SchedDebug.Printf("  User %s %d -> %d (+%d)",
+			if optSchedDebugVerbose {
+				schedDebug.Printf("  User %s %d -> %d (+%d)",
 					user.Username, oInterest, tInterest, tInterest-oInterest)
 			}
-		} else if oInterest > 0 && OptSchedDebugVerbose {
-			SchedDebug.Printf("  User %s will stay where they are (%d > %d)",
+		} else if oInterest > 0 && optSchedDebugVerbose {
+			schedDebug.Printf("  User %s will stay where they are (%d > %d)",
 				user.Username, oInterest, tInterest)
 		}
 	}
@@ -201,8 +209,8 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 
 		// Is this their current favorite? If not, removing it won't have an effect
 		if slot.Users.Get(uid) != disc.ID {
-			if OptSchedDebugVerbose {
-				SchedDebug.Printf("  User %s already going to a different discussion, no change",
+			if optSchedDebugVerbose {
+				schedDebug.Printf("  User %s already going to a different discussion, no change",
 					user.Username)
 			}
 		} else {
@@ -223,16 +231,16 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 
 			delta = tInterest - best.interest
 			if best.did == "" {
-				if OptSchedDebugVerbose {
-					SchedDebug.Printf("  User %s has no other discussions of interest",
+				if optSchedDebugVerbose {
+					schedDebug.Printf("  User %s has no other discussions of interest",
 						user.Username)
 				}
 				if commit {
 					slot.Users.Delete(uid)
 				}
 			} else {
-				if OptSchedDebugVerbose {
-					SchedDebug.Printf("  User %s %d -> %d (%d)",
+				if optSchedDebugVerbose {
+					schedDebug.Printf("  User %s %d -> %d (%d)",
 						user.Username, tInterest, best.interest, delta)
 				}
 				if commit {
@@ -515,8 +523,8 @@ func (sched *Schedule) AssignRandom(disc *Discussion, rng *rand.Rand) {
 	for {
 		slotIndex := rng.Intn(len(sched.Slots))
 		if disc.PossibleSlots[slotIndex] && !ss.LockedSlots[slotIndex] {
-			if OptSchedDebug {
-				SchedDebug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
+			if optSchedDebug {
+				schedDebug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
 			}
 			sched.Slots[slotIndex].Assign(disc, true)
 			break
@@ -541,14 +549,14 @@ func ScheduleFactoryTemplate(ss *SearchStore) (sched *Schedule) {
 }
 
 func ScheduleFactoryInner(ss *SearchStore, rng *rand.Rand) (sched *Schedule) {
-	SchedDebug.Printf("Making new random schedule")
+	schedDebug.Printf("Making new random schedule")
 
 	// Clone the locked discussions
 	sched = ScheduleFactoryTemplate(ss)
 
 	// Put each non-locked discussion in a random slot
 	for _, disc := range ss.dList {
-		SchedDebug.Printf("  Placing discussion `%s`", disc.Title)
+		schedDebug.Printf("  Placing discussion `%s`", disc.Title)
 		sched.AssignRandom(disc, rng)
 	}
 
@@ -558,7 +566,7 @@ func ScheduleFactoryInner(ss *SearchStore, rng *rand.Rand) (sched *Schedule) {
 }
 
 func (sched *Schedule) Clone() (new *Schedule) {
-	SchedDebug.Print("Clone")
+	schedDebug.Print("Clone")
 	new = &Schedule{store: sched.store}
 	for i := range sched.Slots {
 		new.Slots = append(new.Slots, sched.Slots[i].Clone(new))
@@ -579,7 +587,7 @@ func (sched *Schedule) Clone() (new *Schedule) {
 }
 
 func (sched *Schedule) Evaluate() (float64, error) {
-	SchedDebug.Print("Evaluate")
+	schedDebug.Print("Evaluate")
 	score, _ := sched.Score()
 	return -float64(score), nil
 }
@@ -597,9 +605,9 @@ func (sched *Schedule) RandomUnlockedSlot(rng *rand.Rand) (slotn int, slot *Slot
 func (sched *Schedule) Mutate(rng *rand.Rand) {
 	var sScore int
 
-	if OptSchedDebug {
+	if optSchedDebug {
 		sScore, _ = sched.Score()
-		SchedDebug.Print("Mutate")
+		schedDebug.Print("Mutate")
 	}
 	replace := []*Discussion{}
 
@@ -620,8 +628,8 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 		// Choose a random discussion
 		dnum := rng.Intn(len(slot.Discussions))
 		did := slot.Discussions[dnum]
-		if OptSchedDebug {
-			SchedDebug.Printf(" Removing discussion %v from slot %d",
+		if optSchedDebug {
+			schedDebug.Printf(" Removing discussion %v from slot %d",
 				did, slotn)
 		}
 		disc, _ := sched.store.Discussions.Find(did)
@@ -636,12 +644,12 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 
 	sched.Validate()
 
-	if OptSchedDebug {
+	if optSchedDebug {
 		eScore, _ := sched.Score()
 		if eScore > sScore {
-			SchedDebug.Printf("Mutated from %d to %d mplus", sScore, eScore)
+			schedDebug.Printf("Mutated from %d to %d mplus", sScore, eScore)
 		} else {
-			SchedDebug.Printf("Mutated from %d to %d", sScore, eScore)
+			schedDebug.Printf("Mutated from %d to %d", sScore, eScore)
 		}
 	}
 }
@@ -732,7 +740,7 @@ func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
 
 func MakeScheduleRandom(ss *SearchStore) (best *Schedule, err error) {
 	start := time.Now()
-	stop := start.Add(OptSearchDuration)
+	stop := start.Add(getSearchDuration())
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	best = ScheduleFactoryInner(ss, rng)
@@ -766,24 +774,24 @@ func MakeScheduleHeuristic(ss *SearchStore) (*Schedule, error) {
 
 	// Starting at the top, look for a slot to put it in which will maximize this score
 	for _, disc := range ss.dList {
-		SchedDebug.Printf("Scheduling discussion %s (max score %d)",
+		schedDebug.Printf("Scheduling discussion %s (max score %d)",
 			disc.Title, disc.GetMaxScore())
 
 		// Find the slot that increases the score the most
 		best := struct{ score, index int }{score: 0, index: -1}
 		for i := range sched.Slots {
-			SchedDebug.Printf(" Evaluating slot %d", i)
+			schedDebug.Printf(" Evaluating slot %d", i)
 			if Event.LockedSlots[i] {
-				SchedDebug.Printf("  Locked, skipping")
+				schedDebug.Printf("  Locked, skipping")
 				continue
 			}
 			if !disc.PossibleSlots[i] {
-				SchedDebug.Printf("  Impossible, skipping")
+				schedDebug.Printf("  Impossible, skipping")
 				continue
 			}
 			// OK, how much will we increase the score by putting this discussion here?
 			score := sched.Slots[i].Assign(disc, false)
-			SchedDebug.Printf("  Total value: %d", score)
+			schedDebug.Printf("  Total value: %d", score)
 			if score > best.score {
 				best.score = score
 				best.index = i
@@ -793,9 +801,9 @@ func MakeScheduleHeuristic(ss *SearchStore) (*Schedule, error) {
 		// If we've found a slot, put it there
 		if best.index < 0 {
 			// FIXME: Do something useful (least-busy slot?)
-			SchedDebug.Printf(" Can't find a good slot!")
+			schedDebug.Printf(" Can't find a good slot!")
 		} else {
-			SchedDebug.Printf(" Putting discussion in slot %d",
+			schedDebug.Printf(" Putting discussion in slot %d",
 				best.index)
 
 			// Make it so
@@ -880,6 +888,7 @@ func MakeSchedule(algo SearchAlgo, async bool) error {
 	}
 
 	// FIXME: Ignore async for now
+	scheduleInit()
 
 	err := Event.Discussions.Iterate(func(disc *Discussion) error {
 		if !disc.IsPublic {

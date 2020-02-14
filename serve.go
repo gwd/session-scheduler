@@ -10,6 +10,8 @@ import (
 	"syscall"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/gwd/session-scheduler/keyvalue"
 )
 
 // URL scheme
@@ -22,8 +24,6 @@ import (
 // /list/users
 // /admin/{console,test}
 //
-
-var OptServeAddress string
 
 func handleSigs() {
 	c := make(chan os.Signal, 1)
@@ -53,6 +53,10 @@ func LogRequest(w http.ResponseWriter, r *http.Request) {
 		r.Method,
 		r.URL)
 }
+
+const (
+	KeyServeAddress = "ServeAddress"
+)
 
 func serve() {
 	go handleSigs()
@@ -105,14 +109,21 @@ func serve() {
 		Admin:    admin,
 	}
 
-	if OptServeAddress == "" {
+	serveAddress, err := kvs.Get(KeyServeAddress)
+	switch {
+	case err == keyvalue.ErrNoRows:
 		// Generate a raw port between 1024 and 32768
-		OptServeAddress = fmt.Sprintf("localhost:%d",
+		serveAddress = fmt.Sprintf("localhost:%d",
 			rand.Int31n(32768-1024)+1024)
+		if err := kvs.Set(KeyServeAddress, serveAddress); err != nil {
+			panic("Setting KeyServeAddress: " + err.Error())
+		}
+	case err != nil:
+		panic("Getting KeyServeAddress: " + err.Error())
 	}
 
-	log.Printf("Listening on %s", OptServeAddress)
-	log.Fatal(http.ListenAndServe(OptServeAddress, middleware))
+	log.Printf("Listening on %s", serveAddress)
+	log.Fatal(http.ListenAndServe(serveAddress, middleware))
 }
 
 // Creates a new public

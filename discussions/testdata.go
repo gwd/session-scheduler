@@ -27,7 +27,8 @@ func NewTestUser() {
 
 	log.Printf("Creating test user %s %v", username, *profile)
 
-	for _, err := NewUser(username, TestPassword, Event.VerificationCode, profile); err != nil; _, err = NewUser(username, TestPassword, Event.VerificationCode, profile) {
+	vcode, _ := Event.kvs.Get(EventVerificationCode)
+	for _, err := NewUser(username, TestPassword, vcode, profile); err != nil; _, err = NewUser(username, TestPassword, vcode, profile) {
 		if err == errUsernameExists {
 			username = fake.UserName()
 			log.Printf(" User exists!  Trying username %s instead", username)
@@ -144,8 +145,9 @@ const (
 )
 
 func TestPopulate() {
-	Event.Init(EventOptions{
-		AdminPassword: "xenroot"})
+	panic("Not implemented")
+	// Event.Init(EventOptions{
+	// 	AdminPassword: "xenroot"})
 	Event.TestMode = true
 	for i := 0; i < TestUsers; i++ {
 		NewTestUser()
