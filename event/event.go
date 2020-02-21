@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/gwd/session-scheduler/id"
-	"github.com/gwd/session-scheduler/keyvalue"
 )
 
 var deepCopyBuffer bytes.Buffer
@@ -22,7 +21,6 @@ var deepCopyDecoder = gob.NewDecoder(&deepCopyBuffer)
 
 type EventStore struct {
 	filename string
-	kvs      *keyvalue.KeyValueStore
 
 	Timetable Timetable
 
@@ -38,8 +36,7 @@ type EventStore struct {
 }
 
 type EventOptions struct {
-	KeyValueStore *keyvalue.KeyValueStore
-	AdminPwd      string
+	AdminPwd string
 }
 
 var Event EventStore
@@ -49,13 +46,6 @@ const (
 	AdminUsername = "admin"
 	// 3 days * 3 slots per day
 	DefaultSlots = 9
-)
-
-const (
-	EventScheduleDebug  = "EventScheduleDebug"
-	EventSearchAlgo     = "EventSearchAlgo"
-	EventSearchDuration = "EventSearchDuration"
-	EventValidate       = "EventValidate"
 )
 
 func (store *EventStore) Init(adminPwd string) {
@@ -116,7 +106,6 @@ func (store *EventStore) ResetUserData() {
 }
 
 func (store *EventStore) Load(opt EventOptions) error {
-	store.kvs = opt.KeyValueStore
 	if store.filename == "" {
 		store.filename = StoreFilename
 	}

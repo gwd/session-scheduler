@@ -1,10 +1,8 @@
 package event
 
 import (
-	"io/ioutil"
 	"log"
 	"math/rand"
-	"os"
 	"sort"
 	"time"
 )
@@ -109,33 +107,6 @@ func (slot *Slot) Clone(sched *Schedule) (nslot *Slot) {
 	return
 }
 
-// Change this to os.Stderr to enable
-var schedDebug *log.Logger
-var optSchedDebugVerbose bool
-var optSchedDebug bool
-
-func getSearchDuration() time.Duration {
-	durationString, err := Event.kvs.Get(EventSearchDuration)
-	var duration time.Duration
-	if err != nil {
-		duration, err = time.ParseDuration(durationString)
-	}
-
-	if err != nil {
-		// Default search time 5 seconds
-		return time.Second * 5
-	}
-	return duration
-}
-
-func scheduleInit() {
-	if val, _ := Event.kvs.Get(EventScheduleDebug); val == "true" {
-		schedDebug = log.New(os.Stderr, "schedule.go ", log.LstdFlags)
-	} else {
-		schedDebug = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
-	}
-}
-
 func (slot *Slot) Init(sched *Schedule) {
 	slot.Discussions = SlotDiscussions([]DiscussionID{})
 	slot.Users = SlotUsers([]SlotUser{})
@@ -171,12 +142,12 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 			if commit {
 				slot.Users.Set(uid, disc.ID)
 			}
-			if optSchedDebugVerbose {
-				schedDebug.Printf("  User %s %d -> %d (+%d)",
+			if opt.DebugLevel > 1 {
+				opt.Debug.Printf("  User %s %d -> %d (+%d)",
 					user.Username, oInterest, tInterest, tInterest-oInterest)
 			}
-		} else if oInterest > 0 && optSchedDebugVerbose {
-			schedDebug.Printf("  User %s will stay where they are (%d > %d)",
+		} else if oInterest > 0 && opt.DebugLevel > 1 {
+			opt.Debug.Printf("  User %s will stay where they are (%d > %d)",
 				user.Username, oInterest, tInterest)
 		}
 	}
@@ -209,8 +180,8 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 
 		// Is this their current favorite? If not, removing it won't have an effect
 		if slot.Users.Get(uid) != disc.ID {
-			if optSchedDebugVerbose {
-				schedDebug.Printf("  User %s already going to a different discussion, no change",
+			if opt.DebugLevel > 1 {
+				opt.Debug.Printf("  User %s already going to a different discussion, no change",
 					user.Username)
 			}
 		} else {
@@ -231,16 +202,16 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 
 			delta = tInterest - best.interest
 			if best.did == "" {
-				if optSchedDebugVerbose {
-					schedDebug.Printf("  User %s has no other discussions of interest",
+				if opt.DebugLevel > 1 {
+					opt.Debug.Printf("  User %s has no other discussions of interest",
 						user.Username)
 				}
 				if commit {
 					slot.Users.Delete(uid)
 				}
 			} else {
-				if optSchedDebugVerbose {
-					schedDebug.Printf("  User %s %d -> %d (%d)",
+				if opt.DebugLevel > 1 {
+					opt.Debug.Printf("  User %s %d -> %d (%d)",
 						user.Username, tInterest, best.interest, delta)
 				}
 				if commit {
@@ -251,8 +222,6 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 	}
 	return
 }
-
-var OptValidate = false
 
 func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 	us, ds := slot.sched.GetStores()
@@ -279,7 +248,7 @@ func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 		} else {
 			// Check to make sure the discussion they're attending is actually more
 			ainterest := interest
-			if OptValidate {
+			if opt.Validate {
 				ainterest = user.Interest[adid]
 			}
 			if ainterest < interest {
@@ -438,7 +407,7 @@ func (sched *Schedule) Score() (score, missed int) {
 }
 
 func (sched *Schedule) Validate() error {
-	if !OptValidate {
+	if !opt.Validate {
 		return nil
 	}
 
@@ -523,8 +492,8 @@ func (sched *Schedule) AssignRandom(disc *Discussion, rng *rand.Rand) {
 	for {
 		slotIndex := rng.Intn(len(sched.Slots))
 		if disc.PossibleSlots[slotIndex] && !ss.LockedSlots[slotIndex] {
-			if optSchedDebug {
-				schedDebug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
+			if opt.DebugLevel > 0 {
+				opt.Debug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
 			}
 			sched.Slots[slotIndex].Assign(disc, true)
 			break
@@ -549,14 +518,14 @@ func ScheduleFactoryTemplate(ss *SearchStore) (sched *Schedule) {
 }
 
 func ScheduleFactoryInner(ss *SearchStore, rng *rand.Rand) (sched *Schedule) {
-	schedDebug.Printf("Making new random schedule")
+	opt.Debug.Printf("Making new random schedule")
 
 	// Clone the locked discussions
 	sched = ScheduleFactoryTemplate(ss)
 
 	// Put each non-locked discussion in a random slot
 	for _, disc := range ss.dList {
-		schedDebug.Printf("  Placing discussion `%s`", disc.Title)
+		opt.Debug.Printf("  Placing discussion `%s`", disc.Title)
 		sched.AssignRandom(disc, rng)
 	}
 
@@ -566,7 +535,7 @@ func ScheduleFactoryInner(ss *SearchStore, rng *rand.Rand) (sched *Schedule) {
 }
 
 func (sched *Schedule) Clone() (new *Schedule) {
-	schedDebug.Print("Clone")
+	opt.Debug.Print("Clone")
 	new = &Schedule{store: sched.store}
 	for i := range sched.Slots {
 		new.Slots = append(new.Slots, sched.Slots[i].Clone(new))
@@ -574,7 +543,7 @@ func (sched *Schedule) Clone() (new *Schedule) {
 
 	new.Validate()
 
-	if OptValidate {
+	if opt.Validate {
 		sscore, smissed := sched.Score()
 		nscore, nmissed := new.Score()
 		if sscore != nscore || smissed != nmissed {
@@ -587,7 +556,7 @@ func (sched *Schedule) Clone() (new *Schedule) {
 }
 
 func (sched *Schedule) Evaluate() (float64, error) {
-	schedDebug.Print("Evaluate")
+	opt.Debug.Print("Evaluate")
 	score, _ := sched.Score()
 	return -float64(score), nil
 }
@@ -605,9 +574,9 @@ func (sched *Schedule) RandomUnlockedSlot(rng *rand.Rand) (slotn int, slot *Slot
 func (sched *Schedule) Mutate(rng *rand.Rand) {
 	var sScore int
 
-	if optSchedDebug {
+	if opt.DebugLevel > 0 {
 		sScore, _ = sched.Score()
-		schedDebug.Print("Mutate")
+		opt.Debug.Print("Mutate")
 	}
 	replace := []*Discussion{}
 
@@ -628,8 +597,8 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 		// Choose a random discussion
 		dnum := rng.Intn(len(slot.Discussions))
 		did := slot.Discussions[dnum]
-		if optSchedDebug {
-			schedDebug.Printf(" Removing discussion %v from slot %d",
+		if opt.DebugLevel > 0 {
+			opt.Debug.Printf(" Removing discussion %v from slot %d",
 				did, slotn)
 		}
 		disc, _ := sched.store.Discussions.Find(did)
@@ -644,12 +613,12 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 
 	sched.Validate()
 
-	if optSchedDebug {
+	if opt.DebugLevel > 0 {
 		eScore, _ := sched.Score()
 		if eScore > sScore {
-			schedDebug.Printf("Mutated from %d to %d mplus", sScore, eScore)
+			opt.Debug.Printf("Mutated from %d to %d mplus", sScore, eScore)
 		} else {
-			schedDebug.Printf("Mutated from %d to %d", sScore, eScore)
+			opt.Debug.Printf("Mutated from %d to %d", sScore, eScore)
 		}
 	}
 }
@@ -740,7 +709,7 @@ func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
 
 func MakeScheduleRandom(ss *SearchStore) (best *Schedule, err error) {
 	start := time.Now()
-	stop := start.Add(getSearchDuration())
+	stop := start.Add(opt.SearchDuration)
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	best = ScheduleFactoryInner(ss, rng)
@@ -774,24 +743,24 @@ func MakeScheduleHeuristic(ss *SearchStore) (*Schedule, error) {
 
 	// Starting at the top, look for a slot to put it in which will maximize this score
 	for _, disc := range ss.dList {
-		schedDebug.Printf("Scheduling discussion %s (max score %d)",
+		opt.Debug.Printf("Scheduling discussion %s (max score %d)",
 			disc.Title, disc.GetMaxScore())
 
 		// Find the slot that increases the score the most
 		best := struct{ score, index int }{score: 0, index: -1}
 		for i := range sched.Slots {
-			schedDebug.Printf(" Evaluating slot %d", i)
+			opt.Debug.Printf(" Evaluating slot %d", i)
 			if Event.LockedSlots[i] {
-				schedDebug.Printf("  Locked, skipping")
+				opt.Debug.Printf("  Locked, skipping")
 				continue
 			}
 			if !disc.PossibleSlots[i] {
-				schedDebug.Printf("  Impossible, skipping")
+				opt.Debug.Printf("  Impossible, skipping")
 				continue
 			}
 			// OK, how much will we increase the score by putting this discussion here?
 			score := sched.Slots[i].Assign(disc, false)
-			schedDebug.Printf("  Total value: %d", score)
+			opt.Debug.Printf("  Total value: %d", score)
 			if score > best.score {
 				best.score = score
 				best.index = i
@@ -801,9 +770,9 @@ func MakeScheduleHeuristic(ss *SearchStore) (*Schedule, error) {
 		// If we've found a slot, put it there
 		if best.index < 0 {
 			// FIXME: Do something useful (least-busy slot?)
-			schedDebug.Printf(" Can't find a good slot!")
+			opt.Debug.Printf(" Can't find a good slot!")
 		} else {
-			schedDebug.Printf(" Putting discussion in slot %d",
+			opt.Debug.Printf(" Putting discussion in slot %d",
 				best.index)
 
 			// Make it so
@@ -822,10 +791,7 @@ const (
 	SearchRandom        = SearchAlgo("random")
 )
 
-var OptSearchDurationString string
-var OptSearchDuration time.Duration
-
-func makeScheduleAsync(ss *SearchStore, algo SearchAlgo) {
+func makeScheduleAsync(ss *SearchStore) {
 	var Hscore, Hmissed, Sscore, Smissed int
 	var new, newS *Schedule
 	var err error
@@ -838,11 +804,11 @@ func makeScheduleAsync(ss *SearchStore, algo SearchAlgo) {
 
 	Hscore, Hmissed = newH.Score()
 
-	switch algo {
+	switch opt.Algo {
 	case SearchRandom:
 		newS, err = MakeScheduleRandom(ss)
 	default:
-		log.Printf("ERROR: Unknown search algorithm %s", algo)
+		log.Printf("ERROR: Unknown search algorithm %s", opt.Algo)
 		goto out
 	}
 
@@ -856,7 +822,7 @@ func makeScheduleAsync(ss *SearchStore, algo SearchAlgo) {
 	}
 
 	log.Printf("Heuristic schedule happiness: %d, sadness %d", Hscore, Hmissed)
-	log.Printf("Search (%s) schedule happiness: %d, sadness %d", algo, Sscore, Smissed)
+	log.Printf("Search (%s) schedule happiness: %d, sadness %d", opt.Algo, Sscore, Smissed)
 
 	new = newH
 	if Sscore > Hscore {
@@ -882,13 +848,23 @@ out:
 	return
 }
 
-func MakeSchedule(algo SearchAlgo, async bool) error {
+type SearchOptions struct {
+	Async          bool
+	Algo           SearchAlgo
+	Validate       bool
+	DebugLevel     int
+	SearchDuration time.Duration
+	Debug          *log.Logger
+}
+
+var opt SearchOptions
+
+func MakeSchedule(optArg SearchOptions) error {
 	if Event.ScheduleState.IsRunning() {
 		return errInProgress
 	}
 
 	// FIXME: Ignore async for now
-	scheduleInit()
 
 	err := Event.Discussions.Iterate(func(disc *Discussion) error {
 		if !disc.IsPublic {
@@ -909,7 +885,9 @@ func MakeSchedule(algo SearchAlgo, async bool) error {
 
 	Event.ScheduleState.StartSearch()
 
-	makeScheduleAsync(ss, algo)
+	opt = optArg
+
+	makeScheduleAsync(ss)
 
 	return nil
 }

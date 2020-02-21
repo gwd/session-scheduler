@@ -2,9 +2,11 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"runtime/pprof"
+	"time"
 
 	"github.com/gwd/session-scheduler/event"
 	"github.com/gwd/session-scheduler/id"
@@ -16,7 +18,14 @@ var Event = &event.Event
 
 var kvs *keyvalue.KeyValueStore
 
-const VerificationCode = "ServeVerificationCode"
+const (
+	ScheduleDebug        = "EventScheduleDebug"
+	ScheduleDebugVerbose = "EventScheduleDebugVerbose"
+	SearchAlgo           = "EventSearchAlgo"
+	SearchDuration       = "EventSearchDuration"
+	Validate             = "EventValidate"
+	VerificationCode     = "ServeVerificationCode"
+)
 
 func main() {
 	var err error
@@ -29,10 +38,10 @@ func main() {
 	adminPwd := flag.String("admin-password", "", "Set admin password")
 
 	flag.Var(kvs.GetFlagValue(KeyServeAddress), "address", "Address to serve http from")
-	flag.Var(kvs.GetFlagValue(event.EventScheduleDebug), "sched-debug", "Enanable scheduler debug logging")
-	flag.Var(kvs.GetFlagValue(event.EventSearchAlgo), "searchalgo", "Search algorithm.  Options are heuristic, genetic, and random.")
-	flag.Var(kvs.GetFlagValue(event.EventSearchDuration), "searchtime", "Duration to run search")
-	flag.Var(kvs.GetFlagValue(event.EventValidate), "validate", "Extra validation of schedule consistency")
+	flag.Var(kvs.GetFlagValue(ScheduleDebug), "sched-debug", "Debug level for logging (default 0)")
+	flag.Var(kvs.GetFlagValue(SearchAlgo), "searchalgo", "Search algorithm.  Options are heuristic, genetic, and random.")
+	flag.Var(kvs.GetFlagValue(SearchDuration), "searchtime", "Duration to run search")
+	flag.Var(kvs.GetFlagValue(Validate), "validate", "Extra validation of schedule consistency")
 
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
 
@@ -62,7 +71,7 @@ func main() {
 		}
 	}
 
-	err = Event.Load(event.EventOptions{KeyValueStore: kvs, AdminPwd: *adminPwd})
+	err = Event.Load(event.EventOptions{AdminPwd: *adminPwd})
 	if err != nil {
 		log.Fatalf("Loading schedule data: %v", err)
 	}
@@ -76,16 +85,53 @@ func main() {
 	case "serve":
 		serve()
 	case "schedule":
-		algostring, err := kvs.Get("EventSearchAlgo")
-		algo := event.SearchAlgo(algostring)
-		if err == keyvalue.ErrNoRows {
-			algo = event.SearchRandom
-		} else if err != nil {
-			log.Fatalf("Error getting keyvalue: %v", err)
-		}
-		event.MakeSchedule(event.SearchAlgo(algo), false)
+		MakeSchedule(false)
 	default:
 		log.Fatalf("Unknown command: %s", cmd)
 	}
 
+}
+
+func getSearchDuration() time.Duration {
+	durationString, err := kvs.Get(SearchDuration)
+	var duration time.Duration
+	if err != nil {
+		duration, err = time.ParseDuration(durationString)
+	}
+
+	if err != nil {
+		// Default search time 5 seconds
+		return time.Second * 5
+	}
+	return duration
+}
+
+func MakeSchedule(async bool) error {
+	opt := event.SearchOptions{Async: async}
+
+	algostring, err := kvs.Get(SearchAlgo)
+	switch {
+	case err == keyvalue.ErrNoRows:
+		opt.Algo = event.SearchRandom
+	case err != nil:
+		log.Fatalf("Error getting keyvalue: %v", err)
+	default:
+		opt.Algo = event.SearchAlgo(algostring)
+	}
+
+	opt.Validate = kvs.GetBoolDef(Validate)
+
+	if kvs.GetBoolDef(ScheduleDebug) {
+		opt.DebugLevel = 1
+		opt.Debug = log.New(os.Stderr, "schedule.go ", log.LstdFlags)
+		if kvs.GetBoolDef(ScheduleDebugVerbose) {
+			opt.DebugLevel = 2
+		}
+	} else {
+		opt.Debug = log.New(ioutil.Discard, "schedule.go ", log.LstdFlags)
+	}
+
+	opt.SearchDuration = getSearchDuration()
+
+	return event.MakeSchedule(opt)
 }

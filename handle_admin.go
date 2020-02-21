@@ -77,7 +77,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 	switch action {
 	case "runschedule":
-		err := event.MakeSchedule(event.SearchAlgo(OptSearchAlgo), true)
+		err := MakeSchedule(true)
 		if err == nil {
 			http.Redirect(w, r, "console?flash=Schedule+Started", http.StatusFound)
 		} else {
