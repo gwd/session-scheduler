@@ -147,6 +147,29 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 	return disc, err
 }
 
+func DiscussionSetPublic(uid string, public bool) error {
+	d, err := DiscussionFindById(uid)
+	if err != nil {
+		return err
+	}
+	if public {
+		// When making something public, keep track of the
+		// "approved" value
+		d.IsPublic = true
+		d.ApprovedTitle = d.Title
+		d.ApprovedDescription = d.Description
+	} else {
+		// To actually hide something, the ApprovedTitle needs
+		// to be false as well.
+		d.IsPublic = false
+		d.ApprovedTitle = ""
+		d.ApprovedDescription = ""
+	}
+	Event.Discussions.Save(d)
+
+	return nil
+}
+
 func DeleteDiscussion(did DiscussionID) {
 	log.Printf("Deleting discussion %s", did)
 

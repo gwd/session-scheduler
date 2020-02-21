@@ -298,27 +298,14 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			newValueString := r.FormValue("newvalue")
-			// FIXME: Move into /discussions
-			if newValueString == "true" {
-				// When making something public, keep track of the
-				// "approved" value
-				d.IsPublic = true
-				d.ApprovedTitle = d.Title
-				d.ApprovedDescription = d.Description
-			} else {
-				// To actually hide something, the ApprovedTitle needs
-				// to be false as well.
-				d.IsPublic = false
-				d.ApprovedTitle = ""
-				d.ApprovedDescription = ""
+			if err := event.DiscussionSetPublic(string(d.ID), r.FormValue("newvalue") == "true"); err != nil {
+				// FIXME
+				log.Printf("DiscussionSetPublic: %v", err)
 			}
 
 			if tmp := r.FormValue("redirectURL"); tmp != "" {
 				redirectURL = tmp
 			}
-
-			Event.Discussions.Save(d)
 
 		default:
 			return
@@ -364,17 +351,11 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			}
 
 			newValueString := r.FormValue("newvalue")
-			if newValueString == "true" {
-				user.IsVerified = true
-			} else {
-				user.IsVerified = false
-			}
+			user.SetVerified(newValueString == "true")
 
 			if tmp := r.FormValue("redirectURL"); tmp != "" {
 				redirectURL = tmp
 			}
-
-			Event.Users.Save(user)
 		case "verify":
 			vcode := r.FormValue("Vcode")
 
@@ -382,8 +363,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			if vcode != evcode {
 				redirectURL = "view?flash=Invalid+Validation+Code"
 			} else {
-				user.IsVerified = true
-				Event.Users.Save(user)
+				user.SetVerified(true)
 				redirectURL = "view?flash=Account+Verified"
 			}
 		case "delete":

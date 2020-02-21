@@ -177,7 +177,6 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		}
 		log.Printf("New locked slots: %v", locked)
 		Event.LockedSlots.Set(locked)
-		Event.Save()
 		http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)
 	}
 }

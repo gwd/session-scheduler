@@ -172,6 +172,7 @@ type LockedSlots []bool
 func (ls *LockedSlots) Set(new LockedSlots) {
 	*ls = new
 	Event.Timetable.UpdateIsFinal(new)
+	Event.Save()
 }
 
 type UserStore map[UserID]*User

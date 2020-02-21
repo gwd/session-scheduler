@@ -160,6 +160,12 @@ func (user *User) SetPassword(newPassword string) error {
 	return nil
 }
 
+func (user *User) SetVerified(isVerified bool) error {
+	user.IsVerified = isVerified
+	Event.Users.Save(user)
+	return nil
+}
+
 func UserRemoveDiscussion(did DiscussionID) error {
 	return Event.Users.Iterate(func(u *User) error {
 		delete(u.Interest, did)
