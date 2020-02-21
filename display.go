@@ -4,21 +4,21 @@ import (
 	"html/template"
 	"sort"
 
-	disc "github.com/gwd/session-scheduler/discussions"
+	"github.com/gwd/session-scheduler/event"
 )
 
 type UserDisplay struct {
-	ID          disc.UserID
+	ID          event.UserID
 	Username    string
 	IsAdmin     bool
 	IsVerified  bool // Has entered the verification code
 	MayEdit     bool
-	Profile     *disc.UserProfile
+	Profile     *event.UserProfile
 	Description template.HTML
 	List        []*DiscussionDisplay
 }
 
-func UserGetDisplay(u *disc.User, cur *disc.User, long bool) (ud *UserDisplay) {
+func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay) {
 	ud = &UserDisplay{
 		ID:         u.ID,
 		Username:   u.Username,
@@ -36,12 +36,12 @@ func UserGetDisplay(u *disc.User, cur *disc.User, long bool) (ud *UserDisplay) {
 }
 
 type DiscussionDisplay struct {
-	ID             disc.DiscussionID
+	ID             event.DiscussionID
 	Title          string
 	Description    template.HTML
 	DescriptionRaw string
-	Owner          *disc.User
-	Interested     []*disc.User
+	Owner          *event.User
+	Interested     []*event.User
 	IsPublic       bool
 	// IsUser: Used to determine whether to display 'interest'
 	IsUser bool
@@ -50,14 +50,14 @@ type DiscussionDisplay struct {
 	// IsAdmin: Used to determine whether to show slot scheduling options
 	IsAdmin       bool
 	Interest      int
-	Location      disc.Location
+	Location      event.Location
 	Time          string
 	IsFinal       bool
-	PossibleSlots []disc.DisplaySlot
-	AllUsers      []*disc.User
+	PossibleSlots []event.DisplaySlot
+	AllUsers      []*event.User
 }
 
-func DiscussionGetDisplay(d *disc.Discussion, cur *disc.User) *DiscussionDisplay {
+func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDisplay {
 	showMain := true
 
 	// Only display a discussion if:
@@ -93,7 +93,7 @@ func DiscussionGetDisplay(d *disc.Discussion, cur *disc.User) *DiscussionDisplay
 
 	dd.Owner, _ = Event.Users.Find(d.Owner)
 	if cur != nil {
-		if cur.Username != disc.AdminUsername {
+		if cur.Username != event.AdminUsername {
 			dd.IsUser = true
 			dd.Interest = cur.Interest[d.ID]
 		}
@@ -113,9 +113,9 @@ func DiscussionGetDisplay(d *disc.Discussion, cur *disc.User) *DiscussionDisplay
 	return dd
 }
 
-func DiscussionGetListUser(dstore disc.DiscussionStore,
-	u *disc.User, cur *disc.User) (list []*DiscussionDisplay) {
-	dstore.Iterate(func(d *disc.Discussion) error {
+func DiscussionGetListUser(dstore event.DiscussionStore,
+	u *event.User, cur *event.User) (list []*DiscussionDisplay) {
+	dstore.Iterate(func(d *event.Discussion) error {
 		if d.Owner == u.ID {
 			dd := DiscussionGetDisplay(d, cur)
 			if dd != nil {
@@ -132,8 +132,8 @@ func DiscussionGetListUser(dstore disc.DiscussionStore,
 	return
 }
 
-func DiscussionGetList(dstore disc.DiscussionStore, cur *disc.User) (list []*DiscussionDisplay) {
-	dstore.Iterate(func(d *disc.Discussion) error {
+func DiscussionGetList(dstore event.DiscussionStore, cur *event.User) (list []*DiscussionDisplay) {
+	dstore.Iterate(func(d *event.Discussion) error {
 		dd := DiscussionGetDisplay(d, cur)
 		if dd != nil {
 			list = append(list, dd)
@@ -148,9 +148,9 @@ func DiscussionGetList(dstore disc.DiscussionStore, cur *disc.User) (list []*Dis
 	return
 }
 
-func UserGetUsersDisplay(ustore disc.UserStore, cur *disc.User) (users []*UserDisplay) {
-	ustore.Iterate(func(u *disc.User) error {
-		if u.Username != disc.AdminUsername {
+func UserGetUsersDisplay(ustore event.UserStore, cur *event.User) (users []*UserDisplay) {
+	ustore.Iterate(func(u *event.User) error {
+		if u.Username != event.AdminUsername {
 			users = append(users, UserGetDisplay(u, cur, false))
 		}
 		return nil

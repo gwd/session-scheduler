@@ -7,7 +7,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	disc "github.com/gwd/session-scheduler/discussions"
+	"github.com/gwd/session-scheduler/event"
 	"github.com/gwd/session-scheduler/sessions"
 )
 
@@ -18,13 +18,13 @@ func init() {
 	sessions.OpenSessionStore("./data/sessions.sqlite")
 }
 
-func RequestUser(r *http.Request) *disc.User {
+func RequestUser(r *http.Request) *event.User {
 	session := sessions.RequestSession(r)
 	if session == nil || session.UserID == "" {
 		return nil
 	}
 
-	user, err := Event.Users.Find(disc.UserID(session.UserID))
+	user, err := Event.Users.Find(event.UserID(session.UserID))
 	if err != nil {
 		panic(err)
 	}

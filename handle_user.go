@@ -5,7 +5,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	disc "github.com/gwd/session-scheduler/discussions"
+	"github.com/gwd/session-scheduler/event"
 	"github.com/gwd/session-scheduler/sessions"
 )
 
@@ -13,8 +13,8 @@ func HandleUserNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	RenderTemplate(w, r, "user/new", nil)
 }
 
-func parseProfile(r *http.Request) (profile *disc.UserProfile) {
-	profile = &disc.UserProfile{
+func parseProfile(r *http.Request) (profile *event.UserProfile) {
+	profile = &event.UserProfile{
 		RealName:    r.FormValue("RealName"),
 		Company:     r.FormValue("Company"),
 		Email:       r.FormValue("Email"),
@@ -24,7 +24,7 @@ func parseProfile(r *http.Request) (profile *disc.UserProfile) {
 }
 
 func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	user, err := disc.NewUser(
+	user, err := event.NewUser(
 		r.FormValue("Username"),
 		r.FormValue("Password"),
 		r.FormValue("Vcode"),
@@ -32,7 +32,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	)
 
 	if err != nil {
-		if disc.IsValidationError(err) {
+		if event.IsValidationError(err) {
 			RenderTemplate(w, r, "user/new", map[string]interface{}{
 				"Error": err.Error(),
 				"User":  user,

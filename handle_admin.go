@@ -9,7 +9,7 @@ import (
 	"github.com/hako/durafmt"
 	"github.com/julienschmidt/httprouter"
 
-	disc "github.com/gwd/session-scheduler/discussions"
+	"github.com/gwd/session-scheduler/event"
 )
 
 func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -24,7 +24,7 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	tmpl := ps.ByName("template")
 	switch tmpl {
 	case "console":
-		content["Vcode"], _ = kvs.Get(disc.EventVerificationCode)
+		content["Vcode"], _ = kvs.Get(event.EventVerificationCode)
 		lastUpdate := "Never"
 		if Event.ScheduleV2 != nil {
 			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String() + " ago"
@@ -69,7 +69,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 	switch action {
 	case "runschedule":
-		err := disc.MakeSchedule(disc.SearchAlgo(OptSearchAlgo), true)
+		err := event.MakeSchedule(event.SearchAlgo(OptSearchAlgo), true)
 		if err == nil {
 			http.Redirect(w, r, "console?flash=Schedule+Started", http.StatusFound)
 		} else {
@@ -83,7 +83,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	case "setvcode":
 		newvcode := r.FormValue("vcode")
 		if newvcode == "" {
-			vcode, _ := kvs.Get(disc.EventVerificationCode)
+			vcode, _ := kvs.Get(event.EventVerificationCode)
 			RenderTemplate(w, r, "console?flash=Invalid+Vcode",
 				map[string]interface{}{
 					"User":    user,
@@ -94,7 +94,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		}
 
 		log.Printf("New vcode: %s", newvcode)
-		err := kvs.Set(disc.EventVerificationCode, newvcode)
+		err := kvs.Set(event.EventVerificationCode, newvcode)
 		flash := "Verification+code+updated"
 		if err != nil {
 			flash = "Verification+code+not+updated"
@@ -234,7 +234,7 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 				flash = "Bad+input"
 			} else {
 				for i := 0; i < count; i++ {
-					disc.NewTestUser()
+					event.NewTestUser()
 				}
 				flash = countString + " users generated"
 			}
@@ -245,12 +245,12 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 				flash = "Bad+input"
 			} else {
 				for i := 0; i < count; i++ {
-					disc.NewTestDiscussion(nil)
+					event.NewTestDiscussion(nil)
 				}
 				flash = countString + " discussions generated"
 			}
 		case "geninterest":
-			disc.TestGenerateInterest()
+			event.TestGenerateInterest()
 			flash = "Interest generated"
 		default:
 			return

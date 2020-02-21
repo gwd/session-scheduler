@@ -6,12 +6,12 @@ import (
 	"os"
 	"runtime/pprof"
 
-	disc "github.com/gwd/session-scheduler/discussions"
+	"github.com/gwd/session-scheduler/event"
 	"github.com/gwd/session-scheduler/keyvalue"
 )
 
 // FIXME GROSS HACK!
-var Event = &disc.Event
+var Event = &event.Event
 
 var kvs *keyvalue.KeyValueStore
 
@@ -26,10 +26,10 @@ func main() {
 	adminPwd := flag.String("admin-password", "", "Set admin password")
 
 	flag.Var(kvs.GetFlagValue(KeyServeAddress), "address", "Address to serve http from")
-	flag.Var(kvs.GetFlagValue(disc.EventScheduleDebug), "sched-debug", "Enanable scheduler debug logging")
-	flag.Var(kvs.GetFlagValue(disc.EventSearchAlgo), "searchalgo", "Search algorithm.  Options are heuristic, genetic, and random.")
-	flag.Var(kvs.GetFlagValue(disc.EventSearchDuration), "searchtime", "Duration to run search")
-	flag.Var(kvs.GetFlagValue(disc.EventValidate), "validate", "Extra validation of schedule consistency")
+	flag.Var(kvs.GetFlagValue(event.EventScheduleDebug), "sched-debug", "Enanable scheduler debug logging")
+	flag.Var(kvs.GetFlagValue(event.EventSearchAlgo), "searchalgo", "Search algorithm.  Options are heuristic, genetic, and random.")
+	flag.Var(kvs.GetFlagValue(event.EventSearchDuration), "searchtime", "Duration to run search")
+	flag.Var(kvs.GetFlagValue(event.EventValidate), "validate", "Extra validation of schedule consistency")
 
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
 
@@ -46,7 +46,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	err = Event.Load(disc.EventOptions{KeyValueStore: kvs, AdminPwd: *adminPwd})
+	err = Event.Load(event.EventOptions{KeyValueStore: kvs, AdminPwd: *adminPwd})
 	if err != nil {
 		log.Fatalf("Loading schedule data: %v", err)
 	}
@@ -61,13 +61,13 @@ func main() {
 		serve()
 	case "schedule":
 		algostring, err := kvs.Get("EventSearchAlgo")
-		algo := disc.SearchAlgo(algostring)
+		algo := event.SearchAlgo(algostring)
 		if err == keyvalue.ErrNoRows {
-			algo = disc.SearchRandom
+			algo = event.SearchRandom
 		} else if err != nil {
 			log.Fatalf("Error getting keyvalue: %v", err)
 		}
-		disc.MakeSchedule(disc.SearchAlgo(algo), false)
+		event.MakeSchedule(event.SearchAlgo(algo), false)
 	default:
 		log.Fatalf("Unknown command: %s", cmd)
 	}

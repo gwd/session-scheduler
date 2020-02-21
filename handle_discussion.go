@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strconv"
 
-	disc "github.com/gwd/session-scheduler/discussions"
+	"github.com/gwd/session-scheduler/event"
 )
 
 func HandleDiscussionNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -34,14 +34,14 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 
-	d, err := disc.NewDiscussion(
+	d, err := event.NewDiscussion(
 		owner,
 		r.FormValue("title"),
 		r.FormValue("description"),
 	)
 
 	if err != nil {
-		if disc.IsValidationError(err) {
+		if event.IsValidationError(err) {
 			RenderTemplate(w, r, "discussion/new", map[string]interface{}{
 				"Error":      err.Error(),
 				"Discussion": DiscussionGetDisplay(d, owner),
@@ -55,25 +55,25 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 }
 
 // A safety catch to DTRT if either user or discussion are nil
-func MayEditDiscussion(u *disc.User, d *disc.Discussion) bool {
+func MayEditDiscussion(u *event.User, d *event.Discussion) bool {
 	if u == nil || d == nil {
 		return false
 	}
 	return u.MayEditDiscussion(d)
 }
 
-func MayEditUser(cur *disc.User, tgt *disc.User) bool {
+func MayEditUser(cur *event.User, tgt *event.User) bool {
 	if cur == nil || tgt == nil {
 		return false
 	}
 	return cur.MayEditUser(tgt)
 }
 
-func IsAdmin(u *disc.User) bool {
+func IsAdmin(u *event.User) bool {
 	return u != nil && u.IsAdmin
 }
 
-func IsVerified(u *disc.User) bool {
+func IsVerified(u *event.User) bool {
 	return u != nil && (u.IsVerified || u.IsAdmin)
 }
 
@@ -107,7 +107,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	switch itype {
 	case "discussion":
-		d, _ := disc.DiscussionFindById(uid)
+		d, _ := event.DiscussionFindById(uid)
 
 		if d == nil {
 			break
@@ -128,7 +128,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 		display = DiscussionGetDisplay(d, cur)
 	case "user":
-		user, _ := Event.Users.Find(disc.UserID(uid))
+		user, _ := Event.Users.Find(event.UserID(uid))
 
 		if user == nil {
 			break
@@ -210,7 +210,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 	switch itype {
 	case "discussion":
-		d, _ := disc.DiscussionFindById(uid)
+		d, _ := event.DiscussionFindById(uid)
 		if d == nil {
 			log.Printf("Invalid discussion: %s", uid)
 			return
@@ -218,9 +218,9 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		switch action {
 		case "setinterest":
 			// Administrators can't express interest in discussions
-			if cur.Username == disc.AdminUsername {
+			if cur.Username == event.AdminUsername {
 				log.Printf("%s user can't express interest",
-					disc.AdminUsername)
+					event.AdminUsername)
 				return
 			}
 
@@ -265,12 +265,12 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				if err != nil {
 					return
 				}
-				owner = disc.UserID(r.FormValue("owner"))
+				owner = event.UserID(r.FormValue("owner"))
 			}
 
-			discussionNext, err := disc.UpdateDiscussion(d, title, description, possibleSlots, owner)
+			discussionNext, err := event.UpdateDiscussion(d, title, description, possibleSlots, owner)
 			if err != nil {
-				if disc.IsValidationError(err) {
+				if event.IsValidationError(err) {
 					RenderTemplate(w, r, "edit", map[string]interface{}{
 						"Error":   err.Error(),
 						"Display": discussionNext,
@@ -286,7 +286,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			disc.DeleteDiscussion(d.ID)
+			event.DeleteDiscussion(d.ID)
 
 			// Can't redirect to 'view' as it's been deleted
 			http.Redirect(w, r, "/list/discussion", http.StatusFound)
@@ -324,7 +324,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			return
 		}
 	case "user":
-		user, _ := Event.Users.Find(disc.UserID(uid))
+		user, _ := Event.Users.Find(event.UserID(uid))
 		if user == nil {
 			log.Printf("Invalid user: %s", uid)
 			return
@@ -344,10 +344,10 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 			log.Printf(" new profile %v", *profile)
 
-			userNext, err := disc.UpdateUser(user, cur, currentPassword, newPassword, profile)
+			userNext, err := event.UpdateUser(user, cur, currentPassword, newPassword, profile)
 
 			if err != nil {
-				if disc.IsValidationError(err) {
+				if event.IsValidationError(err) {
 					RenderTemplate(w, r, "user/edit", map[string]interface{}{
 						"Error": err.Error(),
 						"User":  userNext,
@@ -378,7 +378,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		case "verify":
 			vcode := r.FormValue("Vcode")
 
-			evcode, _ := kvs.Get(disc.EventVerificationCode)
+			evcode, _ := kvs.Get(event.EventVerificationCode)
 			if vcode != evcode {
 				redirectURL = "view?flash=Invalid+Validation+Code"
 			} else {
@@ -392,7 +392,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			disc.DeleteUser(user.ID)
+			event.DeleteUser(user.ID)
 
 			// Can't redirect to 'view' as it's been deleted
 			http.Redirect(w, r, "/list/user", http.StatusFound)

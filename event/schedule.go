@@ -1,4 +1,4 @@
-package discussions
+package event
 
 import (
 	"io/ioutil"
