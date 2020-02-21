@@ -66,7 +66,7 @@ func (lstore LocationStore) Find(id LocationID) (*Location, error) {
 func (lstore *LocationStore) Save(location *Location) error {
 	// FIXME: For now, add in order.  Later sort by some metric.
 	*lstore = append(*lstore, location)
-	return Event.Save()
+	return event.Save()
 }
 
 func (lstore LocationStore) GetLocations() []*Location {

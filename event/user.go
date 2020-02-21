@@ -77,7 +77,7 @@ func NewUser(username, password string, isVerified bool, profile *UserProfile) (
 	}
 
 	// Check if the username exists
-	existingUser, err := Event.Users.FindByUsername(username)
+	existingUser, err := event.Users.FindByUsername(username)
 	if err != nil {
 		log.Printf("New user failed: %v", err)
 		return user, err
@@ -93,7 +93,7 @@ func NewUser(username, password string, isVerified bool, profile *UserProfile) (
 
 	user.Interest = make(map[DiscussionID]int)
 
-	Event.Users.Save(user)
+	event.Users.Save(user)
 
 	return user, err
 }
@@ -103,7 +103,7 @@ func FindUser(username, password string) (*User, error) {
 		Username: username,
 	}
 
-	existingUser, err := Event.Users.FindByUsername(username)
+	existingUser, err := event.Users.FindByUsername(username)
 	if err != nil {
 		return out, err
 	}
@@ -139,14 +139,14 @@ func (user *User) SetInterestNosave(disc *Discussion, interest int) error {
 		delete(disc.Interested, user.ID)
 		disc.maxScoreValid = false // Lazily update this when it's wanted
 	}
-	Event.ScheduleState.Modify()
+	event.ScheduleState.Modify()
 	return nil
 }
 
 func (user *User) SetInterest(disc *Discussion, interest int) (err error) {
 	err = user.SetInterestNosave(disc, interest)
 	if err == nil {
-		Event.Save()
+		event.Save()
 	}
 	return
 }
@@ -162,12 +162,12 @@ func (user *User) SetPassword(newPassword string) error {
 
 func (user *User) SetVerified(isVerified bool) error {
 	user.IsVerified = isVerified
-	Event.Users.Save(user)
+	event.Users.Save(user)
 	return nil
 }
 
 func UserRemoveDiscussion(did DiscussionID) error {
-	return Event.Users.Iterate(func(u *User) error {
+	return event.Users.Iterate(func(u *User) error {
 		delete(u.Interest, did)
 		return nil
 	})
@@ -203,13 +203,13 @@ func UpdateUser(user, modifier *User, currentPassword, newPassword string,
 
 	user.Profile = *profile
 
-	Event.Users.Save(user)
+	event.Users.Save(user)
 
 	return out, nil
 }
 
 func DeleteUser(uid UserID) error {
-	dlist := Event.Discussions.GetDidListUser(uid)
+	dlist := event.Discussions.GetDidListUser(uid)
 
 	for _, did := range dlist {
 		DeleteDiscussion(did)
@@ -217,7 +217,7 @@ func DeleteUser(uid UserID) error {
 
 	DiscussionRemoveUser(uid)
 
-	Event.Users.Delete(uid)
+	event.Users.Delete(uid)
 
 	return nil
 }

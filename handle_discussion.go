@@ -128,7 +128,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 		display = DiscussionGetDisplay(d, cur)
 	case "user":
-		user, _ := Event.Users.Find(event.UserID(uid))
+		user, _ := event.UserFind(event.UserID(uid))
 
 		if user == nil {
 			break
@@ -165,7 +165,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func FormCheckToBool(formData []string) (bslot []bool, err error) {
-	bslot = make([]bool, Event.ScheduleSlots)
+	bslot = make([]bool, event.ScheduleGetSlots())
 	for _, iString := range formData {
 		i, err := strconv.Atoi(iString)
 		if err != nil {
@@ -311,7 +311,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			return
 		}
 	case "user":
-		user, _ := Event.Users.Find(event.UserID(uid))
+		user, _ := event.UserFind(event.UserID(uid))
 		if user == nil {
 			log.Printf("Invalid user: %s", uid)
 			return
@@ -396,10 +396,10 @@ func HandleList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	switch itype {
 	case "discussion":
-		templateArgs["List"] = DiscussionGetList(Event.Discussions, cur)
+		templateArgs["List"] = DiscussionGetList(cur)
 		templateArgs["redirectURL"] = ""
 	case "user":
-		templateArgs["List"] = UserGetUsersDisplay(Event.Users, cur)
+		templateArgs["List"] = UserGetUsersDisplay(cur)
 	default:
 		return
 	}

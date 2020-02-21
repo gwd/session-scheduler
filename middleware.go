@@ -24,7 +24,7 @@ func RequestUser(r *http.Request) *event.User {
 		return nil
 	}
 
-	user, err := Event.Users.Find(event.UserID(session.UserID))
+	user, err := event.UserFind(event.UserID(session.UserID))
 	if err != nil {
 		panic(err)
 	}

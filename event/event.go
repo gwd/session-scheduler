@@ -39,7 +39,7 @@ type EventOptions struct {
 	AdminPwd string
 }
 
-var Event EventStore
+var event EventStore
 
 const (
 	StoreFilename = "data/event.json"
@@ -69,10 +69,10 @@ func (store *EventStore) Init(adminPwd string) {
 		log.Fatalf("Error creating admin user: %v", err)
 	}
 	admin.IsAdmin = true
-	Event.Users.Save(admin)
+	event.Users.Save(admin)
 	log.Printf("Administrator account: admin %s", adminPwd)
 
-	Event.Save()
+	event.Save()
 }
 
 // Reset "event" data, without touching users or discussions
@@ -85,7 +85,11 @@ func (store *EventStore) ResetEventData() {
 	store.LockedSlots = make([]bool, store.ScheduleSlots)
 	store.Discussions.ResetEventData()
 
-	Event.Save()
+	event.Save()
+}
+
+func ResetData() {
+	event.ResetEventData()
 }
 
 // Reset "user" data -- users, discussions, and interest (keeping admin user).
@@ -102,7 +106,7 @@ func (store *EventStore) ResetUserData() {
 	store.Discussions.Init()
 	store.ResetEventData()
 
-	Event.Users.Save(admin)
+	event.Users.Save(admin)
 }
 
 func (store *EventStore) Load(opt EventOptions) error {
@@ -135,16 +139,20 @@ func (store *EventStore) Load(opt EventOptions) error {
 	}
 
 	// Clean up any stale 'running' data
-	if Event.ScheduleState.IsRunning() {
-		Event.ScheduleState.SearchFailed()
+	if event.ScheduleState.IsRunning() {
+		event.ScheduleState.SearchFailed()
 	}
 
 	// Run timetable placement to update discussion info
-	if Event.ScheduleV2 != nil {
-		Event.ScheduleV2.LoadPost()
-		Event.Timetable.Place(Event.ScheduleV2)
+	if event.ScheduleV2 != nil {
+		event.ScheduleV2.LoadPost()
+		event.Timetable.Place(event.ScheduleV2)
 	}
 	return nil
+}
+
+func Load(opt EventOptions) error {
+	return event.Load(opt)
 }
 
 func (store *EventStore) Save() error {
@@ -160,8 +168,12 @@ type LockedSlots []bool
 
 func (ls *LockedSlots) Set(new LockedSlots) {
 	*ls = new
-	Event.Timetable.UpdateIsFinal(new)
-	Event.Save()
+	event.Timetable.UpdateIsFinal(new)
+	event.Save()
+}
+
+func LockedSlotsSet(new LockedSlots) {
+	event.LockedSlots.Set(new)
 }
 
 type UserStore map[UserID]*User
@@ -172,7 +184,7 @@ func (ustore *UserStore) Init() {
 
 func (ustore UserStore) Save(user *User) error {
 	ustore[user.ID] = user
-	return Event.Save()
+	return event.Save()
 }
 
 func (ustore UserStore) Find(id UserID) (*User, error) {
@@ -181,6 +193,10 @@ func (ustore UserStore) Find(id UserID) (*User, error) {
 		return user, nil
 	}
 	return nil, nil
+}
+
+func UserFind(id UserID) (*User, error) {
+	return event.Users.Find(id)
 }
 
 func (ustore UserStore) FindRandom() (user *User, err error) {
@@ -217,6 +233,10 @@ func (ustore UserStore) Iterate(f func(u *User) error) (err error) {
 	return
 }
 
+func UserIterate(f func(u *User) error) (err error) {
+	return event.Users.Iterate(f)
+}
+
 func (ustore UserStore) GetUsers() (users []*User) {
 	ustore.Iterate(func(u *User) error {
 		if u.Username != AdminUsername {
@@ -230,6 +250,10 @@ func (ustore UserStore) GetUsers() (users []*User) {
 	})
 
 	return
+}
+
+func UserGetAll() (users []*User) {
+	return event.Users.GetUsers()
 }
 
 func (ustore UserStore) FindByUsername(username string) (*User, error) {
@@ -270,8 +294,8 @@ func (ustore *UserStore) DeepCopy(ucopy *UserStore) (err error) {
 
 func (ustore UserStore) Delete(uid UserID) error {
 	delete(ustore, uid)
-	Event.ScheduleState.Modify()
-	return Event.Save()
+	event.ScheduleState.Modify()
+	return event.Save()
 }
 
 func (dstore *DiscussionStore) DeepCopy(dcopy *DiscussionStore) (err error) {
@@ -293,7 +317,7 @@ func (dstore *DiscussionStore) Init() {
 // Update PossibleSlot size while retaining other information
 func (dstore *DiscussionStore) ResetEventData() {
 	dstore.Iterate(func(disc *Discussion) error {
-		disc.PossibleSlots = MakePossibleSlots(Event.ScheduleSlots)
+		disc.PossibleSlots = MakePossibleSlots(event.ScheduleSlots)
 		return nil
 	})
 }
@@ -317,15 +341,19 @@ func (dstore DiscussionStore) Iterate(f func(d *Discussion) error) (err error) {
 	return
 }
 
+func DiscussionIterate(f func(d *Discussion) error) (err error) {
+	return event.Discussions.Iterate(f)
+}
+
 func (dstore DiscussionStore) Save(discussion *Discussion) error {
 	dstore[discussion.ID] = discussion
-	return Event.Save()
+	return event.Save()
 }
 
 func (dstore DiscussionStore) Delete(did DiscussionID) error {
 	delete(dstore, did)
-	Event.ScheduleState.Modify()
-	return Event.Save()
+	event.ScheduleState.Modify()
+	return event.Save()
 }
 
 func (dstore DiscussionStore) GetDidListUser(uid UserID) (list []DiscussionID) {
@@ -337,4 +365,8 @@ func (dstore DiscussionStore) GetDidListUser(uid UserID) (list []DiscussionID) {
 	})
 
 	return
+}
+
+func ScheduleGetSlots() int {
+	return event.ScheduleSlots
 }

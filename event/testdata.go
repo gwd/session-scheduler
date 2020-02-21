@@ -46,7 +46,7 @@ func NewTestDiscussion(owner *User) {
 
 	if owner == nil {
 		var err error
-		owner, err = Event.Users.FindRandom()
+		owner, err = event.Users.FindRandom()
 		if err != nil {
 			log.Fatalf("Getting a random user: %v", err)
 		}
@@ -96,7 +96,7 @@ func NewTestDiscussion(owner *User) {
 // - When emulating somebody, choose like them 7/8 times
 func TestGenerateInterest() {
 	handled := []*User{}
-	for _, user := range Event.Users.GetUsers() {
+	for _, user := range event.Users.GetUsers() {
 		var model *User
 		// Create 4 random "models" at first; after that, 10% are random
 		if len(handled) > 4 && rand.Intn(10) != 0 {
@@ -106,7 +106,7 @@ func TestGenerateInterest() {
 		} else {
 			log.Printf("User %s will be themselves", user.Username)
 		}
-		Event.Discussions.Iterate(func(disc *Discussion) error {
+		event.Discussions.Iterate(func(disc *Discussion) error {
 			r := rand.Intn(100)
 			interest := 0
 
@@ -134,7 +134,7 @@ func TestGenerateInterest() {
 		})
 		handled = append(handled, user)
 	}
-	Event.Save()
+	event.Save()
 }
 
 const (
@@ -145,7 +145,7 @@ const (
 
 func TestPopulate() {
 	panic("Not implemented")
-	// Event.Init(EventOptions{
+	// event.Init(EventOptions{
 	// 	AdminPassword: "xenroot"})
 	//SetFlag(FlagTestMode, true)
 	for i := 0; i < TestUsers; i++ {

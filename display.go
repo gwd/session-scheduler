@@ -30,7 +30,7 @@ func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay)
 		// Only display profile information to people who are logged in
 		ud.Profile = &u.Profile
 		ud.Description = ProcessText(u.Profile.Description)
-		ud.List = DiscussionGetListUser(Event.Discussions, u, cur)
+		ud.List = DiscussionGetListUser(u, cur)
 	}
 	return
 }
@@ -91,7 +91,7 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 
 	dd.IsFinal, dd.Time = d.Slot()
 
-	dd.Owner, _ = Event.Users.Find(d.Owner)
+	dd.Owner, _ = event.UserFind(d.Owner)
 	if cur != nil {
 		if cur.Username != event.AdminUsername {
 			dd.IsUser = true
@@ -100,12 +100,12 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 		dd.MayEdit = cur.MayEditDiscussion(d)
 		if cur.IsAdmin {
 			dd.IsAdmin = true
-			dd.PossibleSlots = Event.Timetable.FillDisplaySlots(d.PossibleSlots)
-			dd.AllUsers = Event.Users.GetUsers()
+			dd.PossibleSlots = event.TimetableFillDisplaySlots(d.PossibleSlots)
+			dd.AllUsers = event.UserGetAll()
 		}
 	}
 	for uid := range d.Interested {
-		a, _ := Event.Users.Find(uid)
+		a, _ := event.UserFind(uid)
 		if a != nil {
 			dd.Interested = append(dd.Interested, a)
 		}
@@ -113,9 +113,8 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 	return dd
 }
 
-func DiscussionGetListUser(dstore event.DiscussionStore,
-	u *event.User, cur *event.User) (list []*DiscussionDisplay) {
-	dstore.Iterate(func(d *event.Discussion) error {
+func DiscussionGetListUser(u *event.User, cur *event.User) (list []*DiscussionDisplay) {
+	event.DiscussionIterate(func(d *event.Discussion) error {
 		if d.Owner == u.ID {
 			dd := DiscussionGetDisplay(d, cur)
 			if dd != nil {
@@ -132,8 +131,8 @@ func DiscussionGetListUser(dstore event.DiscussionStore,
 	return
 }
 
-func DiscussionGetList(dstore event.DiscussionStore, cur *event.User) (list []*DiscussionDisplay) {
-	dstore.Iterate(func(d *event.Discussion) error {
+func DiscussionGetList(cur *event.User) (list []*DiscussionDisplay) {
+	event.DiscussionIterate(func(d *event.Discussion) error {
 		dd := DiscussionGetDisplay(d, cur)
 		if dd != nil {
 			list = append(list, dd)
@@ -148,8 +147,8 @@ func DiscussionGetList(dstore event.DiscussionStore, cur *event.User) (list []*D
 	return
 }
 
-func UserGetUsersDisplay(ustore event.UserStore, cur *event.User) (users []*UserDisplay) {
-	ustore.Iterate(func(u *event.User) error {
+func UserGetUsersDisplay(cur *event.User) (users []*UserDisplay) {
+	event.UserIterate(func(u *event.User) error {
 		if u.Username != event.AdminUsername {
 			users = append(users, UserGetDisplay(u, cur, false))
 		}

@@ -67,7 +67,7 @@ func (d *Discussion) GetMaxScore() int {
 				log.Fatalf("INTERNAL ERROR: Discussion %s Interested[%s] false!",
 					d.ID, uid)
 			}
-			user, err := Event.Users.Find(uid)
+			user, err := event.Users.Find(uid)
 			if err != nil {
 				log.Fatalf("Finding user %s: %v", uid, err)
 			}
@@ -123,11 +123,11 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 
 	if pSlots != nil {
 		disc.PossibleSlots = pSlots
-		Event.ScheduleState.Modify()
+		event.ScheduleState.Modify()
 	}
 
 	if newOwnerID != "" && newOwnerID != disc.Owner {
-		newOwner, _ := Event.Users.Find(newOwnerID)
+		newOwner, _ := event.Users.Find(newOwnerID)
 		if newOwner != nil {
 			// All we need to do is set the owner's interest to max,
 			// and set the new owner.
@@ -139,10 +139,10 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 	}
 
 	// Editing a discussion takes it non-public unless the owner is verified.
-	owner, _ := Event.Users.Find(disc.Owner)
+	owner, _ := event.Users.Find(disc.Owner)
 	disc.IsPublic = (owner != nil && owner.IsVerified)
 
-	err := Event.Discussions.Save(disc)
+	err := event.Discussions.Save(disc)
 
 	return disc, err
 }
@@ -165,7 +165,7 @@ func DiscussionSetPublic(uid string, public bool) error {
 		d.ApprovedTitle = ""
 		d.ApprovedDescription = ""
 	}
-	Event.Discussions.Save(d)
+	event.Discussions.Save(d)
 
 	return nil
 }
@@ -176,21 +176,21 @@ func DeleteDiscussion(did DiscussionID) {
 	// Remove it from the schedule before removing it from user list
 	// so we still have the 'Interest' value in case we decide to
 	// maintain a score at a given time.
-	if Event.ScheduleV2 != nil {
-		Event.ScheduleV2.RemoveDiscussion(did)
+	if event.ScheduleV2 != nil {
+		event.ScheduleV2.RemoveDiscussion(did)
 
 		// Removing a discussion means updating attendees, and
 		// possibly moving rooms as well.  Run the placement again.
-		Event.Timetable.Place(Event.ScheduleV2)
+		event.Timetable.Place(event.ScheduleV2)
 	}
 
 	UserRemoveDiscussion(did)
 
-	Event.Discussions.Delete(did)
+	event.Discussions.Delete(did)
 }
 
 func DiscussionRemoveUser(uid UserID) error {
-	return Event.Discussions.Iterate(func(d *Discussion) error {
+	return event.Discussions.Iterate(func(d *Discussion) error {
 		delete(d.Interested, uid)
 		return nil
 	})
@@ -209,7 +209,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 		Owner:         owner.ID,
 		Title:         title,
 		Description:   description,
-		PossibleSlots: MakePossibleSlots(Event.ScheduleSlots),
+		PossibleSlots: MakePossibleSlots(event.ScheduleSlots),
 	}
 
 	log.Printf("%s New discussion post: '%s'",
@@ -229,7 +229,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 
 	// Check for duplicate titles and too many discussions (admins are exempt)
 	count := 0
-	err := Event.Discussions.Iterate(func(check *Discussion) error {
+	err := event.Discussions.Iterate(func(check *Discussion) error {
 		if check.Title == title {
 			log.Printf("%s New discussion failed: duplicate title",
 				owner.Username)
@@ -239,7 +239,7 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 			count++
 			// Normal users are not allowed to propose more
 			// discussions than they can personally attend
-			if count > Event.ScheduleSlots {
+			if count > event.ScheduleSlots {
 				log.Printf("%s New discussion failed: Too many discussions (%d)",
 					owner.Username, count)
 				return errTooManyDiscussions
@@ -261,9 +261,9 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 	// New discussions are non-public by default unless owner is verified
 	disc.IsPublic = owner.IsVerified
 
-	return disc, Event.Discussions.Save(disc)
+	return disc, event.Discussions.Save(disc)
 }
 
 func DiscussionFindById(id string) (*Discussion, error) {
-	return Event.Discussions.Find(DiscussionID(id))
+	return event.Discussions.Find(DiscussionID(id))
 }

@@ -45,7 +45,7 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 	// For now, just list the discussions.  Place into locations later.
 	ts.Discussions = []TimetableDiscussion{}
 	for _, did := range slot.Discussions {
-		disc, _ := Event.Discussions.Find(did)
+		disc, _ := event.Discussions.Find(did)
 		tdisc := TimetableDiscussion{
 			ID:        did,
 			Title:     disc.Title,
@@ -64,13 +64,13 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 	})
 
 	// And place them in locations, using the non-place as a catch-all
-	locations := Event.Locations.GetLocations()
+	locations := event.Locations.GetLocations()
 	lidx := 0
 	for i := range ts.Discussions {
 		tdisc := &ts.Discussions[i]
 		if lidx < len(locations) {
 			loc := locations[lidx]
-			disc, _ := Event.Discussions.Find(tdisc.ID)
+			disc, _ := event.Discussions.Find(tdisc.ID)
 
 			opt.Debug.Printf("Setting discussion %s room to id %d (%s)",
 				tdisc.Title, lidx, tdisc.LocationInfo.Name)
@@ -223,4 +223,19 @@ func (tt *Timetable) FillDisplaySlots(bslot []bool) (dss []DisplaySlot) {
 		}
 	}
 	return
+}
+
+func TimetableFillDisplaySlots(bslot []bool) []DisplaySlot {
+	return event.Timetable.FillDisplaySlots(bslot)
+}
+
+func TimetableGetLockedSlots() []DisplaySlot {
+	if event.LockedSlots == nil {
+		return nil
+	}
+	return event.Timetable.FillDisplaySlots(event.LockedSlots)
+}
+
+func GetTimetable() *Timetable {
+	return &event.Timetable
 }

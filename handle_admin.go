@@ -4,9 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/hako/durafmt"
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/gwd/session-scheduler/event"
@@ -33,22 +31,16 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	switch tmpl {
 	case "console":
 		content["Vcode"], _ = kvs.Get(VerificationCode)
-		lastUpdate := "Never"
-		if Event.ScheduleV2 != nil {
-			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String() + " ago"
-		}
-		content["SinceLastSchedule"] = lastUpdate
-		switch {
-		case Event.ScheduleState.IsRunning():
+		content["SinceLastSchedule"] = event.SchedLastUpdate()
+		switch event.SchedGetState() {
+		case event.SchedStateRunning:
 			content["IsInProgress"] = true
-		case Event.ScheduleState.IsModified():
+		case event.SchedStateModified:
 			content["IsStale"] = true
 		default:
 			content["IsCurrent"] = true
 		}
-		if Event.LockedSlots != nil {
-			content["LockedSlots"] = Event.Timetable.FillDisplaySlots(Event.LockedSlots)
-		}
+		content["LockedSlots"] = event.TimetableGetLockedSlots()
 		fallthrough
 	case "test":
 		content[tmpl] = true
@@ -85,7 +77,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			http.Redirect(w, r, "console?flash=Error+starting+schedule: See Log", http.StatusFound)
 		}
 	case "resetEventData":
-		Event.ResetEventData()
+		event.ResetData()
 		http.Redirect(w, r, "console?flash=Event+data+reset", http.StatusFound)
 		return
 	case "setvcode":
@@ -176,7 +168,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			return
 		}
 		log.Printf("New locked slots: %v", locked)
-		Event.LockedSlots.Set(locked)
+		event.LockedSlotsSet(locked)
 		http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)
 	}
 }
@@ -223,9 +215,6 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 			}
 		case "enabletest":
 			flash = "Test+mode+already+disabled"
-		case "resetUserData":
-			Event.ResetUserData()
-			flash = "Data+reset"
 		case "genuser":
 			countString := r.FormValue("count")
 			count, err := strconv.Atoi(countString)

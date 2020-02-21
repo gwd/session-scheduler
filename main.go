@@ -13,9 +13,6 @@ import (
 	"github.com/gwd/session-scheduler/keyvalue"
 )
 
-// FIXME GROSS HACK!
-var Event = &event.Event
-
 var kvs *keyvalue.KeyValueStore
 
 const (
@@ -71,7 +68,7 @@ func main() {
 		}
 	}
 
-	err = Event.Load(event.EventOptions{AdminPwd: *adminPwd})
+	err = event.Load(event.EventOptions{AdminPwd: *adminPwd})
 	if err != nil {
 		log.Fatalf("Loading schedule data: %v", err)
 	}

@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"sort"
 	"time"
+
+	"github.com/hako/durafmt"
 )
 
 type SlotDiscussions []DiscussionID
@@ -372,8 +374,8 @@ func (sched *Schedule) GetStores() (us *UserStore, ds *DiscussionStore) {
 		ds = &sched.store.Discussions
 		us = &sched.store.Users
 	} else {
-		ds = &Event.Discussions
-		us = &Event.Users
+		ds = &event.Discussions
+		us = &event.Users
 	}
 	return
 }
@@ -750,7 +752,7 @@ func MakeScheduleHeuristic(ss *SearchStore) (*Schedule, error) {
 		best := struct{ score, index int }{score: 0, index: -1}
 		for i := range sched.Slots {
 			opt.Debug.Printf(" Evaluating slot %d", i)
-			if Event.LockedSlots[i] {
+			if event.LockedSlots[i] {
 				opt.Debug.Printf("  Locked, skipping")
 				continue
 			}
@@ -836,14 +838,14 @@ func makeScheduleAsync(ss *SearchStore) {
 
 out:
 	if new != nil {
-		Event.ScheduleV2 = new
-		Event.Timetable.Place(new)
-		Event.ScheduleState.SearchSucceeded()
+		event.ScheduleV2 = new
+		event.Timetable.Place(new)
+		event.ScheduleState.SearchSucceeded()
 	} else {
-		Event.ScheduleState.SearchFailed()
+		event.ScheduleState.SearchFailed()
 	}
 
-	Event.Save()
+	event.Save()
 
 	return
 }
@@ -860,13 +862,13 @@ type SearchOptions struct {
 var opt SearchOptions
 
 func MakeSchedule(optArg SearchOptions) error {
-	if Event.ScheduleState.IsRunning() {
+	if event.ScheduleState.IsRunning() {
 		return errInProgress
 	}
 
 	// FIXME: Ignore async for now
 
-	err := Event.Discussions.Iterate(func(disc *Discussion) error {
+	err := event.Discussions.Iterate(func(disc *Discussion) error {
 		if !disc.IsPublic {
 			return errModeratedDiscussions
 		}
@@ -879,15 +881,42 @@ func MakeSchedule(optArg SearchOptions) error {
 
 	ss := &SearchStore{}
 
-	if err := ss.Snapshot(&Event); err != nil {
+	if err := ss.Snapshot(&event); err != nil {
 		return err
 	}
 
-	Event.ScheduleState.StartSearch()
+	event.ScheduleState.StartSearch()
 
 	opt = optArg
 
 	makeScheduleAsync(ss)
 
 	return nil
+}
+
+func SchedLastUpdate() string {
+	lastUpdate := "Never"
+	if event.ScheduleV2 != nil {
+		lastUpdate = durafmt.ParseShort(time.Since(event.ScheduleV2.Created)).String() + " ago"
+	}
+	return lastUpdate
+}
+
+type SchedState int
+
+const (
+	SchedStateCurrent = SchedState(iota)
+	SchedStateModified
+	SchedStateRunning
+)
+
+func SchedGetState() SchedState {
+	switch {
+	case event.ScheduleState.IsRunning():
+		return SchedStateRunning
+	case event.ScheduleState.IsModified():
+		return SchedStateModified
+	default:
+		return SchedStateCurrent
+	}
 }
