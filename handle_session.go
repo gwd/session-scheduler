@@ -42,7 +42,7 @@ func HandleSessionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		panic(err)
 	}
 
-	if !Event.Active && !user.IsAdmin {
+	if !kvs.GetBoolDef(FlagActive) && !user.IsAdmin {
 		http.Redirect(w, r, "/login?flash=Website+Inactive", http.StatusFound)
 		return
 	}

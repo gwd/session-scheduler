@@ -76,7 +76,7 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Then, look for paths which are available only when active, or for admins
 	if handler, params, _ := m.Active.Lookup(r.Method, r.URL.Path); handler != nil {
-		if Event.Active || u != nil {
+		if kvs.GetBoolDef(FlagActive) || u != nil {
 			handler(mw, r, params)
 		} else {
 			http.Redirect(w, r, "/", http.StatusFound)

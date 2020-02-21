@@ -78,6 +78,41 @@ func TestKeyStore(t *testing.T) {
 		return
 	}
 
+	for k, v := range expected {
+		nv := v + "'"
+		var ov string
+		if ov, err = kv.Exchange(k, nv); err != nil {
+			t.Errorf("Setting key-value (%s, %s): %v", k, nv, err)
+			return
+		}
+		if ov != v {
+			t.Errorf("Unexpected old value: wanted %s, got %s!", v, ov)
+			return
+		}
+		expected[k] = nv
+	}
+
+	// Test exchanging an empty value
+	{
+		k := "key4"
+		v := ""
+		nv := "value4"
+		ov, err := kv.Exchange(k, nv)
+		if err != nil {
+			t.Errorf("Setting key-value (%s, %s): %v", k, nv, err)
+			return
+		}
+		if ov != v {
+			t.Errorf("Unexpected old value: wanted %s, got %s!", v, ov)
+			return
+		}
+		expected[k] = nv
+	}
+
+	if VerifyExpected(t, expected, kv) {
+		return
+	}
+
 	kv.Close()
 
 	kv, err = OpenFile(fname)

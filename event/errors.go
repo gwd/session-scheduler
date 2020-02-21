@@ -22,7 +22,6 @@ var (
 	errTitleExists          = ValidationError(errors.New("That title exists"))
 	errNoDesc               = ValidationError(errors.New("You must provide a description"))
 	errInvalidInterest      = ValidationError(errors.New("Interest value out of range"))
-	errInvalidVcode         = ValidationError(errors.New("Incorrect verification code"))
 	errTooManyDiscussions   = ValidationError(errors.New("You have too many discussions"))
 	errAllSlotsLocked       = ValidationError(errors.New("All slots are locked"))
 	errInProgress           = ValidationError(errors.New("Schedule already in progress"))

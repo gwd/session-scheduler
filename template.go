@@ -69,12 +69,12 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, name string, data ma
 
 	data["CurrentUser"] = cur
 	data["Flash"] = r.URL.Query().Get("flash")
-	data["IsTestMode"] = Event.TestMode
-	data["IsWebsiteActive"] = Event.Active
-	data["IsScheduleActive"] = Event.ScheduleActive
-	data["IsVcodeSent"] = Event.VerificationCodeSent
-	data["RequireVerification"] = Event.RequireVerification
-	data["ShowToolbar"] = Event.Active || (cur != nil && cur.IsAdmin)
+	data["IsTestMode"] = kvs.GetBoolDef(FlagTestMode)
+	data["IsWebsiteActive"] = kvs.GetBoolDef(FlagActive)
+	data["IsScheduleActive"] = kvs.GetBoolDef(FlagScheduleActive)
+	data["IsVcodeSent"] = kvs.GetBoolDef(FlagVerificationCodeSent)
+	data["RequireVerification"] = kvs.GetBoolDef(FlagRequireVerification)
+	data["ShowToolbar"] = kvs.GetBoolDef(FlagActive) || (cur != nil && cur.IsAdmin)
 
 	funcs := template.FuncMap{
 		"yield": func() (template.HTML, error) {

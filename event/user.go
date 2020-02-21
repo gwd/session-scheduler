@@ -47,25 +47,14 @@ func (u *User) MayEditDiscussion(d *Discussion) bool {
 	return u.IsAdmin || u.ID == d.Owner
 }
 
-func NewUser(username, password, vcode string, profile *UserProfile) (*User, error) {
+func NewUser(username, password string, isVerified bool, profile *UserProfile) (*User, error) {
 	user := &User{
-		Username: username,
-		Profile:  *profile,
+		Username:   username,
+		Profile:    *profile,
+		IsVerified: isVerified,
 	}
 
 	log.Printf("New user post: '%s'", username)
-
-	evcode, err := Event.kvs.Get(EventVerificationCode)
-	if err != nil {
-		log.Printf("INTERNAL ERROR: Couldn't get event verification code: %v", err)
-		return user, err
-	}
-	if vcode == evcode {
-		user.IsVerified = true
-	} else if Event.RequireVerification {
-		log.Printf("New user failed: Bad vcode %s", vcode)
-		return user, errInvalidVcode
-	}
 
 	if username == "" || AllWhitespace(username) {
 		log.Printf("New user failed: no username")

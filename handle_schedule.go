@@ -6,7 +6,7 @@ import (
 )
 
 func HandleScheduleView(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	if Event.ScheduleActive {
+	if kvs.GetBoolDef(FlagScheduleActive) {
 		RenderTemplate(w, r, "schedule/view", map[string]interface{}{
 			"Timetable": &Event.Timetable,
 		})

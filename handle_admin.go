@@ -12,6 +12,14 @@ import (
 	"github.com/gwd/session-scheduler/event"
 )
 
+const (
+	FlagTestMode             = "ServeTestMode"
+	FlagActive               = "ServeActive"
+	FlagScheduleActive       = "ServeScheduleActive"
+	FlagVerificationCodeSent = "ServeVerificationCodeSent"
+	FlagRequireVerification  = "ServeRequireVerification"
+)
+
 func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := RequestUser(r)
 
@@ -24,7 +32,7 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	tmpl := ps.ByName("template")
 	switch tmpl {
 	case "console":
-		content["Vcode"], _ = kvs.Get(event.EventVerificationCode)
+		content["Vcode"], _ = kvs.Get(VerificationCode)
 		lastUpdate := "Never"
 		if Event.ScheduleV2 != nil {
 			lastUpdate = durafmt.ParseShort(time.Since(Event.ScheduleV2.Created)).String() + " ago"
@@ -83,7 +91,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	case "setvcode":
 		newvcode := r.FormValue("vcode")
 		if newvcode == "" {
-			vcode, _ := kvs.Get(event.EventVerificationCode)
+			vcode, _ := kvs.Get(VerificationCode)
 			RenderTemplate(w, r, "console?flash=Invalid+Vcode",
 				map[string]interface{}{
 					"User":    user,
@@ -94,7 +102,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		}
 
 		log.Printf("New vcode: %s", newvcode)
-		err := kvs.Set(event.EventVerificationCode, newvcode)
+		err := kvs.Set(VerificationCode, newvcode)
 		flash := "Verification+code+updated"
 		if err != nil {
 			flash = "Verification+code+not+updated"
@@ -105,7 +113,6 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	case "setstatus":
 		r.ParseForm()
 		statuses := r.Form["status"]
-		flash := ""
 		newval := map[string]bool{
 			"website":      false,
 			"schedule":     false,
@@ -123,57 +130,43 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 				newval["verification"] = true
 			default:
 				log.Printf("Unexpected status value: %v", status)
-				flash = "Invalid form result: Report this error to the admin"
+				flash := "Invalid form result: Report this error to the admin"
 				http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
 				return
 			}
 		}
-		if newval["website"] != Event.Active {
-			Event.Active = newval["website"]
-			if Event.Active {
-				flash += "Website+Activated"
-			} else {
-				flash += "Website+Deactivated"
+
+		flashAccumulator := func(flash string, err error, fkey string, dbkey string, ftt string, ttf string) (string, error) {
+			if err != nil {
+				return flash, err
 			}
-		}
-		if newval["schedule"] != Event.ScheduleActive {
-			Event.ScheduleActive = newval["schedule"]
-			if flash != "" {
-				flash += ", "
+			nv := newval[fkey]
+			ov, err := kvs.ExchangeBool(dbkey, nv)
+			if ov != nv {
+				if flash != "" {
+					flash += ", "
+				}
+				if nv {
+					flash += ftt
+				} else {
+					flash += ttf
+				}
 			}
-			if Event.ScheduleActive {
-				flash += "Schedule+Activated"
-			} else {
-				flash += "Schedule+Deactivated"
-			}
-		}
-		if newval["vcodesent"] != Event.VerificationCodeSent {
-			Event.VerificationCodeSent = newval["vcodesent"]
-			if flash != "" {
-				flash += ", "
-			}
-			if Event.VerificationCodeSent {
-				flash += "Verification+Code+Sent"
-			} else {
-				flash += "Verificaiton+Code+Not+Sent"
-			}
-		}
-		if newval["verification"] != Event.RequireVerification {
-			Event.RequireVerification = newval["verification"]
-			if flash != "" {
-				flash += ", "
-			}
-			if Event.RequireVerification {
-				flash += "Verification+Required"
-			} else {
-				flash += "Verificaiton+Not+Required"
-			}
+			return flash, nil
 		}
 
-		log.Printf("New state: Active %v ScheduleActive %v RequireVerification %v VerificationCodeSent %v",
-			Event.Active, Event.ScheduleActive, Event.RequireVerification,
-			Event.VerificationCodeSent)
-		Event.Save()
+		flash, err := flashAccumulator("", nil, "website",
+			FlagActive, "Website+Activated", "Website+Deactivated")
+
+		flash, err = flashAccumulator(flash, err, "schedule",
+			FlagScheduleActive, "Schedule+Activated", "Schedule+Deactivated")
+
+		flash, err = flashAccumulator(flash, err, "vcodesent",
+			FlagVerificationCodeSent, "Verification+Code+Sent", "Verification+Code+Not+Sent")
+
+		flash, err = flashAccumulator(flash, err, "verification",
+			FlagRequireVerification, "Verification+Required", "Verification+Not+Required")
+
 		http.Redirect(w, r, "console?flash="+flash, http.StatusFound)
 		return
 	case "setLocked":
@@ -200,7 +193,7 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 
 	action := ps.ByName("action")
 
-	if !Event.TestMode {
+	if !kvs.GetBoolDef(FlagTestMode) {
 		if action != "enabletest" {
 			return
 		}
@@ -212,16 +205,23 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 			return
 		}
 
-		Event.TestMode = true
-		Event.Save()
-
-		flash = "Test+mode+enabled"
+		err := kvs.SetBool(FlagTestMode, true)
+		if err != nil {
+			log.Printf("ERROR: Setting test mode failed: %v", err)
+			flash = "Set+test+mode+failed"
+		} else {
+			flash = "Test+mode+enabled"
+		}
 	} else {
 		switch action {
 		case "disabletest":
-			Event.TestMode = false
-			Event.Save()
-			flash = "Test+mode+disabled"
+			err := kvs.SetBool(FlagTestMode, false)
+			if err != nil {
+				log.Printf("ERROR: Setting test mode failed: %v", err)
+				flash = "Set+test+mode+failed"
+			} else {
+				flash = "Test+mode+disabled"
+			}
 		case "enabletest":
 			flash = "Test+mode+already+disabled"
 		case "resetUserData":

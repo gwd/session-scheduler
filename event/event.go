@@ -24,12 +24,6 @@ type EventStore struct {
 	filename string
 	kvs      *keyvalue.KeyValueStore
 
-	TestMode             bool
-	Active               bool
-	ScheduleActive       bool
-	VerificationCodeSent bool
-	RequireVerification  bool
-
 	Timetable Timetable
 
 	Users       UserStore
@@ -58,11 +52,10 @@ const (
 )
 
 const (
-	EventVerificationCode = "EventVerificationCode"
-	EventScheduleDebug    = "EventScheduleDebug"
-	EventSearchAlgo       = "EventSearchAlgo"
-	EventSearchDuration   = "EventSearchDuration"
-	EventValidate         = "EventValidate"
+	EventScheduleDebug  = "EventScheduleDebug"
+	EventSearchAlgo     = "EventSearchAlgo"
+	EventSearchDuration = "EventSearchDuration"
+	EventValidate       = "EventValidate"
 )
 
 func (store *EventStore) Init(adminPwd string) {
@@ -76,22 +69,11 @@ func (store *EventStore) Init(adminPwd string) {
 
 	store.LockedSlots = make([]bool, store.ScheduleSlots)
 
-	vcode, err := store.kvs.Get(EventVerificationCode)
-	switch {
-	case err == keyvalue.ErrNoRows:
-		vcode = id.GenerateRawID(8)
-		if err = store.kvs.Set(EventVerificationCode, vcode); err != nil {
-			log.Fatalf("Setting Event Verification Code: %v", err)
-		}
-	case err != nil:
-		log.Fatalf("Getting Event Verification Code: %v", err)
-	}
-
 	if adminPwd == "" {
 		adminPwd = id.GenerateRawID(12)
 	}
 
-	admin, err := NewUser(AdminUsername, adminPwd, vcode,
+	admin, err := NewUser(AdminUsername, adminPwd, true,
 		&UserProfile{RealName: "Xen Schedule Administrator"})
 	if err != nil {
 		log.Fatalf("Error creating admin user: %v", err)

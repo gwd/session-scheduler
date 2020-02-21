@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -24,26 +25,46 @@ func parseProfile(r *http.Request) (profile *event.UserProfile) {
 }
 
 func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	user, err := event.NewUser(
-		r.FormValue("Username"),
+	var e string
+	var isVerified bool
+	var err error
+	var user *event.User
+
+	profile := parseProfile(r)
+	username := r.FormValue("Username")
+
+	{
+		evcode, err := kvs.Get(VerificationCode)
+		if err != nil {
+			log.Printf("INTERNAL ERROR: Couldn't get event verification code: %v", err)
+			e = "Internal error"
+			goto fail
+		}
+		vcode := r.FormValue("Vcode")
+		if vcode == evcode {
+			isVerified = true
+		} else if kvs.GetBoolDef(FlagRequireVerification) {
+			log.Printf("New user failed: Bad vcode %s", vcode)
+			e = "Incorrect Verification Code"
+			goto fail
+		}
+	}
+
+	user, err = event.NewUser(
+		username,
 		r.FormValue("Password"),
-		r.FormValue("Vcode"),
-		parseProfile(r),
+		isVerified,
+		profile,
 	)
 
 	if err != nil {
 		if event.IsValidationError(err) {
-			RenderTemplate(w, r, "user/new", map[string]interface{}{
-				"Error": err.Error(),
-				"User":  user,
-			})
-			return
+			goto fail
 		}
 		panic(err)
 		return
 	}
 
-	err = Event.Users.Save(user)
 	if err != nil {
 		panic(err)
 		return
@@ -56,4 +77,13 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	}
 
 	http.Redirect(w, r, "/?flash=User+created", http.StatusFound)
+	return
+
+fail:
+	RenderTemplate(w, r, "user/new", map[string]interface{}{
+		"Error":    e,
+		"Username": username,
+		"Profile":  profile,
+	})
+	return
 }

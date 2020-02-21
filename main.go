@@ -7,6 +7,7 @@ import (
 	"runtime/pprof"
 
 	"github.com/gwd/session-scheduler/event"
+	"github.com/gwd/session-scheduler/id"
 	"github.com/gwd/session-scheduler/keyvalue"
 )
 
@@ -14,6 +15,8 @@ import (
 var Event = &event.Event
 
 var kvs *keyvalue.KeyValueStore
+
+const VerificationCode = "ServeVerificationCode"
 
 func main() {
 	var err error
@@ -44,6 +47,19 @@ func main() {
 			log.Fatal("could not start CPU profile: ", err)
 		}
 		defer pprof.StopCPUProfile()
+	}
+
+	{
+		vcode, err := kvs.Get(VerificationCode)
+		switch {
+		case err == keyvalue.ErrNoRows:
+			vcode = id.GenerateRawID(8)
+			if err = kvs.Set(VerificationCode, vcode); err != nil {
+				log.Fatalf("Setting Event Verification Code: %v", err)
+			}
+		case err != nil:
+			log.Fatalf("Getting Event Verification Code: %v", err)
+		}
 	}
 
 	err = Event.Load(event.EventOptions{KeyValueStore: kvs, AdminPwd: *adminPwd})

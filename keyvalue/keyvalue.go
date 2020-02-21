@@ -91,13 +91,22 @@ func (store *KeyValueStore) Close() {
 	store.DB = nil
 }
 
-// Set "key" to "value" in the store.
-func (kv KeyValueStore) Set(key, value string) error {
-	_, err := kv.Exec(`
+func get(q sqlx.Queryer, key string, value *string) error {
+	return sqlx.Get(q, value, `select value from keyvalue_keyvalues where key=?`,
+		key)
+}
+
+func set(e sqlx.Execer, key, value string) error {
+	_, err := e.Exec(`
     insert into keyvalue_keyvalues(key, value) values(?, ?)
         on conflict(key) do
             update set value=excluded.value`, key, value)
 	return err
+}
+
+// Set "key" to "value" in the store.
+func (kv KeyValueStore) Set(key, value string) error {
+	return set(kv.DB, key, value)
 }
 
 var ErrNoRows = sql.ErrNoRows
@@ -106,9 +115,32 @@ var ErrNoRows = sql.ErrNoRows
 // the value; if not found, it will return ErrNoRows.
 func (kv KeyValueStore) Get(key string) (string, error) {
 	var value string
-	err := kv.DB.Get(&value, `select value from keyvalue_keyvalues where key=?`,
-		key)
+	err := get(kv.DB, key, &value)
 	return value, err
+}
+
+// Sets "key" to "value", returning the old value, or an empty string
+// if there is no previous value.
+func (kv KeyValueStore) Exchange(key, value string) (string, error) {
+	tx, err := kv.Beginx()
+	if err != nil {
+		return "", fmt.Errorf("Starting transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	var oldval string
+	err = get(tx, key, &oldval)
+	if err != nil && err != ErrNoRows {
+		return "", fmt.Errorf("Getting old value for key %s: %v", key, err)
+	}
+
+	err = set(tx, key, value)
+	if err != nil {
+		return "", fmt.Errorf("Setting key %s: %v", key, err)
+	}
+	tx.Commit()
+
+	return oldval, nil
 }
 
 // Delete a key from the store.  Future Get() calls will return
@@ -116,6 +148,38 @@ func (kv KeyValueStore) Get(key string) (string, error) {
 func (kv KeyValueStore) Unset(key string) error {
 	_, err := kv.Exec(`delete from keyvalue_keyvalues where key=?`, key)
 	return err
+}
+
+func boolToString(val bool) string {
+	if val {
+		return "true"
+	} else {
+		return "false"
+	}
+}
+
+func stringToBool(val string) bool {
+	if val == "true" {
+		return true
+	}
+	return false
+}
+
+// GetBoolDef looks for the value of "key" in the store.  If found it
+// returns the value; on any error it returns "false".
+func (kv KeyValueStore) GetBoolDef(key string) bool {
+	val, _ := kv.Get(key)
+	return stringToBool(val)
+}
+
+// SetBool sets "key" to a stringified boolean of "val".
+func (kv KeyValueStore) SetBool(key string, val bool) error {
+	return kv.Set(key, boolToString(val))
+}
+
+func (kv KeyValueStore) ExchangeBool(key string, val bool) (bool, error) {
+	ovs, err := kv.Exchange(key, boolToString(val))
+	return stringToBool(ovs), err
 }
 
 // FlagValue implements the flag.Value interface.  See

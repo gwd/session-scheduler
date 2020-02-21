@@ -11,7 +11,7 @@ import (
 )
 
 func HandleDiscussionNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	if Event.RequireVerification {
+	if kvs.GetBoolDef(FlagRequireVerification) {
 		cur := RequestUser(r)
 		if !IsVerified(cur) {
 			http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
@@ -29,7 +29,7 @@ func HandleDiscussionNotFound(w http.ResponseWriter, r *http.Request, _ httprout
 func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	owner := RequestUser(r)
 
-	if Event.RequireVerification && !IsVerified(owner) {
+	if kvs.GetBoolDef(FlagRequireVerification) && !IsVerified(owner) {
 		http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 		return
 	}
@@ -114,7 +114,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 
 		// Unverified accounts can't create or edit sessions
-		if action == "edit" && Event.RequireVerification && !IsVerified(cur) {
+		if action == "edit" && kvs.GetBoolDef(FlagRequireVerification) && !IsVerified(cur) {
 			http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 			return
 		}
@@ -248,7 +248,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			}
 
 			// Unverified accounts can't create or edit sessions
-			if Event.RequireVerification &&
+			if kvs.GetBoolDef(FlagRequireVerification) &&
 				!IsVerified(cur) {
 				http.Redirect(w, r, "/uid/user/self/view", http.StatusFound)
 				return
@@ -378,7 +378,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		case "verify":
 			vcode := r.FormValue("Vcode")
 
-			evcode, _ := kvs.Get(event.EventVerificationCode)
+			evcode, _ := kvs.Get(VerificationCode)
 			if vcode != evcode {
 				redirectURL = "view?flash=Invalid+Validation+Code"
 			} else {

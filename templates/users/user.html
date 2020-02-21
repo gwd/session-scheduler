@@ -200,7 +200,7 @@
   <form action="/register" method="POST">
     <div class="form-group">
       <label for="newUsername">Username</label> (Required)
-      <input type="text" name="Username" value="{{.User.Username}}" id="newUsername" class="form-control" autocomplete="username">
+      <input type="text" name="Username" value="{{.Username}}" id="newUsername" class="form-control" autocomplete="username">
     </div>
     <div class="alert alert-primary">Usernames are displayed
 	publicly on discussion proposals, as well as on an "attendee
@@ -220,7 +220,7 @@
       <p class="text-muted">Please contact lars dot kurth at citrix dot com if you haven't received a verification code</p>
     </div>
     {{end}}
-    {{template "user/profile/form" .User.Profile}}
+    {{template "user/profile/form" .Profile}}
     <input type="submit" value="Register" class="btn btn-primary">
   </form>
 </div>
