@@ -74,7 +74,7 @@ func NewTestDiscussion(owner *User) {
 		if err == nil {
 			break
 		}
-		log.Fatal("Creating new discussion: %v", err)
+		log.Fatalf("Creating new discussion: %v", err)
 	}
 
 	// Only 25% of discussions have constraints

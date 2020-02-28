@@ -109,7 +109,7 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 	log.Printf("Update discussion post: '%s'", title)
 
 	if title == "" {
-		log.Printf("Update discussion failed: no title", title)
+		log.Printf("Update discussion failed: no title")
 		return &out, errNoTitle
 	}
 

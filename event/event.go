@@ -12,6 +12,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/gwd/session-scheduler/id"
 )
 
@@ -21,6 +24,7 @@ var deepCopyDecoder = gob.NewDecoder(&deepCopyBuffer)
 
 type EventStore struct {
 	filename string
+	*sqlx.DB
 
 	Timetable Timetable
 
@@ -43,6 +47,7 @@ var event EventStore
 
 const (
 	StoreFilename = "data/event.json"
+	DbFilename    = "data/event.sqlite"
 	AdminUsername = "admin"
 	// 3 days * 3 slots per day
 	DefaultSlots = 9
@@ -99,7 +104,7 @@ func ResetData() {
 func (store *EventStore) ResetUserData() {
 	admin, err := store.Users.FindByUsername(AdminUsername)
 	if err != nil || admin == nil {
-		log.Fatal("Can't find admin user: %v", err)
+		log.Fatalf("Can't find admin user: %v", err)
 	}
 
 	store.Users.Init()
@@ -132,7 +137,7 @@ func (store *EventStore) Load(opt EventOptions) error {
 	if opt.AdminPwd != "" {
 		admin, err := store.Users.FindByUsername(AdminUsername)
 		if err != nil || admin == nil {
-			log.Fatal("Can't find admin user: %v", err)
+			log.Fatalf("Can't find admin user: %v", err)
 		}
 		log.Printf("Resetting admin password")
 		admin.SetPassword(opt.AdminPwd)
