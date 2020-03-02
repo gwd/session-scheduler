@@ -2,6 +2,7 @@ package main
 
 import (
 	"html/template"
+	"log"
 	"sort"
 
 	"github.com/gwd/session-scheduler/event"
@@ -26,7 +27,7 @@ type UserDisplay struct {
 
 func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay) {
 	ud = &UserDisplay{
-		ID:         u.ID,
+		ID:         u.UserID,
 		Username:   u.Username,
 		IsVerified: u.IsVerified,
 	}
@@ -62,7 +63,7 @@ type DiscussionDisplay struct {
 	Time          string
 	IsFinal       bool
 	PossibleSlots []event.DisplaySlot
-	AllUsers      []*event.User
+	AllUsers      []event.User
 }
 
 func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDisplay {
@@ -72,7 +73,7 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 	// 1. It's pulbic, or...
 	// 2. The current user is admin, or the discussion owner
 	if !d.IsPublic &&
-		(cur == nil || (!cur.IsAdmin && cur.ID != d.Owner)) {
+		(cur == nil || (!cur.IsAdmin && cur.UserID != d.Owner)) {
 		if d.ApprovedTitle == "" {
 			return nil
 		} else {
@@ -103,13 +104,19 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 	if cur != nil {
 		if cur.Username != event.AdminUsername {
 			dd.IsUser = true
-			dd.Interest = cur.Interest[d.ID]
+			// FIXME: Interest
+			//dd.Interest = cur.Interest[d.ID]
 		}
 		dd.MayEdit = cur.MayEditDiscussion(d)
 		if cur.IsAdmin {
 			dd.IsAdmin = true
 			dd.PossibleSlots = event.TimetableFillDisplaySlots(d.PossibleSlots)
-			dd.AllUsers = event.UserGetAll()
+			var err error
+			dd.AllUsers, err = event.UserGetAll()
+			if err != nil {
+				// Report error but continue
+				log.Printf("INTERNAL ERROR: Getting all users: %v", err)
+			}
 		}
 	}
 	for uid := range d.Interested {
@@ -123,7 +130,7 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 
 func DiscussionGetListUser(u *event.User, cur *event.User) (list []*DiscussionDisplay) {
 	event.DiscussionIterate(func(d *event.Discussion) error {
-		if d.Owner == u.ID {
+		if d.Owner == u.UserID {
 			dd := DiscussionGetDisplay(d, cur)
 			if dd != nil {
 				list = append(list, dd)

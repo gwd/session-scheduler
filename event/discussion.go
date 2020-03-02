@@ -61,23 +61,24 @@ func (d *Discussion) GetURL() string {
 
 func (d *Discussion) GetMaxScore() int {
 	if !d.maxScoreValid {
+		// FIXME: Interest
 		d.maxScore = 0
-		for uid := range d.Interested {
-			if !d.Interested[uid] {
-				log.Fatalf("INTERNAL ERROR: Discussion %s Interested[%s] false!",
-					d.ID, uid)
-			}
-			user, err := event.Users.Find(uid)
-			if err != nil {
-				log.Fatalf("Finding user %s: %v", uid, err)
-			}
-			interest, prs := user.Interest[d.ID]
-			if !prs {
-				log.Fatalf("INTERNAL ERROR: User %s has no interest in discussion %s",
-					user.ID, d.ID)
-			}
-			d.maxScore += interest
-		}
+		// for uid := range d.Interested {
+		// 	if !d.Interested[uid] {
+		// 		log.Fatalf("INTERNAL ERROR: Discussion %s Interested[%s] false!",
+		// 			d.ID, uid)
+		// 	}
+		// 	user, err := event.Users.Find(uid)
+		// 	if err != nil {
+		// 		log.Fatalf("Finding user %s: %v", uid, err)
+		// 	}
+		// 	interest, prs := user.Interest[d.ID]
+		// 	if !prs {
+		// 		log.Fatalf("INTERNAL ERROR: User %s has no interest in discussion %s",
+		// 			user.ID, d.ID)
+		// 	}
+		// 	d.maxScore += interest
+		// }
 		d.maxScoreValid = true
 	}
 
@@ -127,19 +128,20 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 	}
 
 	if newOwnerID != "" && newOwnerID != disc.Owner {
-		newOwner, _ := event.Users.Find(newOwnerID)
-		if newOwner != nil {
-			// All we need to do is set the owner's interest to max,
-			// and set the new owner.
-			newOwner.SetInterest(disc, InterestMax)
-			disc.Owner = newOwnerID
-		} else {
-			log.Printf("Ignoring non-existing user %v", newOwnerID)
-		}
+		// FIXME: Interest
+		// newOwner, _ := event.Users.Find(newOwnerID)
+		// if newOwner != nil {
+		// 	// All we need to do is set the owner's interest to max,
+		// 	// and set the new owner.
+		// 	newOwner.SetInterest(disc, InterestMax)
+		// 	disc.Owner = newOwnerID
+		// } else {
+		// 	log.Printf("Ignoring non-existing user %v", newOwnerID)
+		// }
 	}
 
 	// Editing a discussion takes it non-public unless the owner is verified.
-	owner, _ := event.Users.Find(disc.Owner)
+	owner, _ := UserFind(disc.Owner)
 	disc.IsPublic = (owner != nil && owner.IsVerified)
 
 	err := event.Discussions.Save(disc)
@@ -206,7 +208,7 @@ func MakePossibleSlots(len int) []bool {
 
 func NewDiscussion(owner *User, title, description string) (*Discussion, error) {
 	disc := &Discussion{
-		Owner:         owner.ID,
+		Owner:         owner.UserID,
 		Title:         title,
 		Description:   description,
 		PossibleSlots: MakePossibleSlots(event.ScheduleSlots),

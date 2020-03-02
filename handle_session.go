@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 
@@ -24,17 +25,35 @@ func HandleSessionNew(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	})
 }
 
+func FindUser(username, password string) (*event.User, error) {
+	existingUser, err := event.UserFindByUsername(username)
+	if err != nil {
+		log.Printf("INTERNAL ERROR: UserFindByUsername: %v")
+		return nil, event.ErrInternal
+	}
+	if existingUser == nil {
+		// Same error for no user / wrong password to avoid username fishing
+		return nil, event.ErrCredentialsIncorrect
+	}
+
+	if !existingUser.CheckPassword(password) {
+		return nil, event.ErrCredentialsIncorrect
+	}
+
+	return existingUser, nil
+}
+
 func HandleSessionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 	next := r.FormValue("next")
 
-	user, err := event.FindUser(username, password)
+	user, err := FindUser(username, password)
 	if err != nil {
 		if event.IsValidationError(err) {
 			RenderTemplate(w, r, "sessions/new", map[string]interface{}{
 				"Error": err,
-				"User":  user,
+				"User":  event.User{Username: username},
 				"Next":  next,
 			})
 			return
@@ -47,7 +66,7 @@ func HandleSessionCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		return
 	}
 
-	_, err = sessions.FindOrCreateSession(w, r, string(user.ID))
+	_, err = sessions.FindOrCreateSession(w, r, string(user.UserID))
 	if err != nil {
 		panic(err)
 	}

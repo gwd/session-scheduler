@@ -40,6 +40,10 @@ func shouldRetry(err error) bool {
 	return isSqliteErrorCode(err, sqlite3.ErrBusy, sqlite3.ErrLocked)
 }
 
+func isErrorConstraintUnique(err error) bool {
+	return isSqliteErrorCode(err, sqlite3.ErrConstraintUnique)
+}
+
 func errOrRetry(comment string, err error) error {
 	if shouldRetry(err) {
 		return err
@@ -93,8 +97,8 @@ func initDb(ext sqlx.Ext) error {
 		return errOrRetry("Setting user_version", err)
 	}
 
-	_, err = ext.Exec(
-		`CREATE TABLE event_locations(
+	_, err = ext.Exec(`
+CREATE TABLE event_locations(
     locationid   text primary key,
     locationname text not null,
     isplace      boolean not null,
@@ -102,6 +106,22 @@ func initDb(ext sqlx.Ext) error {
 
 	if err != nil {
 		return errOrRetry("Creating table event_location", err)
+	}
+
+	_, err = ext.Exec(`
+CREATE TABLE event_users(
+    userid         text primary key,
+    hashedpassword text not null,
+    username       text not null unique,
+    isadmin        boolean not null,
+    isverified     boolean not null,
+    realname       text,
+    email          text,
+    company        text,
+    description    text)`)
+
+	if err != nil {
+		return errOrRetry("Creating table event_users", err)
 	}
 
 	return nil

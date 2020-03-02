@@ -86,7 +86,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	if itype == "user" && uid == "self" {
 		if cur != nil {
-			uid = string(cur.ID)
+			uid = string(cur.UserID)
 		} else {
 			return
 		}
@@ -187,7 +187,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	uid := ps.ByName("uid")
 	if itype == "user" && uid == "self" {
 		if cur != nil {
-			uid = string(cur.ID)
+			uid = string(cur.UserID)
 		} else {
 			return
 		}
@@ -319,7 +319,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 		// Only allowed to edit our own profile unless you're an admin
 		if !cur.MayEditUser(user) {
-			log.Printf(" uid %s tried to edit uid %s", string(cur.ID), uid)
+			log.Printf(" uid %s tried to edit uid %s", string(cur.UserID), uid)
 			return
 		}
 
@@ -335,7 +335,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 			log.Printf(" new user info %v", userNext)
 
-			err := event.UpdateUser(&userNext, cur, currentPassword, newPassword)
+			err := event.UserUpdate(&userNext, cur, currentPassword, newPassword)
 
 			if err != nil {
 				if event.IsValidationError(err) {
@@ -376,7 +376,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			event.DeleteUser(user.ID)
+			event.DeleteUser(user.UserID)
 
 			// Can't redirect to 'view' as it's been deleted
 			http.Redirect(w, r, "/list/user", http.StatusFound)

@@ -1,7 +1,7 @@
 CREATE TABLE event_users(
     userid      text primary key,
     bcryptpwd   text not null,
-    username    text not null,
+    username    text not null unique,
     isadmin     boolean not null,
     isverified  boolean not null,
     realname    text,

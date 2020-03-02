@@ -119,40 +119,41 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 	if slot.Discussions.IsPresent(disc.ID) {
 		return
 	}
-	for uid := range disc.Interested {
-		user, _ := slot.sched.store.Users.Find(uid)
+	// FIXME: Interest
+	// for uid := range disc.Interested {
+	// 	user, _ := slot.sched.store.Users.Find(uid)
 
-		// How interested is the user in this?
-		tInterest, iprs := user.Interest[disc.ID]
-		if !iprs {
-			log.Fatalf("Internal error: interest not symmetric")
-		}
+	// 	// How interested is the user in this?
+	// 	tInterest, iprs := user.Interest[disc.ID]
+	// 	if !iprs {
+	// 		log.Fatalf("Internal error: interest not symmetric")
+	// 	}
 
-		// See if the user is currently scheduled to do something else
-		oInterest := 0
-		odid, prs := slot.Users.GetPrs(uid)
-		if prs {
-			i, iprs := user.Interest[odid]
-			if !iprs {
-				log.Fatalf("Internal error: interest not symmetric")
-			}
-			oInterest = i
-		}
+	// 	// See if the user is currently scheduled to do something else
+	// 	oInterest := 0
+	// 	odid, prs := slot.Users.GetPrs(uid)
+	// 	if prs {
+	// 		i, iprs := user.Interest[odid]
+	// 		if !iprs {
+	// 			log.Fatalf("Internal error: interest not symmetric")
+	// 		}
+	// 		oInterest = i
+	// 	}
 
-		if tInterest > oInterest {
-			delta += tInterest - oInterest
-			if commit {
-				slot.Users.Set(uid, disc.ID)
-			}
-			if opt.DebugLevel > 1 {
-				opt.Debug.Printf("  User %s %d -> %d (+%d)",
-					user.Username, oInterest, tInterest, tInterest-oInterest)
-			}
-		} else if oInterest > 0 && opt.DebugLevel > 1 {
-			opt.Debug.Printf("  User %s will stay where they are (%d > %d)",
-				user.Username, oInterest, tInterest)
-		}
-	}
+	// 	if tInterest > oInterest {
+	// 		delta += tInterest - oInterest
+	// 		if commit {
+	// 			slot.Users.Set(uid, disc.ID)
+	// 		}
+	// 		if opt.DebugLevel > 1 {
+	// 			opt.Debug.Printf("  User %s %d -> %d (+%d)",
+	// 				user.Username, oInterest, tInterest, tInterest-oInterest)
+	// 		}
+	// 	} else if oInterest > 0 && opt.DebugLevel > 1 {
+	// 		opt.Debug.Printf("  User %s will stay where they are (%d > %d)",
+	// 			user.Username, oInterest, tInterest)
+	// 	}
+	// }
 	if commit {
 		slot.Discussions = append(slot.Discussions, disc.ID)
 	}
@@ -171,76 +172,80 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 		slot.Discussions.Delete(disc.ID)
 	}
 
-	for uid := range disc.Interested {
-		user, _ := slot.sched.store.Users.Find(uid)
+	// FIXME: Interest
+	// for uid := range disc.Interested {
+	// 	user, _ := slot.sched.store.Users.Find(uid)
 
-		// How interested is the user in this?
-		tInterest, iprs := user.Interest[disc.ID]
-		if !iprs {
-			log.Fatalf("Internal error: interest not symmetric")
-		}
+	// 	// How interested is the user in this?
+	// 	tInterest, iprs := user.Interest[disc.ID]
+	// 	if !iprs {
+	// 		log.Fatalf("Internal error: interest not symmetric")
+	// 	}
 
-		// Is this their current favorite? If not, removing it won't have an effect
-		if slot.Users.Get(uid) != disc.ID {
-			if opt.DebugLevel > 1 {
-				opt.Debug.Printf("  User %s already going to a different discussion, no change",
-					user.Username)
-			}
-		} else {
-			best := struct {
-				interest int
-				did      DiscussionID
-			}{}
+	// 	// Is this their current favorite? If not, removing it won't have an effect
+	// 	if slot.Users.Get(uid) != disc.ID {
+	// 		if opt.DebugLevel > 1 {
+	// 			opt.Debug.Printf("  User %s already going to a different discussion, no change",
+	// 				user.Username)
+	// 		}
+	// 	} else {
+	// 		best := struct {
+	// 			interest int
+	// 			did      DiscussionID
+	// 		}{}
 
-			// This user is currently going to this discussion.  See
-			// if they have somewhere else they want to go.
-			for _, did := range slot.Discussions {
-				i, iprs := user.Interest[did]
-				if iprs && i > best.interest {
-					best.interest = i
-					best.did = did
-				}
-			}
+	// 		// This user is currently going to this discussion.  See
+	// 		// if they have somewhere else they want to go.
+	// 		for _, did := range slot.Discussions {
+	// 			i, iprs := user.Interest[did]
+	// 			if iprs && i > best.interest {
+	// 				best.interest = i
+	// 				best.did = did
+	// 			}
+	// 		}
 
-			delta = tInterest - best.interest
-			if best.did == "" {
-				if opt.DebugLevel > 1 {
-					opt.Debug.Printf("  User %s has no other discussions of interest",
-						user.Username)
-				}
-				if commit {
-					slot.Users.Delete(uid)
-				}
-			} else {
-				if opt.DebugLevel > 1 {
-					opt.Debug.Printf("  User %s %d -> %d (%d)",
-						user.Username, tInterest, best.interest, delta)
-				}
-				if commit {
-					slot.Users.Set(uid, disc.ID)
-				}
-			}
-		}
-	}
+	// 		delta = tInterest - best.interest
+	// 		if best.did == "" {
+	// 			if opt.DebugLevel > 1 {
+	// 				opt.Debug.Printf("  User %s has no other discussions of interest",
+	// 					user.Username)
+	// 			}
+	// 			if commit {
+	// 				slot.Users.Delete(uid)
+	// 			}
+	// 		} else {
+	// 			if opt.DebugLevel > 1 {
+	// 				opt.Debug.Printf("  User %s %d -> %d (%d)",
+	// 					user.Username, tInterest, best.interest, delta)
+	// 			}
+	// 			if commit {
+	// 				slot.Users.Set(uid, disc.ID)
+	// 			}
+	// 		}
+	// 	}
+	// }
 	return
 }
 
 func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
-	us, ds := slot.sched.GetStores()
+	ds := slot.sched.GetStores()
 
 	// For every discussion in this slot...
 	disc, _ := ds.Find(did)
 
+	// FIXME: Interest
+	// FIXME: DeepCopy
 	for uid := range disc.Interested {
 		// Find out how much each user was interested in it
-		user, _ := us.Find(uid)
+		user, _ := UserFind(uid)
 		if user == nil {
 			log.Printf("INTERNAL ERROR: disc.ID %v has interest from non-existent user %v",
 				disc.ID, uid)
 			continue
 		}
 
-		interest := user.Interest[disc.ID]
+		//interest := user.Interest[disc.ID]
+		interest := 0
 
 		// If they're going, add it to the score;
 		// if not, add it to the 'missed' category
@@ -251,7 +256,7 @@ func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
 			// Check to make sure the discussion they're attending is actually more
 			ainterest := interest
 			if opt.Validate {
-				ainterest = user.Interest[adid]
+				// ainterest = user.Interest[adid]
 			}
 			if ainterest < interest {
 				adisc, _ := ds.Find(adid)
@@ -286,8 +291,6 @@ func (slot *Slot) Score() (score, missed int) {
 }
 
 func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
-	us, _ := slot.sched.GetStores()
-
 	// Delete the discussion from the map
 	slot.Discussions.Delete(did)
 
@@ -297,15 +300,16 @@ func (slot *Slot) RemoveDiscussion(did DiscussionID) error {
 		if attending.Did != did {
 			continue
 		}
-		user, _ := us.Find(attending.Uid)
+		// FIXME: Interest
+		//user, _ := us.Find(attending.Uid)
 		altDid := DiscussionID("")
 		altInterest := 0
-		for _, candidateDid := range slot.Discussions {
-			if user.Interest[candidateDid] > altInterest {
-				altDid = candidateDid
-				altInterest = user.Interest[candidateDid]
-			}
-		}
+		// for _, candidateDid := range slot.Discussions {
+		// 	if user.Interest[candidateDid] > altInterest {
+		// 		altDid = candidateDid
+		// 		altInterest = user.Interest[candidateDid]
+		// 	}
+		// }
 		if altInterest > 0 {
 			// Found something -- change the user to going to this session
 			slot.Users.Set(attending.Uid, altDid)
@@ -369,13 +373,11 @@ type Schedule struct {
 	store *SearchStore
 }
 
-func (sched *Schedule) GetStores() (us *UserStore, ds *DiscussionStore) {
+func (sched *Schedule) GetStores() (ds *DiscussionStore) {
 	if sched.store != nil {
 		ds = &sched.store.Discussions
-		us = &sched.store.Users
 	} else {
 		ds = &event.Discussions
-		us = &event.Users
 	}
 	return
 }
@@ -628,7 +630,6 @@ func (sched *Schedule) Mutate(rng *rand.Rand) {
 // A snapshot of users and discussions to use while reference while
 // searching for an optimum schedule, but not holding the lock.
 type SearchStore struct {
-	Users       UserStore
 	Discussions DiscussionStore
 	LockedSlots
 	ScheduleSlots   int
@@ -646,9 +647,9 @@ type SearchStore struct {
 // - Creating a list of discussions that need to be placed (i.e., not in locked slots)
 
 func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
-	if err = event.Users.DeepCopy(&ss.Users); err != nil {
-		return
-	}
+	// if err = event.Users.DeepCopy(&ss.Users); err != nil {
+	// 	return
+	// }
 	if err = event.Discussions.DeepCopy(&ss.Discussions); err != nil {
 		return
 	}

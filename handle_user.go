@@ -47,7 +47,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		}
 	}
 
-	uid, err = event.NewUser(r.FormValue("Password"), user)
+	uid, err = event.NewUser(r.FormValue("Password"), &user)
 
 	if err != nil {
 		if event.IsValidationError(err) {

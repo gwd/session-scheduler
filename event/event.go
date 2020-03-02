@@ -2,15 +2,12 @@ package event
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/gob"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"os"
-	"sort"
-	"strings"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -28,7 +25,6 @@ type EventStore struct {
 
 	Timetable Timetable
 
-	Users       UserStore
 	Discussions DiscussionStore
 	Locations   LocationStore
 
@@ -40,7 +36,9 @@ type EventStore struct {
 }
 
 type EventOptions struct {
-	AdminPwd string
+	AdminPwd      string
+	dbFilename    string
+	storeFilename string
 }
 
 var event EventStore
@@ -54,7 +52,6 @@ const (
 )
 
 func (store *EventStore) Init(adminPwd string) {
-	store.Users.Init()
 	store.Discussions.Init()
 	store.Timetable.Init()
 	store.ScheduleSlots = store.Timetable.GetSlots()
@@ -68,7 +65,7 @@ func (store *EventStore) Init(adminPwd string) {
 		adminPwd = id.GenerateRawID(12)
 	}
 
-	_, err := NewUser(adminPwd, User{Username: AdminUsername,
+	_, err := NewUser(adminPwd, &User{Username: AdminUsername,
 		IsAdmin:    true,
 		IsVerified: true,
 		RealName:   "Xen Schedule Administrator"})
@@ -102,21 +99,24 @@ func ResetData() {
 // users and discussions gone.
 // This should only be done in test mode!
 func (store *EventStore) ResetUserData() {
-	admin, err := store.Users.FindByUsername(AdminUsername)
-	if err != nil || admin == nil {
-		log.Fatalf("Can't find admin user: %v", err)
+	_, err := event.Exec(`delete from event_users where username != ?`, AdminUsername)
+	if err != nil {
+		log.Fatalf("Deleting users: %v", err)
 	}
 
-	store.Users.Init()
 	store.Discussions.Init()
 	store.ResetEventData()
-
-	event.Users.Save(admin)
 }
 
 func (store *EventStore) Load(opt EventOptions) error {
+	var err error
+	event.DB, err = openDb(opt.dbFilename)
+	if err != nil {
+		return err
+	}
+
 	if store.filename == "" {
-		store.filename = StoreFilename
+		store.filename = opt.storeFilename
 	}
 	contents, err := ioutil.ReadFile(store.filename)
 
@@ -135,7 +135,7 @@ func (store *EventStore) Load(opt EventOptions) error {
 	}
 
 	if opt.AdminPwd != "" {
-		admin, err := store.Users.FindByUsername(AdminUsername)
+		admin, err := UserFindByUsername(AdminUsername)
 		if err != nil || admin == nil {
 			log.Fatalf("Can't find admin user: %v", err)
 		}
@@ -157,6 +157,12 @@ func (store *EventStore) Load(opt EventOptions) error {
 }
 
 func Load(opt EventOptions) error {
+	if opt.storeFilename == "" {
+		opt.storeFilename = StoreFilename
+	}
+	if opt.dbFilename == "" {
+		opt.dbFilename = DbFilename
+	}
 	return event.Load(opt)
 }
 
@@ -181,127 +187,79 @@ func LockedSlotsSet(new LockedSlots) {
 	event.LockedSlots.Set(new)
 }
 
-type UserStore map[UserID]*User
-
-func (ustore *UserStore) Init() {
-	*ustore = UserStore(make(map[UserID]*User))
-}
-
-func (ustore UserStore) Save(user *User) error {
-	ustore[user.ID] = user
-	return event.Save()
-}
-
-func (ustore UserStore) Find(id UserID) (*User, error) {
-	user, ok := ustore[id]
-	if ok {
-		return user, nil
+func UserFind(userid UserID) (*User, error) {
+	var user User
+	err := event.Get(&user, `select * from event_users where userid=?`,
+		userid)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
-	return nil, nil
+	return &user, err
 }
 
-func UserFind(id UserID) (*User, error) {
-	return event.Users.Find(id)
-}
-
-func (ustore UserStore) FindRandom() (user *User, err error) {
-	// Don't count the admin user
-	l := len(ustore) - 1
-
-	if l == 0 {
-		err = fmt.Errorf("No users!")
-		return
+// Return nil for user not present
+func UserFindByUsername(username string) (*User, error) {
+	var user User
+	// FIXME: Consider making usernames case-insensitive.  This
+	// involves making the whole column case-insensitive (with collate
+	// nocase) so that case-insensitive-uniqueness is maintianed; it
+	// also means adding unit tests to ensure that case-differeng
+	// usernames collide, and that case-differeng usernames are found
+	// by the various searches.
+	err := event.Get(&user, `select * from event_users where username=?`,
+		username)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
-
-	// Choose a random value from [0,l) and
-	i := rand.Int31n(int32(l))
-	for _, user = range ustore {
-		if user.Username == AdminUsername {
-			continue
-		}
-		if i == 0 {
-			return
-		}
-		i--
-	}
-	// We shouldn't be able to get here, but the compiler doesn't know that
-	return
+	return &user, err
 }
 
-func (ustore UserStore) Iterate(f func(u *User) error) (err error) {
-	for _, user := range ustore {
-		err = f(user)
-		if err != nil {
-			return
-		}
+func UserFindRandom() (*User, error) {
+	var user User
+	err := event.Get(&user, `
+    select * from event_users
+        where username != ?
+        order by RANDOM() limit 1`, AdminUsername)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
-	return
+	return &user, err
 }
 
+// Iterate over all users, calling f(u) for each user.
 func UserIterate(f func(u *User) error) (err error) {
-	return event.Users.Iterate(f)
-}
-
-func (ustore UserStore) GetUsers() (users []*User) {
-	ustore.Iterate(func(u *User) error {
-		if u.Username != AdminUsername {
-			users = append(users, u)
-		}
-		return nil
-	})
-
-	sort.Slice(users, func(i, j int) bool {
-		return users[i].ID < users[j].ID
-	})
-
-	return
-}
-
-func UserGetAll() (users []*User) {
-	return event.Users.GetUsers()
-}
-
-func (ustore UserStore) FindByUsername(username string) (*User, error) {
-	if username == "" {
-		return nil, nil
-	}
-
-	for _, user := range ustore {
-		if strings.ToLower(username) == strings.ToLower(user.Username) {
-			return user, nil
-		}
-	}
-	return nil, nil
-}
-
-func (ustore UserStore) FindByEmail(email string) (*User, error) {
-	if email == "" {
-		return nil, nil
-	}
-
-	for _, user := range ustore {
-		if strings.ToLower(email) == strings.ToLower(user.Email) {
-			return user, nil
-		}
-	}
-	return nil, nil
-}
-
-func (ustore *UserStore) DeepCopy(ucopy *UserStore) (err error) {
-	if err = deepCopyEncoder.Encode(ustore); err != nil {
+	rows, err := event.Queryx(`select * from event_users order by userid`)
+	if err != nil {
 		return err
 	}
-	if err = deepCopyDecoder.Decode(ucopy); err != nil {
-		return err
+	defer rows.Close()
+	for rows.Next() {
+		var user User
+		if err := rows.StructScan(&user); err != nil {
+			return err
+		}
+		err = f(&user)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (ustore UserStore) Delete(uid UserID) error {
-	delete(ustore, uid)
-	event.ScheduleState.Modify()
-	return event.Save()
+func UserGetAll() (users []User, err error) {
+	err = event.Select(&users, `select * from event_users order by userid`)
+	return users, err
 }
+
+// func (ustore *UserStore) DeepCopy(ucopy *UserStore) (err error) {
+// 	if err = deepCopyEncoder.Encode(ustore); err != nil {
+// 		return err
+// 	}
+// 	if err = deepCopyDecoder.Decode(ucopy); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func (dstore *DiscussionStore) DeepCopy(dcopy *DiscussionStore) (err error) {
 	if err = deepCopyEncoder.Encode(dstore); err != nil {

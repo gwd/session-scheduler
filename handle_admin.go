@@ -215,17 +215,6 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 			}
 		case "enabletest":
 			flash = "Test+mode+already+disabled"
-		case "genuser":
-			countString := r.FormValue("count")
-			count, err := strconv.Atoi(countString)
-			if err != nil || !(count > 0) {
-				flash = "Bad+input"
-			} else {
-				for i := 0; i < count; i++ {
-					event.NewTestUser()
-				}
-				flash = countString + " users generated"
-			}
 		case "gendiscussion":
 			countString := r.FormValue("count")
 			count, err := strconv.Atoi(countString)

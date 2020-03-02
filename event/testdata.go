@@ -13,32 +13,6 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// This password should always be suitable
-const TestPassword = "xenuser"
-
-func NewTestUser() {
-	user := User{
-		Username:    fake.UserName(),
-		IsVerified:  false,
-		RealName:    fake.FullName(),
-		Company:     fake.Company(),
-		Email:       fake.EmailAddress(),
-		Description: fake.Paragraphs(),
-	}
-
-	log.Printf("Creating test user %v", user)
-
-	for _, err := NewUser(TestPassword, user); err != nil; _, err = NewUser(TestPassword, user) {
-		// Just keep trying random usernames until we get a new one
-		if err == errUsernameExists {
-			user.Username = fake.UserName()
-			log.Printf(" User exists!  Trying username %s instead", user.Username)
-			continue
-		}
-		log.Fatalf("Creating a test user: %v", err)
-	}
-}
-
 func NewTestDiscussion(owner *User) {
 	// Get a random owner
 	title := fake.Title()
@@ -48,7 +22,7 @@ func NewTestDiscussion(owner *User) {
 
 	if owner == nil {
 		var err error
-		owner, err = event.Users.FindRandom()
+		owner, err = UserFindRandom()
 		if err != nil {
 			log.Fatalf("Getting a random user: %v", err)
 		}
@@ -59,7 +33,7 @@ func NewTestDiscussion(owner *User) {
 	for {
 		var err error
 		log.Printf("Creating discussion with owner %s, title %s, desc %s",
-			owner.ID, title, desc)
+			owner.UserID, title, desc)
 
 		disc, err = NewDiscussion(owner, title, desc)
 		switch err {
@@ -98,7 +72,7 @@ func NewTestDiscussion(owner *User) {
 // - When emulating somebody, choose like them 7/8 times
 func TestGenerateInterest() {
 	handled := []*User{}
-	for _, user := range event.Users.GetUsers() {
+	UserIterate(func(user *User) error {
 		var model *User
 		// Create 4 random "models" at first; after that, 10% are random
 		if len(handled) > 4 && rand.Intn(10) != 0 {
@@ -123,7 +97,9 @@ func TestGenerateInterest() {
 				}
 				log.Print(" Choosing own interest")
 			} else {
-				interest = model.Interest[disc.ID]
+				// FIXME: Interest
+				//interest = model.Interest[disc.ID]
+				interest = 0
 				log.Print(" Following mentor's interest")
 			}
 
@@ -135,7 +111,8 @@ func TestGenerateInterest() {
 			return nil
 		})
 		handled = append(handled, user)
-	}
+		return nil
+	})
 	event.Save()
 }
 
@@ -151,7 +128,7 @@ func TestPopulate() {
 	// 	AdminPassword: "xenroot"})
 	//SetFlag(FlagTestMode, true)
 	for i := 0; i < TestUsers; i++ {
-		NewTestUser()
+		//NewTestUser()
 	}
 	for i := 0; i < TestDisc; i++ {
 		NewTestDiscussion(nil)
