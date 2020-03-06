@@ -3,6 +3,7 @@ package event
 import (
 	//"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/mattn/go-sqlite3"
@@ -10,7 +11,7 @@ import (
 
 const codeSchemaVersion = 1
 
-func shouldRetry(err error) bool {
+func isSqliteErrorCode(err error, queries ...error) bool {
 	if err == nil {
 		return false
 	}
@@ -18,7 +19,25 @@ func shouldRetry(err error) bool {
 	if !ok {
 		return false
 	}
-	return sqliteErr.Code == sqlite3.ErrBusy || sqliteErr.Code == sqlite3.ErrLocked
+	for _, qerr := range queries {
+		switch v := qerr.(type) {
+		case sqlite3.ErrNo:
+			if sqliteErr.Code == v {
+				return true
+			}
+		case sqlite3.ErrNoExtended:
+			if sqliteErr.ExtendedCode == v {
+				return true
+			}
+		default:
+			log.Printf("INTERNAL ERROR: isSqliteErrorCode passed invalid type %T", qerr)
+		}
+	}
+	return false
+}
+
+func shouldRetry(err error) bool {
+	return isSqliteErrorCode(err, sqlite3.ErrBusy, sqlite3.ErrLocked)
 }
 
 func errOrRetry(comment string, err error) error {
