@@ -17,20 +17,23 @@ func init() {
 const TestPassword = "xenuser"
 
 func NewTestUser() {
-	username := fake.UserName()
-	profile := &UserProfile{
-		RealName:    fake.FullName(),
-		Company:     fake.Company(),
-		Email:       fake.EmailAddress(),
-		Description: fake.Paragraphs(),
+	user := User{
+		Username:   fake.UserName(),
+		IsVerified: false,
+		Profile: UserProfile{
+			RealName:    fake.FullName(),
+			Company:     fake.Company(),
+			Email:       fake.EmailAddress(),
+			Description: fake.Paragraphs()},
 	}
 
-	log.Printf("Creating test user %s %v", username, *profile)
+	log.Printf("Creating test user %s %v", user.Username, user.Profile)
 
-	for _, err := NewUser(username, TestPassword, true, profile); err != nil; _, err = NewUser(username, TestPassword, true, profile) {
+	for _, err := NewUser(TestPassword, user); err != nil; _, err = NewUser(TestPassword, user) {
+		// Just keep trying random usernames until we get a new one
 		if err == errUsernameExists {
-			username = fake.UserName()
-			log.Printf(" User exists!  Trying username %s instead", username)
+			user.Username = fake.UserName()
+			log.Printf(" User exists!  Trying username %s instead", user.Username)
 			continue
 		}
 		log.Fatalf("Creating a test user: %v", err)

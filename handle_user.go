@@ -28,7 +28,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	var e string
 	var isVerified bool
 	var err error
-	var user *event.User
+	var uid event.UserID
 
 	profile := parseProfile(r)
 	username := r.FormValue("Username")
@@ -50,12 +50,10 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		}
 	}
 
-	user, err = event.NewUser(
-		username,
-		r.FormValue("Password"),
-		isVerified,
-		profile,
-	)
+	uid, err = event.NewUser(r.FormValue("Password"), event.User{
+		Username:   username,
+		IsVerified: isVerified,
+		Profile:    *profile})
 
 	if err != nil {
 		if event.IsValidationError(err) {
@@ -71,7 +69,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	}
 
 	// Create a new session
-	_, err = sessions.NewSession(w, string(user.ID))
+	_, err = sessions.NewSession(w, string(uid))
 	if err != nil {
 		panic(err)
 	}

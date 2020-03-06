@@ -47,44 +47,38 @@ func (u *User) MayEditDiscussion(d *Discussion) bool {
 	return u.IsAdmin || u.ID == d.Owner
 }
 
-func NewUser(username, password string, isVerified bool, profile *UserProfile) (*User, error) {
-	user := &User{
-		Username:   username,
-		Profile:    *profile,
-		IsVerified: isVerified,
-	}
+func NewUser(password string, user User) (UserID, error) {
+	log.Printf("New user post: '%s'", user.Username)
 
-	log.Printf("New user post: '%s'", username)
-
-	if username == "" || AllWhitespace(username) {
+	if user.Username == "" || AllWhitespace(user.Username) {
 		log.Printf("New user failed: no username")
-		return user, errNoUsername
+		return user.ID, errNoUsername
 	}
 
-	if IsEmailAddress(username) {
+	if IsEmailAddress(user.Username) {
 		log.Printf("New user failed: Username looks like an email address")
-		return user, errUsernameIsEmail
+		return user.ID, errUsernameIsEmail
 	}
 
 	if password == "" {
 		log.Printf("New user failed: no password")
-		return user, errNoPassword
+		return user.ID, errNoPassword
 	}
 
 	if len(password) < passwordLength {
 		log.Printf("New user failed: password too short")
-		return user, errPasswordTooShort
+		return user.ID, errPasswordTooShort
 	}
 
 	// Check if the username exists
-	existingUser, err := event.Users.FindByUsername(username)
+	existingUser, err := event.Users.FindByUsername(user.Username)
 	if err != nil {
 		log.Printf("New user failed: %v", err)
-		return user, err
+		return user.ID, err
 	}
 	if existingUser != nil {
 		log.Printf("New user failed: user exists")
-		return user, errUsernameExists
+		return user.ID, errUsernameExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost)
@@ -93,9 +87,9 @@ func NewUser(username, password string, isVerified bool, profile *UserProfile) (
 
 	user.Interest = make(map[DiscussionID]int)
 
-	event.Users.Save(user)
+	event.Users.Save(&user)
 
-	return user, err
+	return user.ID, err
 }
 
 func FindUser(username, password string) (*User, error) {

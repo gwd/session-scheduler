@@ -68,13 +68,13 @@ func (store *EventStore) Init(adminPwd string) {
 		adminPwd = id.GenerateRawID(12)
 	}
 
-	admin, err := NewUser(AdminUsername, adminPwd, true,
-		&UserProfile{RealName: "Xen Schedule Administrator"})
+	_, err := NewUser(adminPwd, User{Username: AdminUsername,
+		IsAdmin:    true,
+		IsVerified: true,
+		Profile:    UserProfile{RealName: "Xen Schedule Administrator"}})
 	if err != nil {
 		log.Fatalf("Error creating admin user: %v", err)
 	}
-	admin.IsAdmin = true
-	event.Users.Save(admin)
 	log.Printf("Administrator account: admin %s", adminPwd)
 
 	event.Save()
