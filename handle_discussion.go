@@ -327,11 +327,15 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		case "edit":
 			currentPassword := r.FormValue("currentPassword")
 			newPassword := r.FormValue("newPassword")
-			profile := parseProfile(r)
+			// Make a copy of the current user data, then update the copy to be the new
+			// user data.  We do this so that in the event of an error, we can fill in the form
+			// with the data the user entered (rather than losing it).
+			userNext := *user
+			parseProfile(r, &userNext)
 
-			log.Printf(" new profile %v", *profile)
+			log.Printf(" new user info %v", userNext)
 
-			userNext, err := event.UpdateUser(user, cur, currentPassword, newPassword, profile)
+			err := event.UpdateUser(&userNext, cur, currentPassword, newPassword)
 
 			if err != nil {
 				if event.IsValidationError(err) {

@@ -18,16 +18,15 @@ const TestPassword = "xenuser"
 
 func NewTestUser() {
 	user := User{
-		Username:   fake.UserName(),
-		IsVerified: false,
-		Profile: UserProfile{
-			RealName:    fake.FullName(),
-			Company:     fake.Company(),
-			Email:       fake.EmailAddress(),
-			Description: fake.Paragraphs()},
+		Username:    fake.UserName(),
+		IsVerified:  false,
+		RealName:    fake.FullName(),
+		Company:     fake.Company(),
+		Email:       fake.EmailAddress(),
+		Description: fake.Paragraphs(),
 	}
 
-	log.Printf("Creating test user %s %v", user.Username, user.Profile)
+	log.Printf("Creating test user %v", user)
 
 	for _, err := NewUser(TestPassword, user); err != nil; _, err = NewUser(TestPassword, user) {
 		// Just keep trying random usernames until we get a new one

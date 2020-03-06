@@ -14,24 +14,21 @@ func HandleUserNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	RenderTemplate(w, r, "user/new", nil)
 }
 
-func parseProfile(r *http.Request) (profile *event.UserProfile) {
-	profile = &event.UserProfile{
-		RealName:    r.FormValue("RealName"),
-		Company:     r.FormValue("Company"),
-		Email:       r.FormValue("Email"),
-		Description: r.FormValue("Description"),
-	}
-	return
+func parseProfile(r *http.Request, user *event.User) {
+	user.RealName = r.FormValue("RealName")
+	user.Company = r.FormValue("Company")
+	user.Email = r.FormValue("Email")
+	user.Description = r.FormValue("Description")
 }
 
 func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var e string
-	var isVerified bool
 	var err error
 	var uid event.UserID
+	var user event.User
 
-	profile := parseProfile(r)
-	username := r.FormValue("Username")
+	user.Username = r.FormValue("Username")
+	parseProfile(r, &user)
 
 	{
 		evcode, err := kvs.Get(VerificationCode)
@@ -42,7 +39,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		}
 		vcode := r.FormValue("Vcode")
 		if vcode == evcode {
-			isVerified = true
+			user.IsVerified = true
 		} else if kvs.GetBoolDef(FlagRequireVerification) {
 			log.Printf("New user failed: Bad vcode %s", vcode)
 			e = "Incorrect Verification Code"
@@ -50,10 +47,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		}
 	}
 
-	uid, err = event.NewUser(r.FormValue("Password"), event.User{
-		Username:   username,
-		IsVerified: isVerified,
-		Profile:    *profile})
+	uid, err = event.NewUser(r.FormValue("Password"), user)
 
 	if err != nil {
 		if event.IsValidationError(err) {
@@ -80,8 +74,8 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 fail:
 	RenderTemplate(w, r, "user/new", map[string]interface{}{
 		"Error":    e,
-		"Username": username,
-		"Profile":  profile,
+		"Username": user.Username,
+		"Profile":  user, // FIXME
 	})
 	return
 }

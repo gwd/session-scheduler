@@ -7,13 +7,19 @@ import (
 	"github.com/gwd/session-scheduler/event"
 )
 
+type UserProfile struct {
+	RealName string
+	Email    string
+	Company  string
+}
+
 type UserDisplay struct {
 	ID          event.UserID
 	Username    string
 	IsAdmin     bool
 	IsVerified  bool // Has entered the verification code
 	MayEdit     bool
-	Profile     *event.UserProfile
+	Profile     UserProfile
 	Description template.HTML
 	List        []*DiscussionDisplay
 }
@@ -28,8 +34,10 @@ func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay)
 		ud.MayEdit = cur.MayEditUser(u)
 		ud.IsAdmin = cur.IsAdmin
 		// Only display profile information to people who are logged in
-		ud.Profile = &u.Profile
-		ud.Description = ProcessText(u.Profile.Description)
+		ud.Profile.RealName = u.RealName
+		ud.Profile.Email = u.Email
+		ud.Profile.Company = u.Company
+		ud.Description = ProcessText(u.Description)
 		ud.List = DiscussionGetListUser(u, cur)
 	}
 	return

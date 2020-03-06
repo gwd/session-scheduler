@@ -21,13 +21,6 @@ func (uid *UserID) generate() {
 	*uid = UserID(id.GenerateID("usr", userIDLength))
 }
 
-type UserProfile struct {
-	RealName    string
-	Email       string
-	Company     string
-	Description string
-}
-
 type User struct {
 	ID             UserID
 	HashedPassword string
@@ -35,8 +28,10 @@ type User struct {
 	IsAdmin        bool
 	IsVerified     bool // Has entered the verification code
 	Interest       map[DiscussionID]int
-	// Profile: Informational only
-	Profile UserProfile
+	RealName       string
+	Email          string
+	Company        string
+	Description    string
 }
 
 func (u *User) MayEditUser(tgt *User) bool {
@@ -167,39 +162,34 @@ func UserRemoveDiscussion(did DiscussionID) error {
 	})
 }
 
-func UpdateUser(user, modifier *User, currentPassword, newPassword string,
-	profile *UserProfile) (User, error) {
-	out := *user
-	out.Profile = *profile
-
+func UpdateUser(userNext, modifier *User, currentPassword, newPassword string) error {
 	if newPassword != "" {
 		// No current password? Don't try update the password.
+		// FIXME: Huh?
 		if currentPassword == "" {
-			return out, nil
+			return nil
 		}
 
 		if bcrypt.CompareHashAndPassword(
 			[]byte(modifier.HashedPassword),
 			[]byte(currentPassword),
 		) != nil {
-			return out, errPasswordIncorrect
+			return errPasswordIncorrect
 		}
 
 		if len(newPassword) < passwordLength {
-			return out, errPasswordTooShort
+			return errPasswordTooShort
 		}
 
-		err := user.SetPassword(newPassword)
+		err := userNext.SetPassword(newPassword)
 		if err != nil {
-			return out, err
+			return err
 		}
 	}
 
-	user.Profile = *profile
+	event.Users.Save(userNext)
 
-	event.Users.Save(user)
-
-	return out, nil
+	return nil
 }
 
 func DeleteUser(uid UserID) error {

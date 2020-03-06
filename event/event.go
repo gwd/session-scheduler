@@ -71,7 +71,7 @@ func (store *EventStore) Init(adminPwd string) {
 	_, err := NewUser(adminPwd, User{Username: AdminUsername,
 		IsAdmin:    true,
 		IsVerified: true,
-		Profile:    UserProfile{RealName: "Xen Schedule Administrator"}})
+		RealName:   "Xen Schedule Administrator"})
 	if err != nil {
 		log.Fatalf("Error creating admin user: %v", err)
 	}
@@ -280,7 +280,7 @@ func (ustore UserStore) FindByEmail(email string) (*User, error) {
 	}
 
 	for _, user := range ustore {
-		if strings.ToLower(email) == strings.ToLower(user.Profile.Email) {
+		if strings.ToLower(email) == strings.ToLower(user.Email) {
 			return user, nil
 		}
 	}
