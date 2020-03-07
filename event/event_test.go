@@ -1,7 +1,7 @@
 package event
 
 import (
-	_ "fmt"
+	"fmt"
 	"os"
 	"testing"
 )
@@ -29,19 +29,19 @@ func TestVersion(t *testing.T) {
 	}
 
 	// Manually break the schema version
-	// _, err = db.Exec(fmt.Sprintf("pragma user_version=%d", codeSchemaVersion+1))
-	// if err != nil {
-	// 	t.Errorf("Messing up user version: %v", err)
-	// 	return
-	// }
+	_, err = db.Exec(fmt.Sprintf("pragma user_version=%d", codeSchemaVersion+1))
+	if err != nil {
+		t.Errorf("Messing up user version: %v", err)
+		return
+	}
 
 	db.Close()
 
-	// db, err = openDb(sfname)
-	// if err == nil {
-	// 	t.Errorf("Opening database with wrong version succeeded!")
-	// 	return
-	// }
+	db, err = openDb(sfname)
+	if err == nil {
+		t.Errorf("Opening database with wrong version succeeded!")
+		return
+	}
 
 	os.Remove(sfname)
 }
