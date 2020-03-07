@@ -55,45 +55,35 @@ func openDb(filename string) (*sqlx.DB, error) {
 	}
 
 	// Check for existence of tables
-	for {
-		tx, err := db.Beginx()
-		if err != nil {
-			return nil, err
-		}
-		defer tx.Rollback()
-
-		var dbSchemaVersion int
-		err = tx.Get(&dbSchemaVersion, "pragma user_version")
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return nil, fmt.Errorf("Getting schema version: %v", err)
-		}
-
-		if dbSchemaVersion == 0 {
-			err = initDb(tx)
-			if shouldRetry(err) {
-				tx.Rollback()
-				continue
-			} else if err != nil {
-				return nil, fmt.Errorf("Initializing database: %v", err)
-			}
-
-			err = tx.Commit()
-			if shouldRetry(err) {
-				tx.Rollback()
-				continue
-			} else if err != nil {
-				return nil, fmt.Errorf("Initializing database: %v", err)
-			}
-			break
-		} else if dbSchemaVersion != codeSchemaVersion {
-			return nil, fmt.Errorf("Wrong schema version (code %d, db %d)",
-				codeSchemaVersion, dbSchemaVersion)
-		}
-		break
+	tx, err := db.Beginx()
+	if err != nil {
+		return nil, err
 	}
+	defer tx.Rollback()
+
+	var dbSchemaVersion int
+	err = tx.Get(&dbSchemaVersion, "pragma user_version")
+	if err != nil {
+		return nil, fmt.Errorf("Getting schema version: %v", err)
+	}
+
+	if dbSchemaVersion == 0 {
+		err = initDb(tx)
+		if err != nil {
+			return nil, fmt.Errorf("Initializing database: %v", err)
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			return nil, fmt.Errorf("Initializing database: %v", err)
+		}
+	} else if dbSchemaVersion != codeSchemaVersion {
+		return nil, fmt.Errorf("Wrong schema version (code %d, db %d)",
+			codeSchemaVersion, dbSchemaVersion)
+	}
+
+	// No need to commit in common case
+
 	return db, nil
 }
 

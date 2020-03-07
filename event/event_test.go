@@ -43,31 +43,5 @@ func TestVersion(t *testing.T) {
 	// 	return
 	// }
 
-	err = os.Remove(sfname)
-	if err != nil {
-		t.Errorf("Removing temporary file: %v", err)
-		return
-	}
-
-	// Test parallel open
-	errChan := make(chan error, 10)
-	for i := 0; i < 10; i++ {
-		go func() {
-			db, err := openDb(sfname)
-			if err == nil {
-				db.Close()
-			}
-			errChan <- err
-		}()
-	}
-
-	for i := 0; i < 10; i++ {
-		err := <-errChan
-		if err != nil {
-			t.Errorf("Opening database: %v", err)
-			return
-		}
-	}
-
 	os.Remove(sfname)
 }
