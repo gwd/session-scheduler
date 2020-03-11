@@ -34,17 +34,17 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 
-	d, err := event.NewDiscussion(
-		owner,
-		r.FormValue("title"),
-		r.FormValue("description"),
-	)
+	d := event.Discussion{
+		Owner:       owner.UserID,
+		Title:       r.FormValue("title"),
+		Description: r.FormValue("description")}
+	err := event.NewDiscussion(&d)
 
 	if err != nil {
 		if event.IsValidationError(err) {
 			RenderTemplate(w, r, "discussion/new", map[string]interface{}{
 				"Error":      err.Error(),
-				"Discussion": DiscussionGetDisplay(d, owner),
+				"Discussion": DiscussionGetDisplay(&d, owner),
 			})
 			return
 		}
@@ -107,7 +107,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	switch itype {
 	case "discussion":
-		d, _ := event.DiscussionFindById(uid)
+		d, _ := event.DiscussionFindById(event.DiscussionID(uid))
 
 		if d == nil {
 			break
@@ -210,7 +210,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 	switch itype {
 	case "discussion":
-		d, _ := event.DiscussionFindById(uid)
+		d, _ := event.DiscussionFindById(event.DiscussionID(uid))
 		if d == nil {
 			log.Printf("Invalid discussion: %s", uid)
 			return
@@ -254,21 +254,22 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			title := r.FormValue("title")
-			description := r.FormValue("description")
-			var possibleSlots []bool
-			owner := d.Owner
+			discussionNext := *d
+			discussionNext.Title = r.FormValue("title")
+			discussionNext.Description = r.FormValue("description")
+
+			//var possibleSlots []bool
 
 			if cur.IsAdmin {
 				var err error
-				possibleSlots, err = FormCheckToBool(r.Form["possible"])
+				//possibleSlots, err = FormCheckToBool(r.Form["possible"])
 				if err != nil {
 					return
 				}
-				owner = event.UserID(r.FormValue("owner"))
+				discussionNext.Owner = event.UserID(r.FormValue("owner"))
 			}
 
-			discussionNext, err := event.UpdateDiscussion(d, title, description, possibleSlots, owner)
+			err := event.DiscussionUpdate(&discussionNext)
 			if err != nil {
 				if event.IsValidationError(err) {
 					RenderTemplate(w, r, "edit", map[string]interface{}{
@@ -298,7 +299,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			if err := event.DiscussionSetPublic(string(d.DiscussionID), r.FormValue("newvalue") == "true"); err != nil {
+			if err := event.DiscussionSetPublic(d.DiscussionID, r.FormValue("newvalue") == "true"); err != nil {
 				// FIXME
 				log.Printf("DiscussionSetPublic: %v", err)
 			}

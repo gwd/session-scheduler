@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"log"
 
 	"golang.org/x/crypto/bcrypt"
@@ -40,34 +41,6 @@ func (u *User) MayEditUser(tgt *User) bool {
 
 func (u *User) MayEditDiscussion(d *Discussion) bool {
 	return u.IsAdmin || u.UserID == d.Owner
-}
-
-func updateUser(user *User) error {
-	res, err := event.Exec(`
-        update event_users set
-            hashedpassword = ?,
-            isadmin = ?, isverified = ?,
-            realname = ?, email = ?, company = ?, description = ?
-          where userid = ?`,
-		user.HashedPassword,
-		user.IsAdmin, user.IsVerified,
-		user.RealName, user.Email, user.Company, user.Description,
-		user.UserID)
-	if err != nil {
-		return err
-	}
-	rcount, err := res.RowsAffected()
-	if err != nil {
-		log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
-	}
-	switch {
-	case rcount == 0:
-		return ErrUserNotFound
-	case rcount > 1:
-		log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
-		return ErrInternal
-	}
-	return nil
 }
 
 func NewUser(password string, user *User) (UserID, error) {
@@ -130,14 +103,13 @@ func NewUser(password string, user *User) (UserID, error) {
 
 func (u *User) CheckPassword(password string) bool {
 	// Don't bother checking the password if it's empty
-	if password == "" ||
-		bcrypt.CompareHashAndPassword(
-			[]byte(u.HashedPassword),
-			[]byte(password),
-		) != nil {
+	if password == "" {
 		return false
 	}
-	return true
+
+	return bcrypt.CompareHashAndPassword(
+		[]byte(u.HashedPassword),
+		[]byte(password)) == nil
 }
 
 // Use when you plan on setting a large sequence in a row and can save
@@ -170,7 +142,7 @@ func (user *User) SetInterest(disc *Discussion, interest int) error {
 	return err
 }
 
-func (user *User) SetPassword(newPassword string) error {
+func (user *User) setPassword(newPassword string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
 	if err != nil {
 		return err
@@ -191,7 +163,19 @@ func UserRemoveDiscussion(did DiscussionID) error {
 	return nil
 }
 
+// UserUpdate will update "user-facing" data associated with the user.
+// This includes RealName, Email, Company, and Description.  It can
+// also inlude the password.
+//
+// UserUpdate will *not* update Username, IsAdmin or IsVerified.  IsVerified
+// should be updated with SetVerified instead.
+//
+// If newPassword is "", HashedPassword will not be changed. If
+// newPassword is non-null, currentPassword will be checked against
+// modifier.HashedPassword.
 func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) error {
+	setPassword := false
+
 	if newPassword != "" {
 		// No current password? Don't try update the password.
 		// FIXME: Huh?
@@ -210,28 +194,28 @@ func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) e
 			return errPasswordTooShort
 		}
 
-		err := userNext.SetPassword(newPassword)
+		err := userNext.setPassword(newPassword)
 		if err != nil {
 			return err
 		}
+
+		setPassword = true
 	}
 
-	return updateUser(userNext)
-}
-
-func DeleteUser(userid UserID) error {
-	// FIXME: Transaction
-	dlist := event.Discussions.GetDidListUser(userid)
-
-	for _, did := range dlist {
-		DeleteDiscussion(did)
+	q := `update event_users set `
+	args := []interface{}{}
+	if setPassword {
+		q += `hashedpassword = ?, `
+		args = append(args, userNext.HashedPassword)
 	}
+	q += `realname = ?, email = ?, company = ?, description = ? where userid = ?`
+	args = append(args, userNext.RealName)
+	args = append(args, userNext.Email)
+	args = append(args, userNext.Company)
+	args = append(args, userNext.Description)
+	args = append(args, userNext.UserID)
 
-	DiscussionRemoveUser(userid)
-
-	res, err := event.Exec(`
-        delete from event_users where userid=?`,
-		userid)
+	res, err := event.Exec(q, args...)
 	if err != nil {
 		return err
 	}
@@ -239,7 +223,9 @@ func DeleteUser(userid UserID) error {
 	rcount, err := res.RowsAffected()
 	if err != nil {
 		log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
+		return ErrInternal
 	}
+
 	switch {
 	case rcount == 0:
 		return ErrUserNotFound
@@ -247,5 +233,65 @@ func DeleteUser(userid UserID) error {
 		log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
 		return ErrInternal
 	}
+
 	return nil
+}
+
+func DeleteUser(userid UserID) error {
+	for {
+		tx, err := event.Beginx()
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Starting transaction: %v", err)
+		}
+		defer tx.Rollback()
+
+		_, err = tx.Exec(`
+        delete from event_discussions
+            where owner = ?`,
+			userid)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Deleting discussions owned by %v: %v",
+				userid, err)
+		}
+
+		// FIXME: Interest
+		// DiscussionRemoveUser(userid)
+
+		res, err := tx.Exec(`
+        delete from event_users where userid=?`,
+			userid)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Deleting record for user %v: %v",
+				userid, err)
+		}
+		rcount, err := res.RowsAffected()
+		if err != nil {
+			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
+		}
+		switch {
+		case rcount == 0:
+			return ErrUserNotFound
+		case rcount > 1:
+			log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
+			return ErrInternal
+		}
+
+		err = tx.Commit()
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return err
+		}
+		return nil
+	}
 }

@@ -25,8 +25,7 @@ type EventStore struct {
 
 	Timetable Timetable
 
-	Discussions DiscussionStore
-	Locations   LocationStore
+	Locations LocationStore
 
 	ScheduleV2    *Schedule
 	ScheduleSlots int
@@ -52,7 +51,6 @@ const (
 )
 
 func (store *EventStore) Init(adminPwd string) {
-	store.Discussions.Init()
 	store.Timetable.Init()
 	store.ScheduleSlots = store.Timetable.GetSlots()
 
@@ -85,7 +83,7 @@ func (store *EventStore) ResetEventData() {
 	store.Locations.Init()
 	store.ScheduleV2 = nil
 	store.LockedSlots = make([]bool, store.ScheduleSlots)
-	store.Discussions.ResetEventData()
+	// Reset possible slots for discussions
 
 	event.Save()
 }
@@ -99,12 +97,44 @@ func ResetData() {
 // users and discussions gone.
 // This should only be done in test mode!
 func (store *EventStore) ResetUserData() {
-	_, err := event.Exec(`delete from event_users where username != ?`, AdminUsername)
-	if err != nil {
-		log.Fatalf("Deleting users: %v", err)
+	for {
+		tx, err := event.Beginx()
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			log.Fatalf("Starting transaction: %v", err)
+		}
+		defer tx.Rollback()
+
+		_, err = event.Exec(`delete from event_users where username != ?`,
+			AdminUsername)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			log.Fatalf("Deleting users: %v", err)
+		}
+
+		_, err = event.Exec(`delete from event_discussions`)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			log.Fatalf("Deleting discussions: %v", err)
+		}
+
+		err = tx.Commit()
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			log.Fatalf("Committing transaction: %v", err)
+		}
+
+		return
 	}
 
-	store.Discussions.Init()
 	store.ResetEventData()
 }
 
@@ -140,7 +170,8 @@ func (store *EventStore) Load(opt EventOptions) error {
 			log.Fatalf("Can't find admin user: %v", err)
 		}
 		log.Printf("Resetting admin password")
-		admin.SetPassword(opt.AdminPwd)
+		// FIXME: This doesn't update the database
+		admin.setPassword(opt.AdminPwd)
 	}
 
 	// Clean up any stale 'running' data
@@ -149,10 +180,10 @@ func (store *EventStore) Load(opt EventOptions) error {
 	}
 
 	// Run timetable placement to update discussion info
-	if event.ScheduleV2 != nil {
-		event.ScheduleV2.LoadPost()
-		event.Timetable.Place(event.ScheduleV2)
-	}
+	// if event.ScheduleV2 != nil {
+	// 	event.ScheduleV2.LoadPost()
+	// 	event.Timetable.Place(event.ScheduleV2)
+	// }
 	return nil
 }
 
@@ -164,6 +195,13 @@ func Load(opt EventOptions) error {
 		opt.dbFilename = DbFilename
 	}
 	return event.Load(opt)
+}
+
+func Close() {
+	if event.DB != nil {
+		event.DB.Close()
+	}
+	event = EventStore{}
 }
 
 func (store *EventStore) Save() error {
@@ -261,73 +299,58 @@ func UserGetAll() (users []User, err error) {
 // 	return nil
 // }
 
-func (dstore *DiscussionStore) DeepCopy(dcopy *DiscussionStore) (err error) {
-	if err = deepCopyEncoder.Encode(dstore); err != nil {
+// func (dstore *DiscussionStore) DeepCopy(dcopy *DiscussionStore) (err error) {
+// 	if err = deepCopyEncoder.Encode(dstore); err != nil {
+// 		return err
+// 	}
+// 	if err = deepCopyDecoder.Decode(dcopy); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+func DiscussionIterate(f func(*Discussion) error) (err error) {
+	rows, err := event.Queryx(`select * from event_discussions order by discussionid`)
+	if err != nil {
 		return err
 	}
-	if err = deepCopyDecoder.Decode(dcopy); err != nil {
-		return err
+	defer rows.Close()
+	for rows.Next() {
+		var disc Discussion
+		if err := rows.StructScan(&disc); err != nil {
+			return err
+		}
+		err = f(&disc)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-type DiscussionStore map[DiscussionID]*Discussion
-
-func (dstore *DiscussionStore) Init() {
-	*dstore = DiscussionStore(make(map[DiscussionID]*Discussion))
-}
-
-// Update PossibleSlot size while retaining other information
-func (dstore *DiscussionStore) ResetEventData() {
-	dstore.Iterate(func(disc *Discussion) error {
-		//disc.PossibleSlots = MakePossibleSlots(event.ScheduleSlots)
-		return nil
-	})
-}
-
-func (dstore DiscussionStore) Find(id DiscussionID) (*Discussion, error) {
-	discussion, exists := (dstore)[id]
-	if !exists {
-		return nil, nil
+// FIXME: This will simply do nothing if the userid doesn't exist.  It
+// would be nice for the caller to distinguish between "User does not
+// exist" and "User has no discussions".
+func DiscussionIterateUser(userid UserID, f func(*Discussion) error) (err error) {
+	rows, err := event.Queryx(
+		`select * from event_discussions
+             where owner=?
+             order by discussionid`, userid)
+	if err != nil {
+		return err
 	}
-
-	return discussion, nil
-}
-
-func (dstore DiscussionStore) Iterate(f func(d *Discussion) error) (err error) {
-	for _, disc := range dstore {
-		err = f(disc)
+	defer rows.Close()
+	for rows.Next() {
+		var disc Discussion
+		if err := rows.StructScan(&disc); err != nil {
+			return err
+		}
+		err = f(&disc)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
-}
-
-func DiscussionIterate(f func(d *Discussion) error) (err error) {
-	return event.Discussions.Iterate(f)
-}
-
-func (dstore DiscussionStore) Save(discussion *Discussion) error {
-	dstore[discussion.DiscussionID] = discussion
-	return event.Save()
-}
-
-func (dstore DiscussionStore) Delete(did DiscussionID) error {
-	delete(dstore, did)
-	event.ScheduleState.Modify()
-	return event.Save()
-}
-
-func (dstore DiscussionStore) GetDidListUser(uid UserID) (list []DiscussionID) {
-	dstore.Iterate(func(d *Discussion) error {
-		if d.Owner == uid {
-			list = append(list, d.DiscussionID)
-		}
-		return nil
-	})
-
-	return
+	return nil
 }
 
 func ScheduleGetSlots() int {

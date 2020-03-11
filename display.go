@@ -129,18 +129,12 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 }
 
 func DiscussionGetListUser(u *event.User, cur *event.User) (list []*DiscussionDisplay) {
-	event.DiscussionIterate(func(d *event.Discussion) error {
-		if d.Owner == u.UserID {
-			dd := DiscussionGetDisplay(d, cur)
-			if dd != nil {
-				list = append(list, dd)
-			}
+	event.DiscussionIterateUser(u.UserID, func(d *event.Discussion) error {
+		dd := DiscussionGetDisplay(d, cur)
+		if dd != nil {
+			list = append(list, dd)
 		}
 		return nil
-	})
-
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].ID < list[j].ID
 	})
 
 	return
@@ -153,10 +147,6 @@ func DiscussionGetList(cur *event.User) (list []*DiscussionDisplay) {
 			list = append(list, dd)
 		}
 		return nil
-	})
-
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].ID < list[j].ID
 	})
 
 	return

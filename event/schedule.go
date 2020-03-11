@@ -373,15 +373,6 @@ type Schedule struct {
 	store *SearchStore
 }
 
-func (sched *Schedule) GetStores() (ds *DiscussionStore) {
-	if sched.store != nil {
-		ds = &sched.store.Discussions
-	} else {
-		ds = &event.Discussions
-	}
-	return
-}
-
 func (sched *Schedule) Init(store *SearchStore) {
 	sched.Slots = make([]*Slot, store.ScheduleSlots)
 	for i := range sched.Slots {
@@ -457,15 +448,15 @@ func (sched *Schedule) Validate() error {
 	}
 
 	// Now go through all the discussions and make sure each one was mapped once
-	err := ss.Discussions.Iterate(func(disc *Discussion) error {
-		_, prs := dMap[disc.DiscussionID]
-		if !prs {
-			log.Panicf("Discussion %v missing!", disc.DiscussionID)
-		}
-		return nil
-	})
+	// err := ss.Discussions.Iterate(func(disc *Discussion) error {
+	// 	_, prs := dMap[disc.DiscussionID]
+	// 	if !prs {
+	// 		log.Panicf("Discussion %v missing!", disc.DiscussionID)
+	// 	}
+	// 	return nil
+	// })
 
-	return err
+	return nil /*err*/
 }
 
 func (sched *Schedule) RemoveDiscussion(did DiscussionID) error {
@@ -575,62 +566,9 @@ func (sched *Schedule) RandomUnlockedSlot(rng *rand.Rand) (slotn int, slot *Slot
 	}
 }
 
-func (sched *Schedule) Mutate(rng *rand.Rand) {
-	var sScore int
-
-	if opt.DebugLevel > 0 {
-		sScore, _ = sched.Score()
-		opt.Debug.Print("Mutate")
-	}
-	replace := []*Discussion{}
-
-	// Remove a random number of discussions
-	rmCount := rng.Intn(len(sched.store.Discussions)*25/100 + 1)
-	if rmCount < 1 {
-		rmCount = 1
-	}
-	for n := 0; n < rmCount; n++ {
-		// Choose a random slot
-		slotn, slot := sched.RandomUnlockedSlot(rng)
-
-		// Nothing to do for empty slots
-		if len(slot.Discussions) == 0 {
-			continue
-		}
-
-		// Choose a random discussion
-		dnum := rng.Intn(len(slot.Discussions))
-		did := slot.Discussions[dnum]
-		if opt.DebugLevel > 0 {
-			opt.Debug.Printf(" Removing discussion %v from slot %d",
-				did, slotn)
-		}
-		disc, _ := sched.store.Discussions.Find(did)
-		replace = append(replace, disc)
-		slot.Remove(disc, true)
-	}
-
-	// And put them back somewhere else
-	for _, disc := range replace {
-		sched.AssignRandom(disc, rng)
-	}
-
-	sched.Validate()
-
-	if opt.DebugLevel > 0 {
-		eScore, _ := sched.Score()
-		if eScore > sScore {
-			opt.Debug.Printf("Mutated from %d to %d mplus", sScore, eScore)
-		} else {
-			opt.Debug.Printf("Mutated from %d to %d", sScore, eScore)
-		}
-	}
-}
-
 // A snapshot of users and discussions to use while reference while
 // searching for an optimum schedule, but not holding the lock.
 type SearchStore struct {
-	Discussions DiscussionStore
 	LockedSlots
 	ScheduleSlots   int
 	CurrentSchedule *Schedule
@@ -650,9 +588,9 @@ func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
 	// if err = event.Users.DeepCopy(&ss.Users); err != nil {
 	// 	return
 	// }
-	if err = event.Discussions.DeepCopy(&ss.Discussions); err != nil {
-		return
-	}
+	// if err = event.Discussions.DeepCopy(&ss.Discussions); err != nil {
+	// 	return
+	// }
 	if event.LockedSlots != nil {
 		ss.LockedSlots = append(LockedSlots(nil), event.LockedSlots...)
 	}
@@ -701,11 +639,11 @@ func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
 	}
 
 	ss.dList = nil
-	for _, disc := range ss.Discussions {
-		if !dLocked[disc.DiscussionID] {
-			ss.dList = append(ss.dList, disc)
-		}
-	}
+	// for _, disc := range ss.Discussions {
+	// 	if !dLocked[disc.DiscussionID] {
+	// 		ss.dList = append(ss.dList, disc)
+	// 	}
+	// }
 
 	return
 }
@@ -790,8 +728,8 @@ type SearchAlgo string
 
 const (
 	SearchHeuristicOnly = SearchAlgo("heuristic")
-	SearchGenetic       = SearchAlgo("genetic")
-	SearchRandom        = SearchAlgo("random")
+	//SearchGenetic       = SearchAlgo("genetic")
+	SearchRandom = SearchAlgo("random")
 )
 
 func makeScheduleAsync(ss *SearchStore) {
@@ -869,7 +807,7 @@ func MakeSchedule(optArg SearchOptions) error {
 
 	// FIXME: Ignore async for now
 
-	err := event.Discussions.Iterate(func(disc *Discussion) error {
+	err := DiscussionIterate(func(disc *Discussion) error {
 		if !disc.IsPublic {
 			return errModeratedDiscussions
 		}

@@ -28,6 +28,7 @@ var (
 	errInProgress           = ValidationError(errors.New("Schedule already in progress"))
 	errModeratedDiscussions = ValidationError(errors.New("Moderated discussions present: Please unmoderate or delete"))
 	ErrUserNotFound         = errors.New("UserID not found")
+	ErrDiscussionNotFound   = errors.New("DiscussionID not found")
 )
 
 func IsValidationError(err error) bool {

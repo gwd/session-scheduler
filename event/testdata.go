@@ -4,67 +4,10 @@ import (
 	"log"
 	"math/rand"
 	"time"
-
-	"github.com/icrowley/fake"
-	//"github.com/Pallinder/go-randomdata"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-}
-
-func NewTestDiscussion(owner *User) {
-	// Get a random owner
-	title := fake.Title()
-	desc := fake.Paragraphs()
-	//title := randomdata.Noun()
-	//desc := randomdata.Paragraph()
-
-	if owner == nil {
-		var err error
-		owner, err = UserFindRandom()
-		if err != nil {
-			log.Fatalf("Getting a random user: %v", err)
-		}
-	}
-
-	//var disc *Discussion
-
-	for {
-		var err error
-		log.Printf("Creating discussion with owner %s, title %s, desc %s",
-			owner.UserID, title, desc)
-
-		/*disc*/
-		_, err = NewDiscussion(owner, title, desc)
-		switch err {
-		case errTitleExists:
-			title = fake.Title()
-			continue
-		case errTooManyDiscussions:
-			// We could try a new user; but we don't want to loop forever
-			// if all users are full of their quota, and we don't want to spend
-			// time detecting that condition.  Just silently fail in that case.
-			err = nil
-			break
-		}
-		if err == nil {
-			break
-		}
-		log.Fatalf("Creating new discussion: %v", err)
-	}
-
-	// Only 25% of discussions have constraints
-	// if disc != nil && rand.Intn(4) == 0 {
-	// 	// Make a continuous range where it's not schedulable
-	// 	start := rand.Intn(len(disc.PossibleSlots))
-	// 	end := rand.Intn(len(disc.PossibleSlots)-start) + 1
-	// 	if start != 0 || end != len(disc.PossibleSlots) {
-	// 		for i := start; i < end; i++ {
-	// 			disc.PossibleSlots[i] = false
-	// 		}
-	// 	}
-	// }
 }
 
 // Try to emulate "realistic" interest, where people will be like one another.
@@ -83,7 +26,7 @@ func TestGenerateInterest() {
 		} else {
 			log.Printf("User %s will be themselves", user.Username)
 		}
-		event.Discussions.Iterate(func(disc *Discussion) error {
+		DiscussionIterate(func(disc *Discussion) error {
 			r := rand.Intn(100)
 			interest := 0
 
@@ -132,6 +75,6 @@ func TestPopulate() {
 		//NewTestUser()
 	}
 	for i := 0; i < TestDisc; i++ {
-		NewTestDiscussion(nil)
+		//NewTestDiscussion(nil)
 	}
 }

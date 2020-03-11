@@ -45,7 +45,7 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 	// For now, just list the discussions.  Place into locations later.
 	ts.Discussions = []TimetableDiscussion{}
 	for _, did := range slot.Discussions {
-		disc, _ := event.Discussions.Find(did)
+		disc, _ := DiscussionFindById(did)
 		tdisc := TimetableDiscussion{
 			ID:        did,
 			Title:     disc.Title,
@@ -70,7 +70,7 @@ func (ts *TimetableSlot) PlaceSlot(slot *Slot) {
 		tdisc := &ts.Discussions[i]
 		if lidx < len(locations) {
 			loc := locations[lidx]
-			disc, _ := event.Discussions.Find(tdisc.ID)
+			disc, _ := DiscussionFindById(tdisc.ID)
 
 			opt.Debug.Printf("Setting discussion %s room to id %d (%s)",
 				tdisc.Title, lidx, tdisc.LocationInfo.Name)

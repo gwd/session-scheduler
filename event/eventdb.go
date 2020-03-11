@@ -103,7 +103,6 @@ CREATE TABLE event_locations(
     locationname text not null,
     isplace      boolean not null,
     capacity     integer not null)`)
-
 	if err != nil {
 		return errOrRetry("Creating table event_location", err)
 	}
@@ -119,9 +118,23 @@ CREATE TABLE event_users(
     email          text,
     company        text,
     description    text)`)
-
 	if err != nil {
 		return errOrRetry("Creating table event_users", err)
+	}
+
+	_, err = ext.Exec(`
+CREATE TABLE event_discussions(
+    discussionid        text primary key,
+    owner               text not null,
+    title               text not null,
+    description         text,
+    approvedtitle       text,
+    approveddescription text,
+    ispublic            boolean not null,
+    foreign key(owner) references event_users(userid),
+    unique(title))`)
+	if err != nil {
+		return errOrRetry("Creating table event_discussions", err)
 	}
 
 	return nil

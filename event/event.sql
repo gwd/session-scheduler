@@ -18,14 +18,15 @@ CREATE TABLE event_interest(
     unique(userid, discussionid));
 
 CREATE TABLE event_discussions(
-    discussionid  text primary key,
-    owner         text not null,
-    title         text not null,
-    description   text,
-    approvedtitle text,
-    approveddesc  text,
-    ispublic      boolean not null,
-    foreign key(owner) references event_users(userid));
+    discussionid        text primary key,
+    owner               text not null,
+    title               text not null,
+    description         text,
+    approvedtitle       text,
+    approveddescription text,
+    ispublic            boolean not null,
+    foreign key(owner) references event_users(userid),
+    unique(title));
 
 CREATE TABLE event_discussions_possible_slots(
     discussionid text not null,

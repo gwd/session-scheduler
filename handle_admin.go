@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -215,20 +214,20 @@ func HandleTestAction(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 			}
 		case "enabletest":
 			flash = "Test+mode+already+disabled"
-		case "gendiscussion":
-			countString := r.FormValue("count")
-			count, err := strconv.Atoi(countString)
-			if err != nil || !(count > 0) {
-				flash = "Bad+input"
-			} else {
-				for i := 0; i < count; i++ {
-					event.NewTestDiscussion(nil)
-				}
-				flash = countString + " discussions generated"
-			}
-		case "geninterest":
-			event.TestGenerateInterest()
-			flash = "Interest generated"
+		// case "gendiscussion":
+		// 	countString := r.FormValue("count")
+		// 	count, err := strconv.Atoi(countString)
+		// 	if err != nil || !(count > 0) {
+		// 		flash = "Bad+input"
+		// 	} else {
+		// 		for i := 0; i < count; i++ {
+		// 			event.NewTestDiscussion(nil)
+		// 		}
+		// 		flash = countString + " discussions generated"
+		// 	}
+		// case "geninterest":
+		// 	event.TestGenerateInterest()
+		// 	flash = "Interest generated"
 		default:
 			return
 		}
