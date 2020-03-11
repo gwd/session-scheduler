@@ -116,7 +116,7 @@ func (slot *Slot) Init(sched *Schedule) {
 }
 
 func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
-	if slot.Discussions.IsPresent(disc.ID) {
+	if slot.Discussions.IsPresent(disc.DiscussionID) {
 		return
 	}
 	// FIXME: Interest
@@ -155,7 +155,7 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 	// 	}
 	// }
 	if commit {
-		slot.Discussions = append(slot.Discussions, disc.ID)
+		slot.Discussions = append(slot.Discussions, disc.DiscussionID)
 	}
 
 	return
@@ -163,13 +163,13 @@ func (slot *Slot) Assign(disc *Discussion, commit bool) (delta int) {
 
 func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 
-	if !slot.Discussions.IsPresent(disc.ID) {
-		log.Printf("ERROR: Trying to remove non-assigned discussion %s", disc.ID)
+	if !slot.Discussions.IsPresent(disc.DiscussionID) {
+		log.Printf("ERROR: Trying to remove non-assigned discussion %s", disc.DiscussionID)
 		return
 	}
 
 	if commit {
-		slot.Discussions.Delete(disc.ID)
+		slot.Discussions.Delete(disc.DiscussionID)
 	}
 
 	// FIXME: Interest
@@ -228,47 +228,47 @@ func (slot *Slot) Remove(disc *Discussion, commit bool) (delta int) {
 }
 
 func (slot *Slot) DiscussionScore(did DiscussionID) (score, missed int) {
-	ds := slot.sched.GetStores()
+	// ds := slot.sched.GetStores()
 
-	// For every discussion in this slot...
-	disc, _ := ds.Find(did)
+	// // For every discussion in this slot...
+	// disc, _ := ds.Find(did)
 
-	// FIXME: Interest
-	// FIXME: DeepCopy
-	for uid := range disc.Interested {
-		// Find out how much each user was interested in it
-		user, _ := UserFind(uid)
-		if user == nil {
-			log.Printf("INTERNAL ERROR: disc.ID %v has interest from non-existent user %v",
-				disc.ID, uid)
-			continue
-		}
+	// // FIXME: Interest
+	// // FIXME: DeepCopy
+	// for uid := range disc.Interested {
+	// 	// Find out how much each user was interested in it
+	// 	user, _ := UserFind(uid)
+	// 	if user == nil {
+	// 		log.Printf("INTERNAL ERROR: disc.ID %v has interest from non-existent user %v",
+	// 			disc.ID, uid)
+	// 		continue
+	// 	}
 
-		//interest := user.Interest[disc.ID]
-		interest := 0
+	// 	//interest := user.Interest[disc.ID]
+	// 	interest := 0
 
-		// If they're going, add it to the score;
-		// if not, add it to the 'missed' category
-		adid := slot.Users.Get(uid) // "Attending" discussion id
-		if adid == disc.ID {
-			score += interest
-		} else {
-			// Check to make sure the discussion they're attending is actually more
-			ainterest := interest
-			if opt.Validate {
-				// ainterest = user.Interest[adid]
-			}
-			if ainterest < interest {
-				adisc, _ := ds.Find(adid)
-				log.Printf("User %v attending wrong discussion (%s %d < %s %d)!",
-					user.Username, adisc.Title, ainterest, disc.Title, interest)
-				score += interest
-				slot.Users.Set(uid, disc.ID)
-			} else {
-				missed += interest
-			}
-		}
-	}
+	// 	// If they're going, add it to the score;
+	// 	// if not, add it to the 'missed' category
+	// 	adid := slot.Users.Get(uid) // "Attending" discussion id
+	// 	if adid == disc.ID {
+	// 		score += interest
+	// 	} else {
+	// 		// Check to make sure the discussion they're attending is actually more
+	// 		ainterest := interest
+	// 		if opt.Validate {
+	// 			// ainterest = user.Interest[adid]
+	// 		}
+	// 		if ainterest < interest {
+	// 			adisc, _ := ds.Find(adid)
+	// 			log.Printf("User %v attending wrong discussion (%s %d < %s %d)!",
+	// 				user.Username, adisc.Title, ainterest, disc.Title, interest)
+	// 			score += interest
+	// 			slot.Users.Set(uid, disc.ID)
+	// 		} else {
+	// 			missed += interest
+	// 		}
+	// 	}
+	// }
 	return
 }
 
@@ -458,9 +458,9 @@ func (sched *Schedule) Validate() error {
 
 	// Now go through all the discussions and make sure each one was mapped once
 	err := ss.Discussions.Iterate(func(disc *Discussion) error {
-		_, prs := dMap[disc.ID]
+		_, prs := dMap[disc.DiscussionID]
 		if !prs {
-			log.Panicf("Discussion %v missing!", disc.ID)
+			log.Panicf("Discussion %v missing!", disc.DiscussionID)
 		}
 		return nil
 	})
@@ -480,29 +480,29 @@ func (sched *Schedule) RemoveDiscussion(did DiscussionID) error {
 
 func (sched *Schedule) AssignRandom(disc *Discussion, rng *rand.Rand) {
 	// First check to make sure there are at least some possible slots
-	found := false
-	ss := sched.store
-	for slotn := range disc.PossibleSlots {
-		if disc.PossibleSlots[slotn] && !ss.LockedSlots[slotn] {
-			found = true
-			break
-		}
-	}
-	if !found {
-		log.Fatalf("Discussion %s has no possible slots! %v %v",
-			disc.ID, disc.PossibleSlots, ss.LockedSlots)
-	}
+	// found := false
+	// ss := sched.store
+	// for slotn := range disc.PossibleSlots {
+	// 	if disc.PossibleSlots[slotn] && !ss.LockedSlots[slotn] {
+	// 		found = true
+	// 		break
+	// 	}
+	// }
+	// if !found {
+	// 	log.Fatalf("Discussion %s has no possible slots! %v %v",
+	// 		disc.ID, disc.PossibleSlots, ss.LockedSlots)
+	// }
 
-	for {
-		slotIndex := rng.Intn(len(sched.Slots))
-		if disc.PossibleSlots[slotIndex] && !ss.LockedSlots[slotIndex] {
-			if opt.DebugLevel > 0 {
-				opt.Debug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
-			}
-			sched.Slots[slotIndex].Assign(disc, true)
-			break
-		}
-	}
+	// for {
+	// 	slotIndex := rng.Intn(len(sched.Slots))
+	// 	if disc.PossibleSlots[slotIndex] && !ss.LockedSlots[slotIndex] {
+	// 		if opt.DebugLevel > 0 {
+	// 			opt.Debug.Printf("  Assigning discussion %v to slot %d", disc.ID, slotIndex)
+	// 		}
+	// 		sched.Slots[slotIndex].Assign(disc, true)
+	// 		break
+	// 	}
+	// }
 }
 
 func ScheduleFactoryTemplate(ss *SearchStore) (sched *Schedule) {
@@ -702,7 +702,7 @@ func (ss *SearchStore) Snapshot(event *EventStore) (err error) {
 
 	ss.dList = nil
 	for _, disc := range ss.Discussions {
-		if !dLocked[disc.ID] {
+		if !dLocked[disc.DiscussionID] {
 			ss.dList = append(ss.dList, disc)
 		}
 	}
@@ -757,10 +757,10 @@ func MakeScheduleHeuristic(ss *SearchStore) (*Schedule, error) {
 				opt.Debug.Printf("  Locked, skipping")
 				continue
 			}
-			if !disc.PossibleSlots[i] {
-				opt.Debug.Printf("  Impossible, skipping")
-				continue
-			}
+			// if !disc.PossibleSlots[i] {
+			// 	opt.Debug.Printf("  Impossible, skipping")
+			// 	continue
+			// }
 			// OK, how much will we increase the score by putting this discussion here?
 			score := sched.Slots[i].Assign(disc, false)
 			opt.Debug.Printf("  Total value: %d", score)

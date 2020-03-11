@@ -17,16 +17,16 @@ func (did *DiscussionID) generate() {
 }
 
 type Discussion struct {
-	ID    DiscussionID
-	Owner UserID
+	DiscussionID DiscussionID
+	Owner        UserID
 
 	Title               string
 	Description         string
 	ApprovedTitle       string
 	ApprovedDescription string
 
-	Interested    map[UserID]bool
-	PossibleSlots []bool
+	// Interested    map[UserID]bool
+	// PossibleSlots []bool
 
 	// Is this discussion publicly visible?
 	// If true, 'Title' and 'Description' should be shown to everyone.
@@ -56,7 +56,7 @@ type DisplaySlot struct {
 }
 
 func (d *Discussion) GetURL() string {
-	return "/uid/discussion/" + string(d.ID) + "/view"
+	return "/uid/discussion/" + string(d.DiscussionID) + "/view"
 }
 
 func (d *Discussion) GetMaxScore() int {
@@ -123,7 +123,7 @@ func UpdateDiscussion(disc *Discussion, title, description string, pSlots []bool
 	disc.Description = description
 
 	if pSlots != nil {
-		disc.PossibleSlots = pSlots
+		//disc.PossibleSlots = pSlots
 		event.ScheduleState.Modify()
 	}
 
@@ -193,7 +193,7 @@ func DeleteDiscussion(did DiscussionID) {
 
 func DiscussionRemoveUser(uid UserID) error {
 	return event.Discussions.Iterate(func(d *Discussion) error {
-		delete(d.Interested, uid)
+		//delete(d.Interested, uid)
 		return nil
 	})
 }
@@ -208,10 +208,10 @@ func MakePossibleSlots(len int) []bool {
 
 func NewDiscussion(owner *User, title, description string) (*Discussion, error) {
 	disc := &Discussion{
-		Owner:         owner.UserID,
-		Title:         title,
-		Description:   description,
-		PossibleSlots: MakePossibleSlots(event.ScheduleSlots),
+		Owner:       owner.UserID,
+		Title:       title,
+		Description: description,
+		//PossibleSlots: MakePossibleSlots(event.ScheduleSlots),
 	}
 
 	log.Printf("%s New discussion post: '%s'",
@@ -253,9 +253,9 @@ func NewDiscussion(owner *User, title, description string) (*Discussion, error) 
 		return disc, err
 	}
 
-	disc.ID.generate()
+	disc.DiscussionID.generate()
 
-	disc.Interested = make(map[UserID]bool)
+	//disc.Interested = make(map[UserID]bool)
 
 	// SetInterest will mark the schedule stale
 	owner.SetInterest(disc, 100)

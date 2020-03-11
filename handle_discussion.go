@@ -243,7 +243,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		case "edit":
 			if !cur.MayEditDiscussion(d) {
 				log.Printf("WARNING user %s doesn't have permission to edit discussion %s",
-					cur.Username, d.ID)
+					cur.Username, d.DiscussionID)
 				return
 			}
 
@@ -282,11 +282,11 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		case "delete":
 			if !cur.MayEditDiscussion(d) {
 				log.Printf("WARNING user %s doesn't have permission to edit discussion %s",
-					cur.Username, d.ID)
+					cur.Username, d.DiscussionID)
 				return
 			}
 
-			event.DeleteDiscussion(d.ID)
+			event.DeleteDiscussion(d.DiscussionID)
 
 			// Can't redirect to 'view' as it's been deleted
 			http.Redirect(w, r, "/list/discussion", http.StatusFound)
@@ -298,7 +298,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			if err := event.DiscussionSetPublic(string(d.ID), r.FormValue("newvalue") == "true"); err != nil {
+			if err := event.DiscussionSetPublic(string(d.DiscussionID), r.FormValue("newvalue") == "true"); err != nil {
 				// FIXME
 				log.Printf("DiscussionSetPublic: %v", err)
 			}

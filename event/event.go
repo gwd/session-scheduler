@@ -280,7 +280,7 @@ func (dstore *DiscussionStore) Init() {
 // Update PossibleSlot size while retaining other information
 func (dstore *DiscussionStore) ResetEventData() {
 	dstore.Iterate(func(disc *Discussion) error {
-		disc.PossibleSlots = MakePossibleSlots(event.ScheduleSlots)
+		//disc.PossibleSlots = MakePossibleSlots(event.ScheduleSlots)
 		return nil
 	})
 }
@@ -309,7 +309,7 @@ func DiscussionIterate(f func(d *Discussion) error) (err error) {
 }
 
 func (dstore DiscussionStore) Save(discussion *Discussion) error {
-	dstore[discussion.ID] = discussion
+	dstore[discussion.DiscussionID] = discussion
 	return event.Save()
 }
 
@@ -322,7 +322,7 @@ func (dstore DiscussionStore) Delete(did DiscussionID) error {
 func (dstore DiscussionStore) GetDidListUser(uid UserID) (list []DiscussionID) {
 	dstore.Iterate(func(d *Discussion) error {
 		if d.Owner == uid {
-			list = append(list, d.ID)
+			list = append(list, d.DiscussionID)
 		}
 		return nil
 	})

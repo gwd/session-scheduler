@@ -19,13 +19,13 @@ CREATE TABLE event_interest(
 
 CREATE TABLE event_discussions(
     discussionid  text primary key,
-    userid        text not null,
+    owner         text not null,
     title         text not null,
     description   text,
     approvedtitle text,
     approveddesc  text,
     ispublic      boolean not null,
-    foreign key(userid) references event_users(userid));
+    foreign key(owner) references event_users(userid));
 
 CREATE TABLE event_discussions_possible_slots(
     discussionid text not null,

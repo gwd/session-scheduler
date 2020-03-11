@@ -28,14 +28,15 @@ func NewTestDiscussion(owner *User) {
 		}
 	}
 
-	var disc *Discussion
+	//var disc *Discussion
 
 	for {
 		var err error
 		log.Printf("Creating discussion with owner %s, title %s, desc %s",
 			owner.UserID, title, desc)
 
-		disc, err = NewDiscussion(owner, title, desc)
+		/*disc*/
+		_, err = NewDiscussion(owner, title, desc)
 		switch err {
 		case errTitleExists:
 			title = fake.Title()
@@ -54,16 +55,16 @@ func NewTestDiscussion(owner *User) {
 	}
 
 	// Only 25% of discussions have constraints
-	if disc != nil && rand.Intn(4) == 0 {
-		// Make a continuous range where it's not schedulable
-		start := rand.Intn(len(disc.PossibleSlots))
-		end := rand.Intn(len(disc.PossibleSlots)-start) + 1
-		if start != 0 || end != len(disc.PossibleSlots) {
-			for i := start; i < end; i++ {
-				disc.PossibleSlots[i] = false
-			}
-		}
-	}
+	// if disc != nil && rand.Intn(4) == 0 {
+	// 	// Make a continuous range where it's not schedulable
+	// 	start := rand.Intn(len(disc.PossibleSlots))
+	// 	end := rand.Intn(len(disc.PossibleSlots)-start) + 1
+	// 	if start != 0 || end != len(disc.PossibleSlots) {
+	// 		for i := start; i < end; i++ {
+	// 			disc.PossibleSlots[i] = false
+	// 		}
+	// 	}
+	// }
 }
 
 // Try to emulate "realistic" interest, where people will be like one another.

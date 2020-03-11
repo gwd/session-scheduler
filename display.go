@@ -82,7 +82,7 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 	}
 
 	dd := &DiscussionDisplay{
-		ID:       d.ID,
+		ID:       d.DiscussionID,
 		IsPublic: d.IsPublic,
 	}
 
@@ -110,7 +110,7 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 		dd.MayEdit = cur.MayEditDiscussion(d)
 		if cur.IsAdmin {
 			dd.IsAdmin = true
-			dd.PossibleSlots = event.TimetableFillDisplaySlots(d.PossibleSlots)
+			//dd.PossibleSlots = event.TimetableFillDisplaySlots(d.PossibleSlots)
 			var err error
 			dd.AllUsers, err = event.UserGetAll()
 			if err != nil {
@@ -119,12 +119,12 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 			}
 		}
 	}
-	for uid := range d.Interested {
-		a, _ := event.UserFind(uid)
-		if a != nil {
-			dd.Interested = append(dd.Interested, a)
-		}
-	}
+	// for uid := range d.Interested {
+	// 	a, _ := event.UserFind(uid)
+	// 	if a != nil {
+	// 		dd.Interested = append(dd.Interested, a)
+	// 	}
+	// }
 	return dd
 }
 

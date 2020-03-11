@@ -151,11 +151,11 @@ func (user *User) SetInterestNosave(disc *Discussion, interest int) error {
 	if interest > 0 {
 		// FIXME: Interest
 		//user.Interest[disc.ID] = interest
-		disc.Interested[user.UserID] = true
+		//disc.Interested[user.UserID] = true
 	} else {
 		// FIXME: Interest
 		//delete(user.Interest, disc.ID)
-		delete(disc.Interested, user.UserID)
+		//delete(disc.Interested, user.UserID)
 		disc.maxScoreValid = false // Lazily update this when it's wanted
 	}
 	event.ScheduleState.Modify()
