@@ -3,7 +3,6 @@ package main
 import (
 	"html/template"
 	"log"
-	"sort"
 
 	"github.com/gwd/session-scheduler/event"
 )
@@ -15,7 +14,7 @@ type UserProfile struct {
 }
 
 type UserDisplay struct {
-	ID          event.UserID
+	UserID      event.UserID
 	Username    string
 	IsAdmin     bool
 	IsVerified  bool // Has entered the verification code
@@ -27,7 +26,7 @@ type UserDisplay struct {
 
 func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay) {
 	ud = &UserDisplay{
-		ID:         u.UserID,
+		UserID:     u.UserID,
 		Username:   u.Username,
 		IsVerified: u.IsVerified,
 	}
@@ -45,7 +44,7 @@ func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay)
 }
 
 type DiscussionDisplay struct {
-	ID             event.DiscussionID
+	DiscussionID   event.DiscussionID
 	Title          string
 	Description    template.HTML
 	DescriptionRaw string
@@ -82,8 +81,8 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 	}
 
 	dd := &DiscussionDisplay{
-		ID:       d.DiscussionID,
-		IsPublic: d.IsPublic,
+		DiscussionID: d.DiscussionID,
+		IsPublic:     d.IsPublic,
 	}
 
 	if showMain {
@@ -158,10 +157,6 @@ func UserGetUsersDisplay(cur *event.User) (users []*UserDisplay) {
 			users = append(users, UserGetDisplay(u, cur, false))
 		}
 		return nil
-	})
-
-	sort.Slice(users, func(i, j int) bool {
-		return users[i].ID < users[j].ID
 	})
 	return
 }

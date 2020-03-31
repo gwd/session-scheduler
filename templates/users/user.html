@@ -1,5 +1,5 @@
 {{define "user/link"}}
-<a href="/uid/user/{{.ID}}/view">{{.Username}}</a>
+<a href="/uid/user/{{.UserID}}/view">{{.Username}}</a>
 {{end}}
 
 {{define "user/item-full"}}
@@ -66,13 +66,13 @@
       <div class="row">
       {{if .CurrentUser}}
         {{if .CurrentUser.IsAdmin}}
-          <form action="/uid/user/{{.User.ID}}/setverified" method="POST">
+          <form action="/uid/user/{{.User.UserID}}/setverified" method="POST">
             <div class="custom-control custom-switch">
 	      <input type="checkbox" class="custom-control-input"
-	       name="verified" value="{{.User.ID}}" id="p{{.User.ID}}"
+	       name="verified" value="{{.User.UserID}}" id="p{{.User.UserID}}"
 	       {{if .User.IsVerified}} checked{{end}}
 	       onChange="this.form.submit()">
-	      <label class="custom-control-label" for="p{{.User.ID}}"> </label>
+	      <label class="custom-control-label" for="p{{.User.UserID}}"> </label>
 	      <input type="hidden" name="newvalue" value={{if .User.IsVerified}}"false"{{else}}"true"{{end}}>
 	    </div>
 	    <input type="submit" value="Set" class="btn btn-primary noscript">
@@ -82,7 +82,7 @@
             {{with .redirectURL}}
             <input type="hidden" name="redirectURL" value="{{.}}">
             {{else}}
-            <input type="hidden" name="redirectURL" value="/list/user#{{.User.ID}}">
+            <input type="hidden" name="redirectURL" value="/list/user#{{.User.UserID}}">
             {{end}}
 	  </form>
 	{{end}}
@@ -104,7 +104,7 @@
 <div class="row">
   <div class="col-9 col-offset-3">
       {{template "user/item-full" dict "Display" .Display "RequireVerification" .RequireVerification "VcodeSent" .IsVcodeSent}}
-    {{$redirectURL := printf "/uid/user/%s/view" .Display.ID}}
+    {{$redirectURL := printf "/uid/user/%s/view" .Display.UserID}}
     {{template "discussion/list" dict "List" .Display.List "redirectURL" $redirectURL "CurrentUser" .CurrentUser}}
   </div>
 </div>

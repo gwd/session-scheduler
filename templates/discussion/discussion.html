@@ -1,5 +1,5 @@
 {{define "discussion/link"}}
-<a href="/uid/discussion/{{.ID}}/view" id="{{.ID}}">{{.Title}}</a>
+<a href="/uid/discussion/{{.DiscussionID}}/view" id="{{.DiscussionID}}">{{.Title}}</a>
 {{end}}
 
 {{define "discussion/slots-display"}}
@@ -76,7 +76,7 @@
     {{if .Discussion.IsUser}}
     <div class=" col btn-group input-group" role="group">
       {{with .Discussion}}
-      <form action="/uid/discussion/{{.ID}}/setinterest" method="POST">
+      <form action="/uid/discussion/{{.DiscussionID}}/setinterest" method="POST">
       <button type="submit" name="interest" class="btn {{if eq .Interest 0}}btn-primary{{else}}btn-secondary{{end}}" value="0">None</button>
       <button type="submit" name="interest" class="btn {{if and (gt .Interest 0) (lt .Interest 26)}}btn-primary{{else}}btn-secondary{{end}}" value="25">A little</button>
       <button type="submit" name="interest" class="btn {{if and (gt .Interest 25) (lt .Interest 76)}}btn-primary{{else}}btn-secondary{{end}}" value="75">Yes</button>
@@ -85,7 +85,7 @@
       {{with .redirectURL}}
       <input type="hidden" name="redirectURL" value="{{.}}">
       {{else}}
-      <input type="hidden" name="redirectURL" value="/list/discussion#{{.Discussion.ID}}">
+      <input type="hidden" name="redirectURL" value="/list/discussion#{{.Discussion.DiscussionID}}">
       {{end}}
       </form>
     </div>
@@ -94,13 +94,13 @@
       <div class="row">
       {{if .CurrentUser}}
         {{if .CurrentUser.IsAdmin}}
-          <form action="/uid/discussion/{{.Discussion.ID}}/setpublic" method="POST">
+          <form action="/uid/discussion/{{.Discussion.DiscussionID}}/setpublic" method="POST">
             <div class="custom-control custom-switch">
 	      <input type="checkbox" class="custom-control-input"
-	       name="public" value="{{.Discussion.ID}}" id="p{{.Discussion.ID}}"
+	       name="public" value="{{.Discussion.DiscussionID}}" id="p{{.Discussion.DiscussionID}}"
 	       {{if .Discussion.IsPublic}} checked{{end}}
 	       onChange="this.form.submit()">
-	      <label class="custom-control-label" for="p{{.Discussion.ID}}"> </label>
+	      <label class="custom-control-label" for="p{{.Discussion.DiscussionID}}"> </label>
 	      <input type="hidden" name="newvalue" value={{if .Discussion.IsPublic}}"false"{{else}}"true"{{end}}>
 	    </div>
 	    <input type="submit" value="Set" class="btn btn-primary noscript">
@@ -110,11 +110,11 @@
             {{with .redirectURL}}
             <input type="hidden" name="redirectURL" value="{{.}}">
             {{else}}
-            <input type="hidden" name="redirectURL" value="/list/discussion#{{.Discussion.ID}}">
+            <input type="hidden" name="redirectURL" value="/list/discussion#{{.Discussion.DiscussionID}}">
             {{end}}
 	  </form>
 	{{end}}
-	{{if or .CurrentUser.IsAdmin (eq .Discussion.Owner.ID .CurrentUser.ID)}}
+	{{if or .CurrentUser.IsAdmin (eq .Discussion.Owner.UserID .CurrentUser.UserID)}}
 	  {{if .Discussion.IsPublic}}
 	  <span class="badge badge-primary">Public</span>
 	  {{else}}
@@ -167,7 +167,7 @@
 {{end}}
 
 {{define "discussion/form-user-option"}}
-<option value="{{.ID}}">{{.Username}} {{if .Profile.RealName}}({{.Profile.RealName}}){{end}}</option>
+<option value="{{.UserID}}">{{.Username}} {{if .Profile.RealName}}({{.Profile.RealName}}){{end}}</option>
 {{end}}
 
 {{define "discussion/form"}}
