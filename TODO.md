@@ -1,3 +1,16 @@
+# Changes required before putting up initial website 2020
+
+- Move Interest Expression to database
+
+- Delete schedule / timetable stuff entirely (for now)
+
+- Modify 'Delete User' to reparent discussions to admin, rather than
+  deleting.  Or maybe not: This allows an attacker to assign arbitrary
+  number of things to admin.  Maybe we fix this when it becomes a
+  problem.  Or maybe we delete if Admin has too many.
+
+- Remove all references to Lars
+
 # Short-term usability improvements
 
 * Document `deploy.sh` and `run.sh` expected use case
