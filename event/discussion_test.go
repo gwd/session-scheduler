@@ -115,8 +115,8 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		return
 	}
 
-	// Make 5 users for testing
-	testUserCount := 5
+	// Make 6 users for testing
+	testUserCount := 6
 	users := make([]User, testUserCount)
 	userMap := make(map[UserID]int)
 
@@ -177,7 +177,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	}
 
 	// Enough discussions to max out one user, plus a few for others
-	testDiscussionCount := maxDiscussionsPerUser + testUserCount
+	testDiscussionCount := maxDiscussionsPerUser + testUserCount*2
 	discussions := make([]Discussion, testDiscussionCount)
 
 	t.Logf("Trying to max out one users's discussions")
