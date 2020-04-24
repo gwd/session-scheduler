@@ -51,7 +51,6 @@ type Discussion struct {
 	ApprovedTitle       string
 	ApprovedDescription string
 
-	// Interested    map[UserID]bool
 	// PossibleSlots []bool
 
 	// Is this discussion publicly visible?
@@ -64,13 +63,6 @@ type Discussion struct {
 	// Cached information from a schedule
 	location *Location
 	slot     *TimetableSlot
-
-	// Things to add at some point:
-	// Session Length (30m, 1hr, &c)
-	// Invitees?
-
-	maxScore      int
-	maxScoreValid bool
 }
 
 // Annotated for display to an individual user
@@ -146,11 +138,6 @@ func NewDiscussion(disc *Discussion) error {
 
 		disc.DiscussionID.generate()
 
-		//disc.Interested = make(map[UserID]bool)
-
-		// SetInterest will mark the schedule stale
-		//owner.SetInterest(disc, 100)
-
 		// New discussions are non-public by default unless owner is verified
 		err = tx.Get(&disc.IsPublic,
 			`select isverified from event_users where userid = ?`,
@@ -181,6 +168,15 @@ func NewDiscussion(disc *Discussion) error {
 			return err
 		}
 
+		// Owners are assumed to want to attend their own session
+		err = setInterestTx(tx, disc.Owner, disc.DiscussionID, InterestMax)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return err
+		}
+
 		err = tx.Commit()
 		if shouldRetry(err) {
 			tx.Rollback()
@@ -193,30 +189,21 @@ func NewDiscussion(disc *Discussion) error {
 	}
 }
 
+// GetMaxScore returns the maximum possible score a discussion could
+// have if everyone attended; that is, the sum of all the interests
+// expressed.
 func (d *Discussion) GetMaxScore() int {
-	if !d.maxScoreValid {
-		// FIXME: Interest
-		d.maxScore = 0
-		// for uid := range d.Interested {
-		// 	if !d.Interested[uid] {
-		// 		log.Fatalf("INTERNAL ERROR: Discussion %s Interested[%s] false!",
-		// 			d.ID, uid)
-		// 	}
-		// 	user, err := event.Users.Find(uid)
-		// 	if err != nil {
-		// 		log.Fatalf("Finding user %s: %v", uid, err)
-		// 	}
-		// 	interest, prs := user.Interest[d.ID]
-		// 	if !prs {
-		// 		log.Fatalf("INTERNAL ERROR: User %s has no interest in discussion %s",
-		// 			user.ID, d.ID)
-		// 	}
-		// 	d.maxScore += interest
-		// }
-		d.maxScoreValid = true
+	var maxscore int
+	err := event.Get(&maxscore, `
+        select sum(interest)
+            from event_interest
+            where discussionid = ?`,
+		d.DiscussionID)
+	if err != nil {
+		log.Printf("INTERNAL ERROR: Getting max score for discussion %v: %v",
+			d.DiscussionID, err)
 	}
-
-	return d.maxScore
+	return maxscore
 }
 
 func (d *Discussion) Location() Location {
@@ -280,19 +267,17 @@ func DiscussionUpdate(disc *Discussion) error {
 		// latitude.
 
 		if disc.Owner != curOwner {
-			// FIXME: Interest
-			// newOwner, _ := event.Users.Find(newOwnerID)
-			// if newOwner != nil {
-			// 	// All we need to do is set the owner's interest to max,
-			// 	// and set the new owner.
-			// 	newOwner.SetInterest(disc, InterestMax)
-			// 	disc.Owner = newOwnerID
-			// } else {
-			// 	log.Printf("Ignoring non-existing user %v", newOwnerID)
-			// }
+			err := setInterestTx(tx, disc.Owner, disc.DiscussionID, InterestMax)
+			if shouldRetry(err) {
+				tx.Rollback()
+				continue
+			} else if err != nil {
+				return fmt.Errorf("Setting interest for new owner %v: %v",
+					disc.Owner, err)
+			}
 
 			// If we're changing owner, we need to see whether the new owner is verified
-			err := tx.Get(&ownerIsVerified,
+			err = tx.Get(&ownerIsVerified,
 				`select isverified from event_users where userid = ?`,
 				disc.Owner)
 			if shouldRetry(err) {
@@ -414,37 +399,60 @@ func DiscussionSetPublic(discussionid DiscussionID, public bool) error {
 func DeleteDiscussion(did DiscussionID) error {
 	log.Printf("Deleting discussion %s", did)
 
-	// Remove it from the schedule before removing it from user list
-	// so we still have the 'Interest' value in case we decide to
-	// maintain a score at a given time.
-	// if event.ScheduleV2 != nil {
-	// 	event.ScheduleV2.RemoveDiscussion(did)
+	for {
+		tx, err := event.Beginx()
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Starting transaction: %v", err)
+		}
+		defer tx.Rollback()
 
-	// 	// Removing a discussion means updating attendees, and
-	// 	// possibly moving rooms as well.  Run the placement again.
-	// 	event.Timetable.Place(event.ScheduleV2)
-	// }
+		// Delete foreign key references first
+		_, err = tx.Exec(`
+           delete from event_interest
+               where discussionid = ?`, did)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Deleting discussion from event_interest: %v", err)
+		}
 
-	// FIXME: Interest
-	// UserRemoveDiscussion(did)
+		res, err := tx.Exec(`
+        delete from event_discussions
+            where discussionid = ?`, did)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Deleting discussion from event_discussions: %v", err)
+		}
 
-	res, err := event.Exec(`
-    delete from event_discussions
-        where discussionid = ?`, did)
-	if err != nil {
-		return err
-	}
+		rcount, err := res.RowsAffected()
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
+		}
+		switch {
+		case rcount == 0:
+			return ErrDiscussionNotFound
+		case rcount > 1:
+			log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
+			return ErrInternal
+		}
 
-	rcount, err := res.RowsAffected()
-	if err != nil {
-		log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
-	}
-	switch {
-	case rcount == 0:
-		return ErrDiscussionNotFound
-	case rcount > 1:
-		log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
-		return ErrInternal
+		err = tx.Commit()
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return err
+		}
+		return nil
 	}
 	return nil
 }

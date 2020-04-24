@@ -53,7 +53,7 @@ func errOrRetry(comment string, err error) error {
 
 func openDb(filename string) (*sqlx.DB, error) {
 
-	db, err := sqlx.Open("sqlite3", fmt.Sprintf("file:%s?cache=shared", filename))
+	db, err := sqlx.Open("sqlite3", fmt.Sprintf("file:%s?cache=shared&_foreign_keys=on", filename))
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +135,18 @@ CREATE TABLE event_discussions(
     unique(title))`)
 	if err != nil {
 		return errOrRetry("Creating table event_discussions", err)
+	}
+
+	_, err = ext.Exec(`
+CREATE TABLE event_interest(
+    userid text not null,
+    discussionid text not null,
+    interest integer not null,
+    foreign key(userid) references event_users(userid),
+    foreign key(discussionid) references event_discussions(discussionid),
+    unique(userid, discussionid))`)
+	if err != nil {
+		return errOrRetry("Creating table event_interest", err)
 	}
 
 	return nil

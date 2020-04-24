@@ -98,4 +98,8 @@ func TestEvent(t *testing.T) {
 	if testUnitDiscussion(t) {
 		return
 	}
+
+	if testUnitInterest(t) {
+		return
+	}
 }

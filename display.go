@@ -49,8 +49,8 @@ type DiscussionDisplay struct {
 	Description    template.HTML
 	DescriptionRaw string
 	Owner          *event.User
-	Interested     []*event.User
-	IsPublic       bool
+	// Interested     []*event.User // Doesn't seem to be used
+	IsPublic bool
 	// IsUser: Used to determine whether to display 'interest'
 	IsUser bool
 	// MayEdit: Used to determine whether to show edit / delete buttons
@@ -62,7 +62,9 @@ type DiscussionDisplay struct {
 	Time          string
 	IsFinal       bool
 	PossibleSlots []event.DisplaySlot
-	AllUsers      []event.User
+	// AllUsers: Used to generate a dropdown for admins to change the
+	// owner.  Only geneated for admin user.
+	AllUsers []event.User
 }
 
 func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDisplay {
@@ -103,8 +105,7 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 	if cur != nil {
 		if cur.Username != event.AdminUsername {
 			dd.IsUser = true
-			// FIXME: Interest
-			//dd.Interest = cur.Interest[d.ID]
+			dd.Interest = cur.GetInterest(d)
 		}
 		dd.MayEdit = cur.MayEditDiscussion(d)
 		if cur.IsAdmin {
@@ -118,12 +119,6 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 			}
 		}
 	}
-	// for uid := range d.Interested {
-	// 	a, _ := event.UserFind(uid)
-	// 	if a != nil {
-	// 		dd.Interested = append(dd.Interested, a)
-	// 	}
-	// }
 	return dd
 }
 

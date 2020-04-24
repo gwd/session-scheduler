@@ -1,9 +1,11 @@
 package event
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 
+	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gwd/session-scheduler/id"
@@ -28,11 +30,10 @@ type User struct {
 	Username       string
 	IsAdmin        bool
 	IsVerified     bool // Has entered the verification code
-	//Interest       map[DiscussionID]int
-	RealName    string
-	Email       string
-	Company     string
-	Description string
+	RealName       string
+	Email          string
+	Company        string
+	Description    string
 }
 
 func (u *User) MayEditUser(tgt *User) bool {
@@ -112,34 +113,52 @@ func (u *User) CheckPassword(password string) bool {
 		[]byte(password)) == nil
 }
 
-// Use when you plan on setting a large sequence in a row and can save
-// the state yourself
-func (user *User) SetInterestNosave(disc *Discussion, interest int) error {
-	log.Printf("Setinterest: %s '%s' %d", user.Username, disc.Title, interest)
-	if interest > InterestMax || interest < 0 {
-		log.Printf("SetInterest failed: Invalid interest")
-		return errInvalidInterest
-	}
-	if interest > 0 {
-		// FIXME: Interest
-		//user.Interest[disc.ID] = interest
-		//disc.Interested[user.UserID] = true
-	} else {
-		// FIXME: Interest
-		//delete(user.Interest, disc.ID)
-		//delete(disc.Interested, user.UserID)
-		disc.maxScoreValid = false // Lazily update this when it's wanted
-	}
-	event.ScheduleState.Modify()
-	return nil
+func setInterestTx(ext sqlx.Ext, uid UserID, did DiscussionID, interest int) error {
+	_, err := ext.Exec(`
+        insert into event_interest(userid, discussionid, interest)
+            values(:userid, :discussionid, :interest)
+        on conflict(userid, discussionid) do update set interest=:interest`,
+		uid, did, interest)
+	return err
 }
 
 func (user *User) SetInterest(disc *Discussion, interest int) error {
-	err := user.SetInterestNosave(disc, interest)
-	if err == nil {
-		event.Save()
+	switch {
+	case interest > InterestMax || interest < 0:
+		return errInvalidInterest
+	case interest == 0:
+		_, err := event.Exec(`
+        delete from event_interest
+            where discussionid = ? and userid = ?`, disc.DiscussionID, user.UserID)
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	default:
+		return setInterestTx(event, user.UserID, disc.DiscussionID, interest)
 	}
-	return err
+}
+
+func (user *User) GetInterest(disc *Discussion) int {
+	var interest int
+	// NB this will return 0 even for non-existent users and
+	// discussions.  If we wanted to change this, we'd have to return
+	// an error code.  We'd also need to either set interest to 0
+	// proactively (which would mean setting up interest for all users
+	// every time a new discussion was created, and setting up
+	// interest for all discussions every time a new user is created)
+	// or setting up a query such that we could distinguish between
+	// "user/discussion pair exists but has no interest entry" and
+	// "user/discussion pair does not exist".
+	err := event.Get(&interest, `
+		select interest
+            from event_interest
+            where userid=? and discussionid=?`,
+		user.UserID, disc.DiscussionID)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("ERROR getting interest: %v", err)
+	}
+	return interest
 }
 
 func (user *User) setPassword(newPassword string) error {
@@ -156,11 +175,6 @@ func (user *User) SetVerified(isVerified bool) error {
     update event_users set isverified = ? where userid = ?`,
 		isVerified, user.UserID)
 	return err
-}
-
-func UserRemoveDiscussion(did DiscussionID) error {
-	// FIXME: Interest
-	return nil
 }
 
 // UserUpdate will update "user-facing" data associated with the user.
@@ -248,6 +262,35 @@ func DeleteUser(userid UserID) error {
 		}
 		defer tx.Rollback()
 
+		// Delete foreign key references first
+
+		// Delete interest of this user in any discussion
+		_, err = tx.Exec(`
+           delete from event_interest
+               where userid = ?`, userid)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Deleting discussion from event_interest: %v", err)
+		}
+
+		// Delete interest in any users in discussions owned by this user
+		_, err = tx.Exec(`
+           delete from event_interest
+               where discussionid in (
+                   select discussionid
+                       from event_discussions
+                       where owner = ?)`, userid)
+		if shouldRetry(err) {
+			tx.Rollback()
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Deleting interest in discussions owned by %v: %v",
+				userid, err)
+		}
+
+		// And delete any discussions owned by this user
 		_, err = tx.Exec(`
         delete from event_discussions
             where owner = ?`,
@@ -259,9 +302,6 @@ func DeleteUser(userid UserID) error {
 			return fmt.Errorf("Deleting discussions owned by %v: %v",
 				userid, err)
 		}
-
-		// FIXME: Interest
-		// DiscussionRemoveUser(userid)
 
 		res, err := tx.Exec(`
         delete from event_users where userid=?`,

@@ -49,7 +49,7 @@ func TestGenerateInterest() {
 
 			log.Printf("Setting uid %s interest in discussion %s to %d",
 				user.Username, disc.Title, interest)
-			if err := user.SetInterestNosave(disc, interest); err != nil {
+			if err := user.SetInterest(disc, interest); err != nil {
 				log.Fatalf("Setting interest: %v", err)
 			}
 			return nil
