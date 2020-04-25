@@ -8,9 +8,10 @@ import (
 )
 
 type UserProfile struct {
-	RealName string
-	Email    string
-	Company  string
+	RealName    string
+	Email       string
+	Company     string
+	Description string // Raw description, suitable for editing
 }
 
 type UserDisplay struct {
@@ -20,7 +21,7 @@ type UserDisplay struct {
 	IsVerified  bool // Has entered the verification code
 	MayEdit     bool
 	Profile     UserProfile
-	Description template.HTML
+	Description template.HTML // Sanitised description, suitable for displaying
 	List        []*DiscussionDisplay
 }
 
@@ -37,6 +38,7 @@ func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay)
 		ud.Profile.RealName = u.RealName
 		ud.Profile.Email = u.Email
 		ud.Profile.Company = u.Company
+		ud.Profile.Description = u.Description
 		ud.Description = ProcessText(u.Description)
 		ud.List = DiscussionGetListUser(u, cur)
 	}
