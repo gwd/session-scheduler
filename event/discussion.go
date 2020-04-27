@@ -194,8 +194,10 @@ func NewDiscussion(disc *Discussion) error {
 // expressed.
 func (d *Discussion) GetMaxScore() int {
 	var maxscore int
+	// Theoretically the owner should always have non-zero interest,
+	// so sum(interest) should never be NULL; but better to be robust.
 	err := event.Get(&maxscore, `
-        select sum(interest)
+        select IFNULL(sum(interest), 0)
             from event_interest
             where discussionid = ?`,
 		d.DiscussionID)
