@@ -35,30 +35,36 @@ CREATE TABLE event_discussions_possible_slots(
     foreign key(slotid) references event_slots(slotid),
     unique(discussionid, slotid));
 
+/* Location ids should be in order and contiguous, starting at 1 */
 CREATE TABLE event_locations(
-    locationid   text primary key,
+    locationid   integer primary key,
     locationname text not null,
     isplace      boolean not null,
     capacity     integer not null);
 
+/* Day names should be in order and contiguous, starting at 1 */
 CREATE TABLE event_days(
-    dayid text primary key,
+    dayid integer primary key,
     dayname  text not null);
 
+/* Every day should have associated slots with a slotidx's
+ * in order and contiguous, starting at 1 */
 CREATE TABLE event_slots(
     slotid   text primary key,
-    dayid    text not null,
-    slottime string nto null,
+    slotidx  integer not null, /* Order within a day */
+    dayid    integer not null,
+    slottime string not null,
     isbreak  boolean not null,
     islocked boolean not null,
-    foreign  key(dayid) references event_days(dayid));
+    foreign  key(dayid) references event_days(dayid),
+    unique(dayid, slotidx));
 
 CREATE TABLE event_schedule(
     discussionid text not null,
     slotid       text not null,
-    locationid   text not null,
+    locationid   integer not null,
     foreign key(discussionid) references event_discussions(discussionid),
     foreign key(slotid) references event_slots(slotid),
     foreign key(locationid) references event_slots(locationid),
-    unique(discussionid, slotid, locationid));
+    unique(slotid, locationid));
 

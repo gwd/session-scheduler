@@ -98,16 +98,6 @@ func initDb(ext sqlx.Ext) error {
 	}
 
 	_, err = ext.Exec(`
-CREATE TABLE event_locations(
-    locationid   text primary key,
-    locationname text not null,
-    isplace      boolean not null,
-    capacity     integer not null)`)
-	if err != nil {
-		return errOrRetry("Creating table event_location", err)
-	}
-
-	_, err = ext.Exec(`
 CREATE TABLE event_users(
     userid         text primary key,
     hashedpassword text not null,
@@ -147,6 +137,50 @@ CREATE TABLE event_interest(
     unique(userid, discussionid))`)
 	if err != nil {
 		return errOrRetry("Creating table event_interest", err)
+	}
+
+	_, err = ext.Exec(`
+CREATE TABLE event_locations(
+    locationid   integer primary key,
+    locationname text not null,
+    isplace      boolean not null,
+    capacity     integer not null)`)
+	if err != nil {
+		return errOrRetry("Creating table event_locations", err)
+	}
+
+	_, err = ext.Exec(`
+CREATE TABLE event_days(
+    dayid integer primary key,
+    dayname  text not null)`)
+	if err != nil {
+		return errOrRetry("Creating table event_days", err)
+	}
+
+	_, err = ext.Exec(`
+CREATE TABLE event_slots(
+    slotid   integer primary key,
+    dayid    integer not null,
+    slottime string not null,
+    isbreak  boolean not null,
+    islocked boolean not null,
+    foreign  key(dayid) references event_days(dayid),
+    unique(dayid, slotid))`)
+	if err != nil {
+		return errOrRetry("Creating table event_slots", err)
+	}
+
+	_, err = ext.Exec(`
+CREATE TABLE event_schedule(
+    discussionid text not null,
+    slotid       text not null,
+    locationid   integer not null,
+    foreign key(discussionid) references event_discussions(discussionid),
+    foreign key(slotid) references event_slots(slotid),
+    foreign key(locationid) references event_slots(locationid),
+    unique(slotid, locationid))`)
+	if err != nil {
+		return errOrRetry("Creating table event_schedule", err)
 	}
 
 	return nil
