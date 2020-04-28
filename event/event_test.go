@@ -51,9 +51,8 @@ func TestVersion(t *testing.T) {
 }
 
 type testContext struct {
-	tmpdir    string
-	jsonfname string
-	dbfname   string
+	tmpdir  string
+	dbfname string
 }
 
 func dataInit(t *testing.T) *testContext {
@@ -66,16 +65,14 @@ func dataInit(t *testing.T) *testContext {
 		return nil
 	}
 
-	tc.jsonfname = tc.tmpdir + "/event.json"
 	tc.dbfname = tc.tmpdir + "/event.sqlite3"
-	t.Logf("Temporary session store filenames: %s, %s", tc.jsonfname, tc.dbfname)
+	t.Logf("Temporary session store filenames: %s", tc.dbfname)
 
 	// Remove the file first, just in case
-	os.Remove(tc.jsonfname)
 	os.Remove(tc.dbfname)
 
 	// Test simple open / close
-	err = Load(EventOptions{storeFilename: tc.jsonfname, dbFilename: tc.dbfname})
+	err = Load(EventOptions{dbFilename: tc.dbfname})
 	if err != nil {
 		t.Errorf("Opening stores: %v", err)
 		return nil

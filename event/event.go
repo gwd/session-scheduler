@@ -1,13 +1,8 @@
 package event
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/gob"
-	"encoding/json"
-	"io/ioutil"
 	"log"
-	"os"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -15,55 +10,52 @@ import (
 	"github.com/gwd/session-scheduler/id"
 )
 
-var deepCopyBuffer bytes.Buffer
-var deepCopyEncoder = gob.NewEncoder(&deepCopyBuffer)
-var deepCopyDecoder = gob.NewDecoder(&deepCopyBuffer)
-
 type EventStore struct {
 	filename string
 	*sqlx.DB
-
-	Timetable Timetable
-
-	Locations LocationStore
-
-	ScheduleV2    *Schedule
-	ScheduleSlots int
-	LockedSlots
-
-	ScheduleState
 }
 
 type EventOptions struct {
-	AdminPwd      string
-	dbFilename    string
-	storeFilename string
+	AdminPwd   string
+	dbFilename string
 }
 
 var event EventStore
 
 const (
-	StoreFilename = "data/event.json"
 	DbFilename    = "data/event.sqlite"
 	AdminUsername = "admin"
-	// 3 days * 3 slots per day
-	DefaultSlots = 9
 )
 
-func (store *EventStore) Init(adminPwd string) {
-	store.Timetable.Init()
-	store.ScheduleSlots = store.Timetable.GetSlots()
+// handleAdminPwd: If there is no admin user, create it.
+//  - If opt.AdminPwd is non-empty, use it; otherwise generate one.
+//  - Generate one.  Either way, print the password.
+//
+// If there is no admin user, but opt.AdminPwd is non-zero, set the password.
+func handleAdminPwd(adminPwd string) {
+	admin, err := UserFindByUsername(AdminUsername)
 
-	store.Locations.Init()
-	store.ScheduleV2 = nil
+	if err != nil {
+		log.Fatalf("handleAdminPwd: Error finding admin user: %v", err)
+	}
 
-	store.LockedSlots = make([]bool, store.ScheduleSlots)
+	if admin != nil {
+		if adminPwd != "" {
+			if err != nil || admin == nil {
+				log.Fatalf("Can't find admin user: %v", err)
+			}
+			log.Printf("Resetting admin password")
+			admin.setPassword(adminPwd)
+		}
+		return
+	}
 
+	// admin user doesn't exist; create it
 	if adminPwd == "" {
 		adminPwd = id.GenerateRawID(12)
 	}
 
-	_, err := NewUser(adminPwd, &User{Username: AdminUsername,
+	_, err = NewUser(adminPwd, &User{Username: AdminUsername,
 		IsAdmin:    true,
 		IsVerified: true,
 		RealName:   "Xen Schedule Administrator"})
@@ -71,71 +63,6 @@ func (store *EventStore) Init(adminPwd string) {
 		log.Fatalf("Error creating admin user: %v", err)
 	}
 	log.Printf("Administrator account: admin %s", adminPwd)
-
-	event.Save()
-}
-
-// Reset "event" data, without touching users or discussions
-func (store *EventStore) ResetEventData() {
-	store.Timetable.Init()
-	store.ScheduleSlots = store.Timetable.GetSlots()
-
-	store.Locations.Init()
-	store.ScheduleV2 = nil
-	store.LockedSlots = make([]bool, store.ScheduleSlots)
-	// Reset possible slots for discussions
-
-	event.Save()
-}
-
-func ResetData() {
-	event.ResetEventData()
-}
-
-// Reset "user" data -- users, discussions, and interest (keeping admin user).
-// This also resets the 'event' data, as it won't make much sense anymore with the
-// users and discussions gone.
-// This should only be done in test mode!
-func (store *EventStore) ResetUserData() {
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			log.Fatalf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
-		_, err = event.Exec(`delete from event_users where username != ?`,
-			AdminUsername)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			log.Fatalf("Deleting users: %v", err)
-		}
-
-		_, err = event.Exec(`delete from event_discussions`)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			log.Fatalf("Deleting discussions: %v", err)
-		}
-
-		err = tx.Commit()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			log.Fatalf("Committing transaction: %v", err)
-		}
-
-		return
-	}
-
-	store.ResetEventData()
 }
 
 func (store *EventStore) Load(opt EventOptions) error {
@@ -145,52 +72,14 @@ func (store *EventStore) Load(opt EventOptions) error {
 		return err
 	}
 
-	if store.filename == "" {
-		store.filename = opt.storeFilename
-	}
-	contents, err := ioutil.ReadFile(store.filename)
+	handleAdminPwd(opt.AdminPwd)
 
-	if err != nil {
-		if os.IsNotExist(err) {
-			store.Init(opt.AdminPwd)
-			return nil
-		}
-		return err
-	}
+	// FIXME: Clean up any stale 'running' data
 
-	// Restoring from an existing file at this point
-	err = json.Unmarshal(contents, store)
-	if err != nil {
-		return err
-	}
-
-	if opt.AdminPwd != "" {
-		admin, err := UserFindByUsername(AdminUsername)
-		if err != nil || admin == nil {
-			log.Fatalf("Can't find admin user: %v", err)
-		}
-		log.Printf("Resetting admin password")
-		// FIXME: This doesn't update the database
-		admin.setPassword(opt.AdminPwd)
-	}
-
-	// Clean up any stale 'running' data
-	if event.ScheduleState.IsRunning() {
-		event.ScheduleState.SearchFailed()
-	}
-
-	// Run timetable placement to update discussion info
-	// if event.ScheduleV2 != nil {
-	// 	event.ScheduleV2.LoadPost()
-	// 	event.Timetable.Place(event.ScheduleV2)
-	// }
 	return nil
 }
 
 func Load(opt EventOptions) error {
-	if opt.storeFilename == "" {
-		opt.storeFilename = StoreFilename
-	}
 	if opt.dbFilename == "" {
 		opt.dbFilename = DbFilename
 	}
@@ -202,27 +91,6 @@ func Close() {
 		event.DB.Close()
 	}
 	event = EventStore{}
-}
-
-func (store *EventStore) Save() error {
-	contents, err := json.MarshalIndent(store, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(store.filename, contents, 0660)
-}
-
-type LockedSlots []bool
-
-func (ls *LockedSlots) Set(new LockedSlots) {
-	*ls = new
-	event.Timetable.UpdateIsFinal(new)
-	event.Save()
-}
-
-func LockedSlotsSet(new LockedSlots) {
-	event.LockedSlots.Set(new)
 }
 
 func UserFind(userid UserID) (*User, error) {
@@ -289,26 +157,6 @@ func UserGetAll() (users []User, err error) {
 	return users, err
 }
 
-// func (ustore *UserStore) DeepCopy(ucopy *UserStore) (err error) {
-// 	if err = deepCopyEncoder.Encode(ustore); err != nil {
-// 		return err
-// 	}
-// 	if err = deepCopyDecoder.Decode(ucopy); err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// func (dstore *DiscussionStore) DeepCopy(dcopy *DiscussionStore) (err error) {
-// 	if err = deepCopyEncoder.Encode(dstore); err != nil {
-// 		return err
-// 	}
-// 	if err = deepCopyDecoder.Decode(dcopy); err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
 func DiscussionIterate(f func(*Discussion) error) (err error) {
 	rows, err := event.Queryx(`select * from event_discussions order by discussionid`)
 	if err != nil {
@@ -351,8 +199,4 @@ func DiscussionIterateUser(userid UserID, f func(*Discussion) error) (err error)
 		}
 	}
 	return nil
-}
-
-func ScheduleGetSlots() int {
-	return event.ScheduleSlots
 }

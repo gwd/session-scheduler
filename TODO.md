@@ -2,7 +2,7 @@
 
 + Move Interest Expression to database
 
-- Delete schedule / timetable stuff entirely (for now)
++ Delete schedule / timetable stuff entirely (for now)
 
 - Remove all references to Lars
 

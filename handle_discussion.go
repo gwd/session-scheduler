@@ -165,15 +165,8 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func FormCheckToBool(formData []string) (bslot []bool, err error) {
-	bslot = make([]bool, event.ScheduleGetSlots())
-	for _, iString := range formData {
-		i, err := strconv.Atoi(iString)
-		if err != nil {
-			return nil, err
-		}
-		bslot[i] = true
-	}
-	return
+	// FIXME: Locked Slots
+	return nil, nil
 }
 
 func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

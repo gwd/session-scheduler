@@ -39,7 +39,7 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		default:
 			content["IsCurrent"] = true
 		}
-		content["LockedSlots"] = event.TimetableGetLockedSlots()
+		//content["LockedSlots"] = event.TimetableGetLockedSlots()
 		fallthrough
 	case "test":
 		content[tmpl] = true
@@ -75,10 +75,6 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			log.Printf("Error generating schedule: %v", err)
 			http.Redirect(w, r, "console?flash=Error+starting+schedule: See Log", http.StatusFound)
 		}
-	case "resetEventData":
-		event.ResetData()
-		http.Redirect(w, r, "console?flash=Event+data+reset", http.StatusFound)
-		return
 	case "setvcode":
 		newvcode := r.FormValue("vcode")
 		if newvcode == "" {
@@ -167,7 +163,8 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			return
 		}
 		log.Printf("New locked slots: %v", locked)
-		event.LockedSlotsSet(locked)
+		// FIXME: LockedSlots.  We'll need to pass in slot ids now.
+		//event.LockedSlotsSet(locked)
 		http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)
 	}
 }

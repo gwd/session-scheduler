@@ -59,10 +59,6 @@ type Discussion struct {
 	//   admin and owner should see 'Title' and 'Description'
 	//   Everyone else should either see 'Approved*', or nothing at all (if nothing has been approved)
 	IsPublic bool
-
-	// Cached information from a schedule
-	location *Location
-	slot     *TimetableSlot
 }
 
 // Annotated for display to an individual user
@@ -209,18 +205,13 @@ func (d *Discussion) GetMaxScore() int {
 }
 
 func (d *Discussion) Location() Location {
-	if d.location != nil {
-		return *d.location
-	}
+	// FIXME: Location
 	return Location{}
 }
 
 func (d *Discussion) Slot() (IsFinal bool, Time string) {
-	if d.slot != nil {
-		IsFinal = d.slot.day.IsFinal
-		Time = d.slot.day.DayName + " " + d.slot.Time
-	}
-	return IsFinal, Time
+	// FIXME: Slot
+	return false, ""
 }
 
 // Updates discussion's Title, Description, and Owner.

@@ -57,7 +57,6 @@ func TestGenerateInterest() {
 		handled = append(handled, user)
 		return nil
 	})
-	event.Save()
 }
 
 const (
