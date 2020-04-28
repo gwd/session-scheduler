@@ -99,4 +99,8 @@ func TestEvent(t *testing.T) {
 	if testUnitInterest(t) {
 		return
 	}
+
+	if testTransaction(t) {
+		return
+	}
 }

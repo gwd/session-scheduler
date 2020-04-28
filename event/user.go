@@ -78,28 +78,33 @@ func NewUser(password string, user *User) (UserID, error) {
 	}
 	user.UserID.generate()
 
-	_, err := event.Exec(`
+	for {
+		_, err := event.Exec(`
         insert into event_users(
             userid,
             hashedpassword,
             username,
             isadmin, isverified,
             realname, email, company, description) values(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		user.UserID,
-		user.HashedPassword,
-		user.Username,
-		user.IsAdmin, user.IsVerified,
-		user.RealName, user.Email, user.Company, user.Description)
-	switch {
-	case isErrorConstraintUnique(err):
-		log.Printf("New user failed: user exists")
-		return user.UserID, errUsernameExists
-	case err != nil:
-		log.Printf("New user failed: %v", err)
-		return user.UserID, err
+			user.UserID,
+			user.HashedPassword,
+			user.Username,
+			user.IsAdmin, user.IsVerified,
+			user.RealName, user.Email, user.Company, user.Description)
+		switch {
+		case shouldRetry(err):
+			continue
+		case isErrorConstraintUnique(err):
+			log.Printf("New user failed: user exists")
+			return user.UserID, errUsernameExists
+		case err != nil:
+			log.Printf("New user failed: %v", err)
+			return user.UserID, err
+		}
+		break
 	}
 
-	return user.UserID, err
+	return user.UserID, nil
 }
 
 func (u *User) CheckPassword(password string) bool {
@@ -127,15 +132,26 @@ func (user *User) SetInterest(disc *Discussion, interest int) error {
 	case interest > InterestMax || interest < 0:
 		return errInvalidInterest
 	case interest == 0:
-		_, err := event.Exec(`
-        delete from event_interest
-            where discussionid = ? and userid = ?`, disc.DiscussionID, user.UserID)
-		if err == sql.ErrNoRows {
-			return nil
+		for {
+			_, err := event.Exec(`
+            delete from event_interest
+                where discussionid = ? and userid = ?`, disc.DiscussionID, user.UserID)
+			switch {
+			case shouldRetry(err):
+				continue
+			case err == sql.ErrNoRows:
+				return nil
+			}
+			return err
 		}
-		return err
 	default:
-		return setInterestTx(event, user.UserID, disc.DiscussionID, interest)
+		for {
+			err := setInterestTx(event, user.UserID, disc.DiscussionID, interest)
+			if shouldRetry(err) {
+				continue
+			}
+			return err
+		}
 	}
 }
 
