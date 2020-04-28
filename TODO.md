@@ -4,7 +4,9 @@
 
 + Delete schedule / timetable stuff entirely (for now)
 
-- Remove all references to Lars
++ Remove all references to Lars
+
+- Test parallelism
 
 - Modify 'Delete User' to reparent discussions to admin, rather than
   deleting.  Or maybe not: This allows an attacker to assign arbitrary
