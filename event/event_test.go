@@ -88,17 +88,17 @@ func (tc testContext) cleanup() {
 
 func TestEvent(t *testing.T) {
 	t.Logf("testUnitUser")
-	// if testUnitUser(t) {
-	// 	return
-	// }
+	if testUnitUser(t) {
+		return
+	}
 
-	// if testUnitDiscussion(t) {
-	// 	return
-	// }
+	if testUnitDiscussion(t) {
+		return
+	}
 
-	// if testUnitInterest(t) {
-	// 	return
-	// }
+	if testUnitInterest(t) {
+		return
+	}
 
 	if testTransaction(t) {
 		return

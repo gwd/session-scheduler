@@ -49,6 +49,12 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			return
 		}
 
+		_, err = UserFindByUsername(user.Username)
+		if err != nil {
+			t.Errorf("ERROR: UserFindByUsername: %v", err)
+			return
+		}
+
 		// Do some random user updates, make sure they "took"
 		user.RealName = fake.FullName()
 		user.Email = fake.EmailAddress()
@@ -168,9 +174,19 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 				t.Errorf("user.GetInterest: wanted %d, got %d!", interest, gotInterest)
 				return
 			}
+
+			maxInt, err := discussions[didx].GetMaxScore()
+			if err != nil {
+				t.Errorf("ERROR discussions.MaxScore(): %v", err)
+				return
+			}
+			if maxInt < interest && maxInt != 0 {
+				t.Errorf("ERROR non-zero MaxScore %d < my own interest %d!", maxInt, interest)
+				return
+			}
 		}
 
-		// Get discussions for this user and delete half
+		// Get discussions for this user and perform some operations on them
 		discussions = []Discussion{}
 		err = DiscussionIterateUser(user.UserID, func(d *Discussion) error {
 			discussions = append(discussions, *d)
@@ -179,6 +195,37 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 		if err != nil {
 			t.Errorf("Getting list of my own discussions: %v", err)
 			return
+		}
+
+		// Update / SetPublic
+		for j := 0; j < len(discussions)*2; j++ {
+			var didx int
+			for {
+				didx = rand.Intn(len(discussions))
+				if discussions[didx].DiscussionID != "" {
+					break
+				}
+			}
+
+			disc := &discussions[didx]
+
+			public := rand.Intn(2) == 0
+			err = DiscussionSetPublic(disc.DiscussionID, public)
+			if err != nil {
+				t.Errorf("ERROR: DiscussionSetPublic: %v", err)
+				return
+			}
+			disc.IsPublic = public
+
+			disc.Title = fake.Title()
+			disc.Description = fake.Paragraphs()
+			err = DiscussionUpdate(disc)
+			if err != nil {
+				t.Errorf("ERROR: DiscussionUpdate: %v", err)
+				return
+			}
+
+			// NB we don't check values here because we don't want to have to deal w/ ApprovedTitle &c
 		}
 
 		for j := 0; j < len(discussions)/2; j++ {
@@ -251,7 +298,7 @@ func testTransaction(t *testing.T) (exit bool) {
 
 		shouldExit := false
 		for i := 0; i < routineCount; i++ {
-			shouldExit = shouldExit || <-exitChan
+			shouldExit = <-exitChan || shouldExit
 		}
 
 		close(exitChan)

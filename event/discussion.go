@@ -188,20 +188,27 @@ func NewDiscussion(disc *Discussion) error {
 // GetMaxScore returns the maximum possible score a discussion could
 // have if everyone attended; that is, the sum of all the interests
 // expressed.
-func (d *Discussion) GetMaxScore() int {
+func (d *Discussion) GetMaxScore() (int, error) {
 	var maxscore int
 	// Theoretically the owner should always have non-zero interest,
 	// so sum(interest) should never be NULL; but better to be robust.
-	err := event.Get(&maxscore, `
-        select IFNULL(sum(interest), 0)
-            from event_interest
-            where discussionid = ?`,
-		d.DiscussionID)
-	if err != nil {
-		log.Printf("INTERNAL ERROR: Getting max score for discussion %v: %v",
-			d.DiscussionID, err)
+	for {
+		err := event.Get(&maxscore, `
+            select IFNULL(sum(interest), 0)
+                from event_interest
+                where discussionid = ?`,
+			d.DiscussionID)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err != nil:
+			log.Printf("INTERNAL ERROR: Getting max score for discussion %v: %v",
+				d.DiscussionID, err)
+			return 0, err
+		default:
+			return maxscore, err
+		}
 	}
-	return maxscore
 }
 
 func (d *Discussion) Location() Location {
@@ -336,19 +343,36 @@ func DiscussionUpdate(disc *Discussion) error {
 // setting 'IsPublic' to false, but also clearing the approved title
 // and description.
 func DiscussionSetPublic(discussionid DiscussionID, public bool) error {
+	var query, errlogfmt string
 	if public {
-		res, err := event.Exec(`
+		query = `
         update event_discussions
             set (approvedtitle, approveddescription, ispublic)
             = (select title, description, true
                    from event_discussions
                    where discussionid = :did)
-            where discussionid = :did`,
-			discussionid)
-		if err != nil {
-			log.Printf("Setting event discussion %v public: %v", discussionid, err)
+            where discussionid = :did`
+		errlogfmt = "Setting event discussion %v public: %v"
+	} else {
+		query = `
+        update event_discussions
+            set ispublic = false,
+                approvedtitle = "",
+                approveddescription = ""
+            where discussionid = ?`
+		errlogfmt = "Setting event discussion %v non-public: %v"
+	}
+
+	for {
+		res, err := event.Exec(query, discussionid)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err != nil:
+			log.Printf(errlogfmt, discussionid, err)
 			return ErrInternal
 		}
+
 		rcount, err := res.RowsAffected()
 		if err != nil {
 			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
@@ -362,30 +386,6 @@ func DiscussionSetPublic(discussionid DiscussionID, public bool) error {
 		}
 		return nil
 
-	} else {
-		res, err := event.Exec(`
-        update event_discussions
-            set ispublic = false,
-                approvedtitle = "",
-                approveddescription = ""
-            where discussionid = ?`,
-			discussionid)
-		if err != nil {
-			log.Printf("Setting event discussion %v non-public: %v", discussionid, err)
-			return ErrInternal
-		}
-		rcount, err := res.RowsAffected()
-		if err != nil {
-			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
-		}
-		switch {
-		case rcount == 0:
-			return ErrUserNotFound
-		case rcount > 1:
-			log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
-			return ErrInternal
-		}
-		return nil
 	}
 }
 

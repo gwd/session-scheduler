@@ -23,7 +23,12 @@ func checkInterest(interestMap [][]int, users []User, discussions []Discussion, 
 	}
 
 	for didx := range discussions {
-		if maxScore := discussions[didx].GetMaxScore(); maxScore != eMaxScore[didx] {
+		maxScore, err := discussions[didx].GetMaxScore()
+		if err != nil {
+			t.Errorf("ERROR GetMaxScore: %v", err)
+			return true
+		}
+		if maxScore != eMaxScore[didx] {
 			t.Errorf("maxscore[%d]: expected %d, got %d!", didx, eMaxScore[didx], maxScore)
 			return true
 		}
