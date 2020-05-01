@@ -83,6 +83,34 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			user.IsVerified = verified
 		}
 
+		// Get all users; make sure we get at least one.
+		users := []User{}
+		err = UserIterate(func(u *User) error {
+			users = append(users, *u)
+			return nil
+		})
+		if err != nil {
+			t.Errorf("Getting list of all users: %v", err)
+			return
+		}
+		if len(users) == 0 {
+			t.Errorf("ERROR: UserIterate returned no users!")
+			return
+		}
+		t.Logf("Found %d users total", len(users))
+
+		users, err = UserGetAll()
+		if err != nil {
+			t.Errorf("ERROR: UserGetAll: %v", err)
+			return
+		}
+
+		_, err = UserFindRandom()
+		if err != nil {
+			t.Errorf("ERROR: UserFindRandom: %v", err)
+			return
+		}
+
 		// Make a bunch of discussions
 		for j := 0; j < 5; j++ {
 			disc, res := testNewDiscussion(t, user.UserID)

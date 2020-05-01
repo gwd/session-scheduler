@@ -135,39 +135,77 @@ func UserFindByUsername(username string) (*User, error) {
 
 func UserFindRandom() (*User, error) {
 	var user User
-	err := event.Get(&user, `
-    select * from event_users
-        where username != ?
-        order by RANDOM() limit 1`, AdminUsername)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	for {
+		err := event.Get(&user, `
+        select * from event_users
+           where username != ?
+           order by RANDOM() limit 1`, AdminUsername)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err == sql.ErrNoRows:
+			return nil, nil
+		case err != nil:
+			return nil, err
+		default:
+			return &user, nil
+		}
 	}
-	return &user, err
 }
 
 // Iterate over all users, calling f(u) for each user.
-func UserIterate(f func(u *User) error) (err error) {
-	rows, err := event.Queryx(`select * from event_users order by userid`)
-	if err != nil {
+func UserIterate(f func(u *User) error) error {
+	for {
+		rows, err := event.Queryx(`select * from event_users order by userid`)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err != nil:
+			return err
+		}
+		defer rows.Close()
+		processed := 0
+		for rows.Next() {
+			var user User
+			if err := rows.StructScan(&user); err != nil {
+				return err
+			}
+			err = f(&user)
+			if err != nil {
+				return err
+			}
+			processed++
+		}
+
+		// For some reason we often get the transaction conflict error
+		// from rows.Err() rather than from the original Queryx.
+		// Retrying is fine as long as we haven't actually processed
+		// any rows yet.  If we have, throw an error.  (There's an
+		// argument to makign this a panic() instead.)
+		err = rows.Err()
+		if shouldRetry(err) {
+			if processed == 0 {
+				rows.Close()
+				continue
+			}
+			err = fmt.Errorf("INTERNAL ERROR: Got transaction retry error after processing %d callbacks",
+				processed)
+		}
+
 		return err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var user User
-		if err := rows.StructScan(&user); err != nil {
-			return err
-		}
-		err = f(&user)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func UserGetAll() (users []User, err error) {
-	err = event.Select(&users, `select * from event_users order by userid`)
-	return users, err
+	for {
+		err = event.Select(&users, `select * from event_users order by userid`)
+		switch {
+		case shouldRetry(err):
+			continue
+		default:
+			return users, err
+		}
+	}
 }
 
 func discussionIterateQuery(query string, args []interface{}, f func(*Discussion) error) error {
