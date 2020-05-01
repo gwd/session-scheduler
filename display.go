@@ -107,7 +107,7 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 	if cur != nil {
 		if cur.Username != event.AdminUsername {
 			dd.IsUser = true
-			dd.Interest = cur.GetInterest(d)
+			dd.Interest, _ = cur.GetInterest(d)
 		}
 		dd.MayEdit = cur.MayEditDiscussion(d)
 		if cur.IsAdmin {

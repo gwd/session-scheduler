@@ -9,7 +9,11 @@ func checkInterest(interestMap [][]int, users []User, discussions []Discussion, 
 	eMaxScore := make([]int, len(discussions))
 	for uidx := range users {
 		for didx := range discussions {
-			interest := users[uidx].GetInterest(&discussions[didx])
+			interest, err := users[uidx].GetInterest(&discussions[didx])
+			if err != nil {
+				t.Errorf("[%d][%d] GetInterest returned %v", uidx, didx, err)
+				return true
+			}
 			if interest != interestMap[uidx][didx] {
 				t.Errorf("[%d][%d] expected %d got %d", uidx, didx, interestMap[uidx][didx], interest)
 				return true
@@ -71,7 +75,12 @@ func testUnitInterest(t *testing.T) (exit bool) {
 		}
 		owner := &users[owneridx] // Wish I had 'const'
 
-		if interest := owner.GetInterest(&discussions[i]); interest != InterestMax {
+		interest, err := owner.GetInterest(&discussions[i])
+		if err != nil {
+			t.Errorf("ERROR GetInterest: %v", err)
+			return
+		}
+		if interest != InterestMax {
 			t.Errorf("Unexpected interest for new discussion: got %d expected %d",
 				interest, InterestMax)
 			return
@@ -268,7 +277,11 @@ func testUnitInterest(t *testing.T) (exit bool) {
 		}
 
 		// Then get the interest and make sure it's zero
-		interest := users[0].GetInterest(&discussions[didx])
+		interest, err := users[0].GetInterest(&discussions[didx])
+		if err != nil {
+			t.Errorf("ERROR GetInterest: %v", err)
+			return
+		}
 		if interest != 0 {
 			t.Errorf("Expected 0, got %d for deleted discussion!", interest)
 			return
@@ -325,7 +338,12 @@ func testUnitInterest(t *testing.T) (exit bool) {
 		}
 
 		// Check to see that the interest is zero
-		if interest := users[uidx].GetInterest(&discussions[0]); interest != 0 {
+		interest, err := users[uidx].GetInterest(&discussions[0])
+		if err != nil {
+			t.Errorf("ERROR: GetInterest %v", err)
+			return
+		}
+		if interest != 0 {
 			t.Errorf("Expected interest 0 from deleted user, got %d!", interest)
 			return
 		}

@@ -93,6 +93,17 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 				t.Errorf("Setting interest: %v", err)
 				return
 			}
+
+			gotInterest, err := user.GetInterest(&discussions[didx])
+			if err != nil {
+				t.Errorf("ERROR user.GetInterest: %v", err)
+				return
+			}
+			// A deleted discussion will return interest 0
+			if gotInterest != interest && gotInterest != 0 {
+				t.Errorf("user.GetInterest: wanted %d, got %d!", interest, gotInterest)
+				return
+			}
 		}
 
 		// Get discussions for this user and delete half

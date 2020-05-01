@@ -160,7 +160,7 @@ func (user *User) SetInterest(disc *Discussion, interest int) error {
 	}
 }
 
-func (user *User) GetInterest(disc *Discussion) int {
+func (user *User) GetInterest(disc *Discussion) (int, error) {
 	var interest int
 	// NB this will return 0 even for non-existent users and
 	// discussions.  If we wanted to change this, we'd have to return
@@ -171,15 +171,22 @@ func (user *User) GetInterest(disc *Discussion) int {
 	// or setting up a query such that we could distinguish between
 	// "user/discussion pair exists but has no interest entry" and
 	// "user/discussion pair does not exist".
-	err := event.Get(&interest, `
-		select interest
-            from event_interest
-            where userid=? and discussionid=?`,
-		user.UserID, disc.DiscussionID)
-	if err != nil && err != sql.ErrNoRows {
-		log.Printf("ERROR getting interest: %v", err)
+	for {
+		err := event.Get(&interest, `
+		    select interest
+                from event_interest
+                where userid=? and discussionid=?`,
+			user.UserID, disc.DiscussionID)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err != nil && err != sql.ErrNoRows:
+			log.Printf("ERROR getting interest: %v", err)
+			return 0, err
+		default:
+			return interest, nil
+		}
 	}
-	return interest
 }
 
 func (user *User) setPassword(newPassword string) error {
