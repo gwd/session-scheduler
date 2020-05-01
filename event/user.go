@@ -199,10 +199,17 @@ func (user *User) setPassword(newPassword string) error {
 }
 
 func (user *User) SetVerified(isVerified bool) error {
-	_, err := event.Exec(`
-    update event_users set isverified = ? where userid = ?`,
-		isVerified, user.UserID)
-	return err
+	for {
+		_, err := event.Exec(`
+        update event_users set isverified = ? where userid = ?`,
+			isVerified, user.UserID)
+		switch {
+		case shouldRetry(err):
+			continue
+		default:
+			return err
+		}
+	}
 }
 
 // UserUpdate will update "user-facing" data associated with the user.
@@ -257,26 +264,31 @@ func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) e
 	args = append(args, userNext.Description)
 	args = append(args, userNext.UserID)
 
-	res, err := event.Exec(q, args...)
-	if err != nil {
-		return err
-	}
+	for {
+		res, err := event.Exec(q, args...)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err != nil:
+			return err
+		}
 
-	rcount, err := res.RowsAffected()
-	if err != nil {
-		log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
-		return ErrInternal
-	}
+		rcount, err := res.RowsAffected()
+		if err != nil {
+			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
+			return ErrInternal
+		}
 
-	switch {
-	case rcount == 0:
-		return ErrUserNotFound
-	case rcount > 1:
-		log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
-		return ErrInternal
-	}
+		switch {
+		case rcount == 0:
+			return ErrUserNotFound
+		case rcount > 1:
+			log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
+			return ErrInternal
+		}
 
-	return nil
+		return nil
+	}
 }
 
 func DeleteUser(userid UserID) error {

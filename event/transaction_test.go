@@ -3,6 +3,8 @@ package event
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/icrowley/fake"
 )
 
 // Goal: To test transactions to make sure they're robust against failure / irrational results
@@ -45,6 +47,40 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 		if !compareUsers(&user, gotuser, t) {
 			t.Errorf("User data mismatch")
 			return
+		}
+
+		// Do some random user updates, make sure they "took"
+		user.RealName = fake.FullName()
+		user.Email = fake.EmailAddress()
+		err = UserUpdate(&user, nil, "", "")
+		if err != nil {
+			t.Errorf("Updating user: %v", err)
+			return
+		}
+
+		gotuser, err = UserFind(user.UserID)
+		if err != nil {
+			t.Errorf("Finding the user we just created by ID: %v", err)
+			return
+		}
+		if gotuser == nil {
+			t.Errorf("Couldn't find just-created user by id %s!", user.UserID)
+			return
+		}
+
+		if !compareUsers(&user, gotuser, t) {
+			t.Errorf("User data mismatch")
+			return
+		}
+
+		for j := 0; j < 5; j++ {
+			verified := rand.Intn(2) == 0
+			err := user.SetVerified(verified)
+			if err != nil {
+				t.Errorf("Changing verification: %v", err)
+				return
+			}
+			user.IsVerified = verified
 		}
 
 		// Make a bunch of discussions
