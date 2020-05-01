@@ -95,6 +95,39 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			}
 		}
 
+		// Get discussions for this user and delete half
+		discussions = []Discussion{}
+		err = DiscussionIterateUser(user.UserID, func(d *Discussion) error {
+			discussions = append(discussions, *d)
+			return nil
+		})
+		if err != nil {
+			t.Errorf("Getting list of my own discussions: %v", err)
+			return
+		}
+
+		for j := 0; j < len(discussions)/2; j++ {
+			var didx int
+			for {
+				didx = rand.Intn(len(discussions))
+				if discussions[didx].DiscussionID != "" {
+					break
+				}
+			}
+
+			if discussions[didx].Owner != user.UserID {
+				t.Errorf("User %v got discussion owned by %v!", user.UserID, discussions[didx].Owner)
+				return
+			}
+
+			err = DeleteDiscussion(discussions[didx].DiscussionID)
+			if err != nil {
+				t.Errorf("Deleting discussion %v owned by %v: %v", discussions[didx].DiscussionID, discussions[didx].Owner, err)
+				return
+			}
+			discussions[didx].DiscussionID = ""
+		}
+
 		err = DeleteUser(user.UserID)
 		if err != nil {
 			t.Errorf("Deleting user %s: %v", user.UserID, err)

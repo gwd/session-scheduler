@@ -170,9 +170,9 @@ func UserGetAll() (users []User, err error) {
 	return users, err
 }
 
-func DiscussionIterate(f func(*Discussion) error) error {
+func discussionIterateQuery(query string, args []interface{}, f func(*Discussion) error) error {
 	for {
-		rows, err := event.Queryx(`select * from event_discussions order by discussionid`)
+		rows, err := event.Queryx(query, args...)
 		switch {
 		case shouldRetry(err):
 			continue
@@ -212,27 +212,13 @@ func DiscussionIterate(f func(*Discussion) error) error {
 	}
 }
 
+func DiscussionIterate(f func(*Discussion) error) error {
+	return discussionIterateQuery(`select * from event_discussions order by discussionid`, nil, f)
+}
+
 // FIXME: This will simply do nothing if the userid doesn't exist.  It
 // would be nice for the caller to distinguish between "User does not
 // exist" and "User has no discussions".
 func DiscussionIterateUser(userid UserID, f func(*Discussion) error) (err error) {
-	rows, err := event.Queryx(
-		`select * from event_discussions
-             where owner=?
-             order by discussionid`, userid)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var disc Discussion
-		if err := rows.StructScan(&disc); err != nil {
-			return err
-		}
-		err = f(&disc)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return discussionIterateQuery(`select * from event_discussions where owner=? order by discussionid`, []interface{}{userid}, f)
 }
