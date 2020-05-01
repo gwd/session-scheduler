@@ -25,7 +25,7 @@ func testNewUser(t *testing.T) (User, bool) {
 	user.IsVerified = !lastIsVerified
 	lastIsVerified = user.IsVerified
 
-	t.Logf("Creating test user %v", user)
+	//t.Logf("Creating test user %v", user)
 
 	var err error
 	for _, err = NewUser(TestPassword, &user); err != nil; _, err = NewUser(TestPassword, &user) {

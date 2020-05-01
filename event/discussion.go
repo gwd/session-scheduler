@@ -460,11 +460,17 @@ func MakePossibleSlots(len int) []bool {
 
 func DiscussionFindById(discussionid DiscussionID) (*Discussion, error) {
 	disc := &Discussion{}
-	err := event.Get(disc,
-		`select * from event_discussions where discussionid = ?`,
-		discussionid)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	for {
+		err := event.Get(disc,
+			`select * from event_discussions where discussionid = ?`,
+			discussionid)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err == sql.ErrNoRows:
+			return nil, nil
+		default:
+			return disc, err
+		}
 	}
-	return disc, err
 }

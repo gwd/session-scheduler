@@ -1,6 +1,9 @@
 package event
 
-import "testing"
+import (
+	"math/rand"
+	"testing"
+)
 
 // Goal: To test transactions to make sure they're robust against failure / irrational results
 
@@ -23,6 +26,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 	defer func() { exitChan <- exit }()
 
 	for i := 0; i < iterations; i++ {
+		// Make a user, then read them back
 		user, res := testNewUser(t)
 		if res {
 			return
@@ -41,6 +45,54 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 		if !compareUsers(&user, gotuser, t) {
 			t.Errorf("User data mismatch")
 			return
+		}
+
+		// Make a bunch of discussions
+		for j := 0; j < 5; j++ {
+			disc, res := testNewDiscussion(t, user.UserID)
+			if res {
+				return
+			}
+
+			// Look for that discussion by did
+			gotdisc, err := DiscussionFindById(disc.DiscussionID)
+			if err != nil {
+				t.Errorf("Finding the discussion we just created by ID: %v", err)
+				return
+			}
+			if gotdisc == nil {
+				t.Errorf("Couldn't find just-created discussion by id %s!", disc.DiscussionID)
+				return
+			}
+			if !compareDiscussions(&disc, gotdisc, t) {
+				t.Errorf("Discussion data mismatch")
+				return
+			}
+		}
+
+		// Get all discussions & set an interest in some of them
+		discussions := []Discussion{}
+		err = DiscussionIterate(func(d *Discussion) error {
+			discussions = append(discussions, *d)
+			return nil
+		})
+		if err != nil {
+			t.Errorf("Getting list of all open discussions: %v", err)
+			return
+		}
+		t.Logf("Found %d discussions total", len(discussions))
+
+		for j := 0; j < 20; j++ {
+			didx := rand.Intn(len(discussions))
+			interest := rand.Intn(100)
+			if interest < 20 {
+				interest = 0
+			}
+			err := user.SetInterest(&discussions[didx], interest)
+			if err != nil && err != ErrUserOrDiscussionNotFound {
+				t.Errorf("Setting interest: %v", err)
+				return
+			}
 		}
 
 		err = DeleteUser(user.UserID)

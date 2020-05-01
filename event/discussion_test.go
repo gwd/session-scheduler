@@ -25,7 +25,7 @@ func testNewDiscussion(t *testing.T, owner UserID) (Discussion, bool) {
 		disc.Owner = owner
 	}
 
-	t.Logf("Creating test discussion %v", disc)
+	//t.Logf("Creating test discussion %v", disc)
 
 	failures := 0
 	for err := NewDiscussion(&disc); err != nil; err = NewDiscussion(&disc) {

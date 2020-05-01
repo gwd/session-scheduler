@@ -141,16 +141,21 @@ func (user *User) SetInterest(disc *Discussion, interest int) error {
 				continue
 			case err == sql.ErrNoRows:
 				return nil
+			default:
+				return err
 			}
-			return err
 		}
 	default:
 		for {
 			err := setInterestTx(event, user.UserID, disc.DiscussionID, interest)
-			if shouldRetry(err) {
+			switch {
+			case shouldRetry(err):
 				continue
+			case isErrorForeignKey(err):
+				return ErrUserOrDiscussionNotFound
+			default:
+				return err
 			}
-			return err
 		}
 	}
 }

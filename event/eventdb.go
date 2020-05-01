@@ -44,6 +44,10 @@ func isErrorConstraintUnique(err error) bool {
 	return isSqliteErrorCode(err, sqlite3.ErrConstraintUnique)
 }
 
+func isErrorForeignKey(err error) bool {
+	return isSqliteErrorCode(err, sqlite3.ErrConstraintForeignKey)
+}
+
 func errOrRetry(comment string, err error) error {
 	if shouldRetry(err) {
 		return err

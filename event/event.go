@@ -2,6 +2,7 @@ package event
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -95,12 +96,18 @@ func Close() {
 
 func UserFind(userid UserID) (*User, error) {
 	var user User
-	err := event.Get(&user, `select * from event_users where userid=?`,
-		userid)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	for {
+		err := event.Get(&user, `select * from event_users where userid=?`,
+			userid)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err == sql.ErrNoRows:
+			return nil, nil
+		default:
+			return &user, err
+		}
 	}
-	return &user, err
 }
 
 // Return nil for user not present
@@ -112,12 +119,18 @@ func UserFindByUsername(username string) (*User, error) {
 	// also means adding unit tests to ensure that case-differeng
 	// usernames collide, and that case-differeng usernames are found
 	// by the various searches.
-	err := event.Get(&user, `select * from event_users where username=?`,
-		username)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	for {
+		err := event.Get(&user, `select * from event_users where username=?`,
+			username)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err == sql.ErrNoRows:
+			return nil, nil
+		default:
+			return &user, err
+		}
 	}
-	return &user, err
 }
 
 func UserFindRandom() (*User, error) {
@@ -157,23 +170,46 @@ func UserGetAll() (users []User, err error) {
 	return users, err
 }
 
-func DiscussionIterate(f func(*Discussion) error) (err error) {
-	rows, err := event.Queryx(`select * from event_discussions order by discussionid`)
-	if err != nil {
+func DiscussionIterate(f func(*Discussion) error) error {
+	for {
+		rows, err := event.Queryx(`select * from event_discussions order by discussionid`)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err != nil:
+			return err
+		}
+		defer rows.Close()
+		processed := 0
+		for rows.Next() {
+			var disc Discussion
+			if err := rows.StructScan(&disc); err != nil {
+				return err
+			}
+			err = f(&disc)
+			if err != nil {
+				return err
+			}
+			processed++
+		}
+
+		// For some reason we often get the transaction conflict error
+		// from rows.Err() rather than from the original Queryx.
+		// Retrying is fine as long as we haven't actually processed
+		// any rows yet.  If we have, throw an error.  (There's an
+		// argument to makign this a panic() instead.)
+		err = rows.Err()
+		if shouldRetry(err) {
+			if processed == 0 {
+				rows.Close()
+				continue
+			}
+			err = fmt.Errorf("INTERNAL ERROR: Got transaction retry error after processing %d callbacks",
+				processed)
+		}
+
 		return err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var disc Discussion
-		if err := rows.StructScan(&disc); err != nil {
-			return err
-		}
-		err = f(&disc)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // FIXME: This will simply do nothing if the userid doesn't exist.  It
