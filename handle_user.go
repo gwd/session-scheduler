@@ -51,6 +51,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 
 	if err != nil {
 		if event.IsValidationError(err) {
+			e = err.Error()
 			goto fail
 		}
 		panic(err)
@@ -75,7 +76,12 @@ fail:
 	RenderTemplate(w, r, "user/new", map[string]interface{}{
 		"Error":    e,
 		"Username": user.Username,
-		"Profile":  user, // FIXME
+		"Profile": map[string]string{
+			"RealName":    user.RealName,
+			"Email":       user.Email,
+			"Company":     user.Company,
+			"Description": user.Description,
+		},
 	})
 	return
 }
