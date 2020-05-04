@@ -31,6 +31,7 @@ func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay)
 		Username:   u.Username,
 		IsVerified: u.IsVerified,
 	}
+	// Only show profile information to registered users
 	if cur != nil {
 		ud.MayEdit = cur.MayEditUser(u)
 		ud.IsAdmin = cur.IsAdmin
@@ -40,8 +41,10 @@ func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay)
 		ud.Profile.Company = u.Company
 		ud.Profile.Description = u.Description
 		ud.Description = ProcessText(u.Description)
-		ud.List = DiscussionGetListUser(u, cur)
 	}
+	// But show discussions to everyone.  (This is already available
+	// from the 'sessions' list.)
+	ud.List = DiscussionGetListUser(u, cur)
 	return
 }
 

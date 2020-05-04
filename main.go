@@ -27,7 +27,7 @@ const (
 func main() {
 	var err error
 
-	kvs, err = keyvalue.OpenFile("data/serverconfig.db")
+	kvs, err = keyvalue.OpenFile("data/serverconfig.sqlite")
 	if err != nil {
 		log.Fatal("Opening serverconfig: %v", err)
 	}

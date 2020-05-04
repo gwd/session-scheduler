@@ -1,4 +1,5 @@
 session-scheduler
-data/*.json
+data/*.sqlite
 notes.txt
 *.diff
+*.test
