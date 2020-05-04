@@ -102,6 +102,26 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 	}
 
+	t.Logf("Testing admin password reset")
+	{
+		gotuser, err := UserFindByUsername(AdminUsername)
+		if err != nil {
+			t.Errorf("Finding the user we just created by username: %v", err)
+			return
+		}
+
+		err = gotuser.setPassword(TestPassword)
+		if err != nil {
+			t.Errorf("ERROR: Setting admin password: %v", err)
+			return
+		}
+
+		if !gotuser.CheckPassword(TestPassword) {
+			t.Errorf("Admin password reset failed!")
+			return
+		}
+	}
+
 	// Make 5 users, and use them to unit-test various functions
 	testUserCount := 5
 	users := make([]User, testUserCount)
@@ -434,7 +454,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 
 		// Try modifying HashedPassword directly and make sure nothing changes
 		copy = users[i]
-		copy.setPassword("Foo")
+		copy.HashedPassword, _ = passwordHash("Foo")
 		err = UserUpdate(&copy, nil, "", "")
 		if err != nil {
 			t.Errorf("Updating user: %v", err)

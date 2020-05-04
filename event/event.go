@@ -42,11 +42,14 @@ func handleAdminPwd(adminPwd string) {
 
 	if admin != nil {
 		if adminPwd != "" {
-			if err != nil || admin == nil {
-				log.Fatalf("Can't find admin user: %v", err)
+			if admin == nil {
+				log.Fatalf("Cannot set admin password: No such user")
 			}
 			log.Printf("Resetting admin password")
-			admin.setPassword(adminPwd)
+			err = admin.setPassword(adminPwd)
+			if err != nil {
+				log.Fatalf("resetting admin password: %v", err)
+			}
 		}
 		return
 	}

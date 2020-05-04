@@ -189,13 +189,31 @@ func (user *User) GetInterest(disc *Discussion) (int, error) {
 	}
 }
 
+func passwordHash(newPassword string) (string, error) {
+	hashedPasswordBytes, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
+	return string(hashedPasswordBytes), err
+}
+
 func (user *User) setPassword(newPassword string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
+	hashedPassword, err := passwordHash(newPassword)
 	if err != nil {
 		return err
 	}
-	user.HashedPassword = string(hashedPassword)
-	return nil
+
+	for {
+		_, err := event.Exec(`
+        update event_users set hashedpassword = ? where userid = ?`,
+			hashedPassword, user.UserID)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err == nil:
+			user.HashedPassword = hashedPassword
+			fallthrough
+		default:
+			return err
+		}
+	}
 }
 
 func (user *User) SetVerified(isVerified bool) error {
@@ -225,6 +243,8 @@ func (user *User) SetVerified(isVerified bool) error {
 func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) error {
 	setPassword := false
 
+	var hashedPassword string
+
 	if newPassword != "" {
 		// No current password? Don't try update the password.
 		// FIXME: Huh?
@@ -243,7 +263,8 @@ func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) e
 			return errPasswordTooShort
 		}
 
-		err := userNext.setPassword(newPassword)
+		var err error
+		hashedPassword, err = passwordHash(newPassword)
 		if err != nil {
 			return err
 		}
@@ -255,7 +276,7 @@ func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) e
 	args := []interface{}{}
 	if setPassword {
 		q += `hashedpassword = ?, `
-		args = append(args, userNext.HashedPassword)
+		args = append(args, hashedPassword)
 	}
 	q += `realname = ?, email = ?, company = ?, description = ? where userid = ?`
 	args = append(args, userNext.RealName)
@@ -285,6 +306,11 @@ func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) e
 		case rcount > 1:
 			log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
 			return ErrInternal
+		}
+
+		// Only update the password hash if we succeeded in the update
+		if setPassword {
+			userNext.HashedPassword = hashedPassword
 		}
 
 		return nil
