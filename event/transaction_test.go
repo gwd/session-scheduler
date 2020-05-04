@@ -36,16 +36,16 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 
 		gotuser, err := UserFind(user.UserID)
 		if err != nil {
-			t.Errorf("Finding the user we just created by ID: %v", err)
+			t.Errorf("ERROR: Finding the user we just created by ID: %v", err)
 			return
 		}
 		if gotuser == nil {
-			t.Errorf("Couldn't find just-created user by id %s!", user.UserID)
+			t.Errorf("ERROR: Couldn't find just-created user by id %s!", user.UserID)
 			return
 		}
 
 		if !compareUsers(&user, gotuser, t) {
-			t.Errorf("User data mismatch")
+			t.Errorf("ERROR: User data mismatch")
 			return
 		}
 
@@ -60,22 +60,22 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 		user.Email = fake.EmailAddress()
 		err = UserUpdate(&user, nil, "", "")
 		if err != nil {
-			t.Errorf("Updating user: %v", err)
+			t.Errorf("ERROR: Updating user: %v", err)
 			return
 		}
 
 		gotuser, err = UserFind(user.UserID)
 		if err != nil {
-			t.Errorf("Finding the user we just created by ID: %v", err)
+			t.Errorf("ERROR: Finding the user we just created by ID: %v", err)
 			return
 		}
 		if gotuser == nil {
-			t.Errorf("Couldn't find just-created user by id %s!", user.UserID)
+			t.Errorf("ERROR: Couldn't find just-created user by id %s!", user.UserID)
 			return
 		}
 
 		if !compareUsers(&user, gotuser, t) {
-			t.Errorf("User data mismatch")
+			t.Errorf("ERROR: User data mismatch")
 			return
 		}
 
@@ -83,7 +83,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			verified := rand.Intn(2) == 0
 			err := user.SetVerified(verified)
 			if err != nil {
-				t.Errorf("Changing verification: %v", err)
+				t.Errorf("ERROR: Changing verification: %v", err)
 				return
 			}
 			user.IsVerified = verified
@@ -96,7 +96,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			return nil
 		})
 		if err != nil {
-			t.Errorf("Getting list of all users: %v", err)
+			t.Errorf("ERROR: Getting list of all users: %v", err)
 			return
 		}
 		if len(users) == 0 {
@@ -127,15 +127,15 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			// Look for that discussion by did
 			gotdisc, err := DiscussionFindById(disc.DiscussionID)
 			if err != nil {
-				t.Errorf("Finding the discussion we just created by ID: %v", err)
+				t.Errorf("ERROR: Finding the discussion we just created by ID: %v", err)
 				return
 			}
 			if gotdisc == nil {
-				t.Errorf("Couldn't find just-created discussion by id %s!", disc.DiscussionID)
+				t.Errorf("ERROR: Couldn't find just-created discussion by id %s!", disc.DiscussionID)
 				return
 			}
 			if !compareDiscussions(&disc, gotdisc, t) {
-				t.Errorf("Discussion data mismatch")
+				t.Errorf("ERROR: Discussion data mismatch")
 				return
 			}
 		}
@@ -147,7 +147,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			return nil
 		})
 		if err != nil {
-			t.Errorf("Getting list of all open discussions: %v", err)
+			t.Errorf("ERROR: Getting list of all open discussions: %v", err)
 			return
 		}
 		t.Logf("Found %d discussions total", len(discussions))
@@ -160,7 +160,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			}
 			err := user.SetInterest(&discussions[didx], interest)
 			if err != nil && err != ErrUserOrDiscussionNotFound {
-				t.Errorf("Setting interest: %v", err)
+				t.Errorf("ERROR: Setting interest: %v", err)
 				return
 			}
 
@@ -171,7 +171,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			}
 			// A deleted discussion will return interest 0
 			if gotInterest != interest && gotInterest != 0 {
-				t.Errorf("user.GetInterest: wanted %d, got %d!", interest, gotInterest)
+				t.Errorf("ERROR: user.GetInterest: wanted %d, got %d!", interest, gotInterest)
 				return
 			}
 
@@ -193,7 +193,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			return nil
 		})
 		if err != nil {
-			t.Errorf("Getting list of my own discussions: %v", err)
+			t.Errorf("ERROR: Getting list of my own discussions: %v", err)
 			return
 		}
 
@@ -238,13 +238,13 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			}
 
 			if discussions[didx].Owner != user.UserID {
-				t.Errorf("User %v got discussion owned by %v!", user.UserID, discussions[didx].Owner)
+				t.Errorf("ERROR: User %v got discussion owned by %v!", user.UserID, discussions[didx].Owner)
 				return
 			}
 
 			err = DeleteDiscussion(discussions[didx].DiscussionID)
 			if err != nil {
-				t.Errorf("Deleting discussion %v owned by %v: %v", discussions[didx].DiscussionID, discussions[didx].Owner, err)
+				t.Errorf("ERROR: Deleting discussion %v owned by %v: %v", discussions[didx].DiscussionID, discussions[didx].Owner, err)
 				return
 			}
 			discussions[didx].DiscussionID = ""
@@ -252,23 +252,23 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 
 		err = DeleteUser(user.UserID)
 		if err != nil {
-			t.Errorf("Deleting user %s: %v", user.UserID, err)
+			t.Errorf("ERROR: Deleting user %s: %v", user.UserID, err)
 			return
 		}
 
 		gotuser, err = UserFind(user.UserID)
 		if err != nil {
-			t.Errorf("Error getting deleted user: %v", err)
+			t.Errorf("ERROR: Error getting deleted user: %v", err)
 			return
 		}
 		if gotuser != nil {
-			t.Errorf("Getting deleted user: Expected nil, got %v!", gotuser)
+			t.Errorf("ERROR: Getting deleted user: Expected nil, got %v!", gotuser)
 			return
 		}
 
 		err = DeleteUser(user.UserID)
 		if err != ErrUserNotFound {
-			t.Errorf("Deleting non-existent user: wanted ErrUserNotfound, got %v", err)
+			t.Errorf("ERROR: Deleting non-existent user: wanted ErrUserNotfound, got %v", err)
 			return
 		}
 	}
