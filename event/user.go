@@ -30,6 +30,7 @@ type User struct {
 	Username       string
 	IsAdmin        bool
 	IsVerified     bool // Has entered the verification code
+	Location       TZLocation
 	RealName       string
 	Email          string
 	Company        string
@@ -55,6 +56,10 @@ func NewUser(password string, user *User) (UserID, error) {
 	if IsEmailAddress(user.Username) {
 		log.Printf("New user failed: Username looks like an email address")
 		return user.UserID, errUsernameIsEmail
+	}
+
+	if user.Location.Location == nil {
+		user.Location.Location = event.defaultLocation
 	}
 
 	switch {
@@ -85,12 +90,14 @@ func NewUser(password string, user *User) (UserID, error) {
             hashedpassword,
             username,
             isadmin, isverified,
-            realname, email, company, description) values(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            realname, email, company, description,
+            location) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			user.UserID,
 			user.HashedPassword,
 			user.Username,
 			user.IsAdmin, user.IsVerified,
-			user.RealName, user.Email, user.Company, user.Description)
+			user.RealName, user.Email, user.Company, user.Description,
+			user.Location)
 		switch {
 		case shouldRetry(err):
 			continue
@@ -231,8 +238,9 @@ func (user *User) SetVerified(isVerified bool) error {
 }
 
 // UserUpdate will update "user-facing" data associated with the user.
-// This includes RealName, Email, Company, and Description.  It can
-// also inlude the password.
+// This includes RealName, Email, Company, Description, and Location.
+// It can also inlude the password *via* the new/currentPassword
+// fields (not the HashedPassword field).
 //
 // UserUpdate will *not* update Username, IsAdmin or IsVerified.  IsVerified
 // should be updated with SetVerified instead.
@@ -278,11 +286,12 @@ func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) e
 		q += `hashedpassword = ?, `
 		args = append(args, hashedPassword)
 	}
-	q += `realname = ?, email = ?, company = ?, description = ? where userid = ?`
+	q += `realname = ?, email = ?, company = ?, description = ?, location = ? where userid = ?`
 	args = append(args, userNext.RealName)
 	args = append(args, userNext.Email)
 	args = append(args, userNext.Company)
 	args = append(args, userNext.Description)
+	args = append(args, userNext.Location)
 	args = append(args, userNext.UserID)
 
 	for {

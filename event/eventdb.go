@@ -103,15 +103,16 @@ func initDb(ext sqlx.Ext) error {
 
 	_, err = ext.Exec(`
 CREATE TABLE event_users(
-    userid         text primary key,
+    userid          text primary key,
     hashedpassword text not null,
-    username       text not null unique,
-    isadmin        boolean not null,
-    isverified     boolean not null,
-    realname       text,
-    email          text,
-    company        text,
-    description    text)`)
+    username        text not null unique,
+    isadmin         boolean not null,
+    isverified      boolean not null,
+    realname        text,
+    email           text,
+    company         text,
+    description     text,
+    location        text not null /* Parsable by time.LoadLocation() */)`)
 	if err != nil {
 		return errOrRetry("Creating table event_users", err)
 	}
@@ -165,7 +166,7 @@ CREATE TABLE event_days(
 CREATE TABLE event_slots(
     slotid   integer primary key,
     dayid    integer not null,
-    slottime string not null,
+    slottime string not null, /* Output of time.MarshalText() */
     isbreak  boolean not null,
     islocked boolean not null,
     foreign  key(dayid) references event_days(dayid),

@@ -1,13 +1,14 @@
 CREATE TABLE event_users(
-    userid      text primary key,
-    bcryptpwd   text not null,
-    username    text not null unique,
-    isadmin     boolean not null,
-    isverified  boolean not null,
-    realname    text,
-    email       text,
-    company     text,
-    description text);
+    userid          text primary key,
+    hashedpassword text not null,
+    username        text not null unique,
+    isadmin         boolean not null,
+    isverified      boolean not null,
+    realname        text,
+    email           text,
+    company         text,
+    description     text,
+    location        text not null /* Parsable by time.LoadLocation() */);
 
 CREATE TABLE event_interest(
     userid text not null,
@@ -53,7 +54,7 @@ CREATE TABLE event_slots(
     slotid   text primary key,
     slotidx  integer not null, /* Order within a day */
     dayid    integer not null,
-    slottime string not null,
+    slottime string not null,  /* Output of time.MarshalText() */
     isbreak  boolean not null,
     islocked boolean not null,
     foreign  key(dayid) references event_days(dayid),

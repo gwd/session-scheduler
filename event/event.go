@@ -2,6 +2,7 @@ package event
 
 import (
 	"log"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -12,11 +13,13 @@ import (
 type EventStore struct {
 	filename string
 	*sqlx.DB
+	defaultLocation *time.Location
 }
 
 type EventOptions struct {
-	AdminPwd   string
-	dbFilename string
+	AdminPwd        string
+	DefaultLocation string
+	dbFilename      string
 }
 
 var event EventStore
@@ -68,7 +71,17 @@ func handleAdminPwd(adminPwd string) {
 }
 
 func (store *EventStore) Load(opt EventOptions) error {
+	if opt.DefaultLocation == "" {
+		log.Fatalf("No default location!")
+	}
+
 	var err error
+
+	event.defaultLocation, err = time.LoadLocation(opt.DefaultLocation)
+	if err != nil {
+		return err
+	}
+
 	event.DB, err = openDb(opt.dbFilename)
 	if err != nil {
 		return err

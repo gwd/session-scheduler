@@ -55,6 +55,8 @@ type testContext struct {
 	dbfname string
 }
 
+var TestDefaultLocation = "Europe/Berlin"
+
 func dataInit(t *testing.T) *testContext {
 	tc := &testContext{}
 	var err error
@@ -71,8 +73,14 @@ func dataInit(t *testing.T) *testContext {
 	// Remove the file first, just in case
 	os.Remove(tc.dbfname)
 
+	evopt := EventOptions{dbFilename: tc.dbfname, DefaultLocation: TestDefaultLocation}
+	if err != nil {
+		t.Errorf("Getting default test location %s: %v", TestDefaultLocation, err)
+		return nil
+	}
+
 	// Test simple open / close
-	err = Load(EventOptions{dbFilename: tc.dbfname})
+	err = Load(evopt)
 	if err != nil {
 		t.Errorf("Opening stores: %v", err)
 		return nil

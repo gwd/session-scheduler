@@ -13,6 +13,8 @@ const TestPassword = "xenuser"
 
 var lastIsVerified bool
 
+var TestAlternateLocation = "America/Detroit"
+
 func testNewUser(t *testing.T) (User, bool) {
 	user := User{
 		Username:    fake.UserName(),
@@ -25,9 +27,16 @@ func testNewUser(t *testing.T) (User, bool) {
 	user.IsVerified = !lastIsVerified
 	lastIsVerified = user.IsVerified
 
-	//t.Logf("Creating test user %v", user)
-
 	var err error
+
+	if user.IsVerified {
+		user.Location, err = LoadLocation(TestAlternateLocation)
+		if err != nil {
+			t.Errorf("ERROR: LoadLocation(%s): %v", TestAlternateLocation, err)
+			return user, true
+		}
+	}
+
 	for _, err = NewUser(TestPassword, &user); err != nil; _, err = NewUser(TestPassword, &user) {
 		// Just keep trying random usernames until we get a new one
 		if err == errUsernameExists {
@@ -73,7 +82,11 @@ func compareUsers(u1, u2 *User, t *testing.T) bool {
 		ret = false
 	}
 	if u1.Description != u2.Description {
-		t.Logf("mismatch Description: %v != %v", u1.Description, u2.Company)
+		t.Logf("mismatch Description: %v != %v", u1.Description, u2.Description)
+		ret = false
+	}
+	if u1.Location.String() != u2.Location.String() {
+		t.Logf("mismatch Location: %v != %v", u1.Location, u2.Location)
 		ret = false
 	}
 	return ret
@@ -316,6 +329,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 	// - Invalid userid
 	t.Logf("Testing UserUpdate")
 	for i := range users {
+		// Change some things but not everything
 		users[i].RealName = fake.FullName()
 		users[i].Description = fake.Paragraphs()
 		// Don't update password
@@ -327,6 +341,42 @@ func testUnitUser(t *testing.T) (exit bool) {
 
 		// Check to see that we still get the same result
 		gotuser, err := UserFindByUsername(users[i].Username)
+		if err != nil {
+			t.Errorf("Finding the user we just created by username: %v", err)
+			return
+		}
+
+		if !compareUsers(&users[i], gotuser, t) {
+			t.Errorf("User data mismatch for user uid %s username %s",
+				users[i].UserID, users[i].Username)
+			return
+		}
+
+		if !gotuser.CheckPassword(TestPassword) {
+			t.Errorf("Password failed")
+			return
+		}
+
+		// Try changing some different things
+		users[i].Company = fake.Company()
+		if users[i].Location.String() == TestAlternateLocation {
+			users[i].Location, err = LoadLocation(TestDefaultLocation)
+		} else {
+			users[i].Location, err = LoadLocation(TestAlternateLocation)
+		}
+		if err != nil {
+			t.Errorf("Loading location: %v", err)
+			return
+		}
+		// Don't update password
+		err = UserUpdate(&users[i], nil, "", "")
+		if err != nil {
+			t.Errorf("Updating user: %v", err)
+			return
+		}
+
+		// Check to see that we still get the same result
+		gotuser, err = UserFindByUsername(users[i].Username)
 		if err != nil {
 			t.Errorf("Finding the user we just created by username: %v", err)
 			return

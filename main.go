@@ -21,8 +21,11 @@ const (
 	SearchAlgo           = "EventSearchAlgo"
 	SearchDuration       = "EventSearchDuration"
 	Validate             = "EventValidate"
+	KeyDefaultLocation   = "EventDefaultLocation"
 	VerificationCode     = "ServeVerificationCode"
 )
+
+const DefaultLocation = "Europe/Berlin"
 
 func main() {
 	var err error
@@ -39,6 +42,7 @@ func main() {
 	flag.Var(kvs.GetFlagValue(SearchAlgo), "searchalgo", "Search algorithm.  Options are heuristic, genetic, and random.")
 	flag.Var(kvs.GetFlagValue(SearchDuration), "searchtime", "Duration to run search")
 	flag.Var(kvs.GetFlagValue(Validate), "validate", "Extra validation of schedule consistency")
+	flag.Var(kvs.GetFlagValue(KeyDefaultLocation), "default-location", "Default location to use for times")
 
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
 
@@ -68,7 +72,20 @@ func main() {
 		}
 	}
 
-	err = event.Load(event.EventOptions{AdminPwd: *adminPwd})
+	locstring, err := kvs.Get(KeyDefaultLocation)
+	switch {
+	case err == keyvalue.ErrNoRows:
+		locstring = DefaultLocation
+		if err = kvs.Set(KeyDefaultLocation, locstring); err != nil {
+			log.Fatalf("Setting default location: %v", err)
+		} else {
+			log.Printf("Default location to %s", DefaultLocation)
+		}
+	case err != nil:
+		log.Fatalf("Getting default location: %v", err)
+	}
+
+	err = event.Load(event.EventOptions{AdminPwd: *adminPwd, DefaultLocation: locstring})
 	if err != nil {
 		log.Fatalf("Loading schedule data: %v", err)
 	}
