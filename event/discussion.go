@@ -474,3 +474,56 @@ func DiscussionFindById(discussionid DiscussionID) (*Discussion, error) {
 		}
 	}
 }
+
+func discussionIterateQuery(query string, args []interface{}, f func(*Discussion) error) error {
+	for {
+		rows, err := event.Queryx(query, args...)
+		switch {
+		case shouldRetry(err):
+			continue
+		case err != nil:
+			return err
+		}
+		defer rows.Close()
+		processed := 0
+		for rows.Next() {
+			var disc Discussion
+			if err := rows.StructScan(&disc); err != nil {
+				return err
+			}
+			err = f(&disc)
+			if err != nil {
+				return err
+			}
+			processed++
+		}
+
+		// For some reason we often get the transaction conflict error
+		// from rows.Err() rather than from the original Queryx.
+		// Retrying is fine as long as we haven't actually processed
+		// any rows yet.  If we have, throw an error.  (There's an
+		// argument to makign this a panic() instead.)
+		err = rows.Err()
+		if shouldRetry(err) {
+			if processed == 0 {
+				rows.Close()
+				continue
+			}
+			err = fmt.Errorf("INTERNAL ERROR: Got transaction retry error after processing %d callbacks",
+				processed)
+		}
+
+		return err
+	}
+}
+
+func DiscussionIterate(f func(*Discussion) error) error {
+	return discussionIterateQuery(`select * from event_discussions order by discussionid`, nil, f)
+}
+
+// FIXME: This will simply do nothing if the userid doesn't exist.  It
+// would be nice for the caller to distinguish between "User does not
+// exist" and "User has no discussions".
+func DiscussionIterateUser(userid UserID, f func(*Discussion) error) (err error) {
+	return discussionIterateQuery(`select * from event_discussions where owner=? order by discussionid`, []interface{}{userid}, f)
+}
