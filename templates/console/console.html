@@ -5,9 +5,6 @@
       <li class="nav-item">
       <a class="nav-link {{if .console}} active{{end}}" href="/admin/console">Console</a>
       </li>
-      <li class="nav-item">
-      <a class="nav-link {{if .test}} active{{end}}" href="/admin/test">Testing</a>
-      </li>
     </ul>
   </nav>
 </div>
@@ -90,63 +87,4 @@
   </div>
 </div>
 {{end}}
-
-{{define "admin/test"}}
-<div class="row">
-  {{template "admin/sidebar" .}}
-  <div class="col-10">
-    <h2>Test console</h2>
-    {{if .IsTestMode}}
-    <ul class="list-group">
-      <li class="list-group-item">
-      <h4>Disable test mode</h4>
-      <p>Turn off test mode; put the safety on</p>
-      <form action="/testaction/disabletest" method="POST">
-      <input type="submit" value="Disable" class="btn btn-primary">
-      </form></li>
-      <li class="list-group-item">
-      <h4>Clear the database</h4>
-      <p>Remove all users, discussions, and schedules.  Leaves admin account.</p>
-      <form action="/testaction/resetUserData" method="POST">
-      <input type="submit" value="Clear All Data" class="btn btn-primary">
-      </form></li>
-      <li class="list-group-item">
-      <h4>Generate users</h4>
-      <p>Creates a number of randomly generated users</p>
-      <form action="/testaction/genuser" method="POST">
-      <input type="submit" value="Generate Users" class="btn btn-primary">
-      <label for="userCount">Number of users to create</label>
-      <input type="number" name="count" id="count" value="10">
-      </form></li>
-      <li class="list-group-item">
-      <h4>Generate sessions</h4>
-      <p>Creates a number of randomly generated sessions (owned by
-      current users)</p>
-      <form action="/testaction/gendiscussion" method="POST">
-      <input type="submit" value="Generate Discussions" class="btn btn-primary">
-      <label for="sessionCount">Number of discussions to create</label>
-      <input type="number" name="count" id="count" value="10">
-      </form></li>
-      <li class="list-group-item">
-      <h4>Generate interest</h4>
-      <p>Randomly assign current users interest in current sessions<p>
-      <form action="/testaction/geninterest" method="POST">
-      <input type="submit" value="Generate Interest" class="btn btn-primary">
-      </form></li>
-    </ul>
-    {{else}}
-    <form action="/testaction/enabletest" method="POST">
-    {{if .MustConfirm}}
-    <p class="text-danger"> You must click 'Confirm'</p>
-    {{end}}
-    <div class="container"><input type="checkbox" name="confirm" id="confirm" value="SafetyOff">
-    <span class="text-warning">Caution</span> I know this enables testing
-    functionality which may destroy data</div>
-    <input type="submit" value="Enable Test Mode" class="btn btn-primary">
-    </form>
-    {{end}}
-  </div>
-</div>
-{{end}}
-
 
