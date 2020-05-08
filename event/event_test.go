@@ -111,4 +111,8 @@ func TestEvent(t *testing.T) {
 	if testTransaction(t) {
 		return
 	}
+
+	if testUnitLocation(t) {
+		return
+	}
 }

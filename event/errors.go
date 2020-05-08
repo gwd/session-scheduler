@@ -29,7 +29,10 @@ var (
 	errModeratedDiscussions     = ValidationError(errors.New("Moderated discussions present: Please unmoderate or delete"))
 	ErrUserNotFound             = errors.New("UserID not found")
 	ErrDiscussionNotFound       = errors.New("DiscussionID not found")
+	ErrLocationNotFound         = errors.New("LocationID not found")
 	ErrUserOrDiscussionNotFound = errors.New("UserID or DiscussionID not found")
+	errLocationNoName           = ValidationError(errors.New("Location must have a name"))
+	errLocationInvalidCapacity  = ValidationError(errors.New("Invalid capacity"))
 )
 
 func IsValidationError(err error) bool {
