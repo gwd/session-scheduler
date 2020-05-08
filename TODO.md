@@ -6,7 +6,19 @@
 
 + Remove all references to Lars
 
-- Test parallelism
++ Test parallelism
+
+# Changes before final websete
+
+- A way to add location
+
+- A way to set up the timetable
+
+- The new scheduler
+
+- A way to set your own timezone
+
+- View the schedule in your own timezone
 
 - Modify 'Delete User' to reparent discussions to admin, rather than
   deleting.  Or maybe not: This allows an attacker to assign arbitrary

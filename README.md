@@ -14,39 +14,17 @@ At the moment, this is a prototype focused on Xen's Developer Summit.
 
 # Build instructions
 
-Make sure you have your `GOPATH` set up to something reasonable:
+Clone the repo:
 
 ```
-$ echo $GOPATH
-/Users/dunlapg/go
-```
-
-Use `go get` to download the repo and all its dependencies:
-
-```
-go get -d github.com/gwd/session-scheduler
-```
-
-This will download the source and dependencies into your `$GOPATH`, but not compile it yet.
-
-The session-scheduler must be run from the git repo; this will be in `$GOPATH/src/github.com/gwd/sessions-scheduler`.
-
-Change to this directory:
-
-```
-cd $GOPATH/src/github.com/gwd/session-scheduler
+git clone https://github.com/gwd/session-scheduler
+cd session-scheduler
 ```
 
 Build the binary:
 
 ```
 go build
-```
-
-And finally, make a directory for storing data:
-
-```
-mkdir data
 ```
 
 # Starting instructions
@@ -68,19 +46,12 @@ Logging in as `admin`, you are in "Admin mode".  The `admin` account may edit us
 The `admin` account has a "Console" page available.  From there you can initiate the session scheduler
 and enable test mode, set the verification code, and other admin activities.
 
-# Test mode
+# Deployment
 
-Test mode enables functionality useful for developing and testing the website and UI.  In particular it allows
-you to:
-
-1. Generate a random set of users, with random profiles
-2. Generate random discussions (from the currently-present users)
-3. Generate random "interest" values for current users in current discussions
-4. Clear the user database (while keeping the current admin password).
-
-There are under the admin console.
-
-Because these are destructive, they are only available when "test mode" is enabled.
+To run elsewhere without cloning the entire repo, copy the
+`sessions-scheduler` binary, along with the following directories:
+`assets` `templates`.  Also create a directory, `data`, for
+session-scheduler to store the databases.
 
 # Miscellaneous notes
 
