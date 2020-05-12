@@ -16,14 +16,14 @@ At the moment, this is a prototype focused on Xen's Developer Summit.
 
 Clone the repo:
 
-```
+```bash
 git clone https://github.com/gwd/session-scheduler
 cd session-scheduler
 ```
 
 Build the binary:
 
-```
+```bash
 go build
 ```
 
@@ -31,13 +31,19 @@ go build
 
 Running it is simple.  From the git repo, run:
 
-```
+```bash
 ./session-scheduler
 ```
 
 The first time you run `session-scheduler` it will create `data/event.json` to store data about the event.  It will also create an account named `admin`, generate a random password, and print the password to `stdout`.
 
-It will then start serving http on localhost:3000.  To view the webpage, go to "http://localhost:3000".
+```bash
+./session-scheduler
+2020/05/11 15:34:13 Default location to Europe/Berlin
+2020/05/11 15:34:13 New user post: 'admin'
+2020/05/11 15:34:13 Administrator account: admin DB7Zixb2RYra
+2020/05/11 15:34:13 Listening on localhost:22752
+```
 
 # Admin mode
 
