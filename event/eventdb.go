@@ -9,7 +9,7 @@ import (
 	"github.com/mattn/go-sqlite3"
 )
 
-const codeSchemaVersion = 1
+const codeSchemaVersion = 2
 
 func isSqliteErrorCode(err error, queries ...error) bool {
 	if err == nil {
@@ -75,24 +75,55 @@ func openDb(filename string) (*sqlx.DB, error) {
 		return nil, fmt.Errorf("Getting schema version: %v", err)
 	}
 
-	if dbSchemaVersion == 0 {
+	commit := false
+
+	switch dbSchemaVersion {
+	case 0:
 		err = initDb(tx)
 		if err != nil {
 			return nil, fmt.Errorf("Initializing database: %v", err)
 		}
-
-		err = tx.Commit()
+		commit = true
+	case 1:
+		err = upgradeDbv1(tx)
 		if err != nil {
-			return nil, fmt.Errorf("Initializing database: %v", err)
+			return nil, fmt.Errorf("Upgrading database: %v", err)
 		}
-	} else if dbSchemaVersion != codeSchemaVersion {
+
+		commit = true
+	case codeSchemaVersion:
+		break
+	default:
 		return nil, fmt.Errorf("Wrong schema version (code %d, db %d)",
 			codeSchemaVersion, dbSchemaVersion)
 	}
 
 	// No need to commit in common case
+	if commit {
+		err = tx.Commit()
+		if err != nil {
+			return nil, fmt.Errorf("Committing database init/upgrade: %v", err)
+		}
+	}
 
 	return db, nil
+}
+
+func upgradeDbv1(ext sqlx.Ext) error {
+	_, err := ext.Exec(fmt.Sprintf("pragma user_version=%d", 2))
+	if err != nil {
+		return errOrRetry("Updating user_version", err)
+	}
+
+	// NB when adding a column with a 'not null' restriction, we have
+	// to add a default, even if we don't expect there to be any rows
+	// to update.  Testing for the non-upgaded case should catch any
+	// insertions which don't include this column.
+	_, err = ext.Exec(`alter table event_locations add column locationdescription text not null default ""`)
+	if err != nil {
+		return errOrRetry("Adding event_locations:locationdescription: %v", err)
+	}
+	return nil
 }
 
 func initDb(ext sqlx.Ext) error {
@@ -148,6 +179,7 @@ CREATE TABLE event_interest(
 CREATE TABLE event_locations(
     locationid   integer primary key,
     locationname text not null,
+    locationdescription text not null,
     isplace      boolean not null,
     capacity     integer not null)`)
 	if err != nil {

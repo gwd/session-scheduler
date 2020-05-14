@@ -38,10 +38,11 @@ CREATE TABLE event_discussions_possible_slots(
 
 /* Location ids should be in order and contiguous, starting at 1 */
 CREATE TABLE event_locations(
-    locationid   integer primary key,
-    locationname text not null,
-    isplace      boolean not null,
-    capacity     integer not null);
+    locationid          integer primary key,
+    locationname        text not null,
+    locationdescription text not null,
+    isplace             boolean not null,
+    capacity            integer not null);
 
 /* Day names should be in order and contiguous, starting at 1 */
 CREATE TABLE event_days(
