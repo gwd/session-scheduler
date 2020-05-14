@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -28,6 +29,9 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 	tmpl := ps.ByName("template")
 	switch tmpl {
+	default:
+		return
+
 	case "console":
 		content["Vcode"], _ = kvs.Get(VerificationCode)
 		content["SinceLastSchedule"] = event.SchedLastUpdate()
@@ -41,11 +45,16 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		}
 		//content["LockedSlots"] = event.TimetableGetLockedSlots()
 		fallthrough
-	case "test":
-		content[tmpl] = true
-		RenderTemplate(w, r, "admin/"+tmpl, content)
+	case "locations":
+		var err error
+		content["Locations"], err = event.LocationGetAll()
+		if err != nil {
+			log.Printf("Error getting locations: %v", err)
+		}
 	}
 
+	content[tmpl] = true
+	RenderTemplate(w, r, "admin/"+tmpl, content)
 }
 
 var OptSearchAlgo string
@@ -62,7 +71,9 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		action == "setvcode" ||
 		action == "setstatus" ||
 		action == "resetEventData" ||
-		action == "setLocked") {
+		action == "setLocked" ||
+		action == "newLocation" ||
+		action == "updateLocation") {
 		return
 	}
 
@@ -166,6 +177,56 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		// FIXME: LockedSlots.  We'll need to pass in slot ids now.
 		//event.LockedSlotsSet(locked)
 		http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)
+		return
+	case "newLocation", "updateLocation":
+		l := event.Location{
+			LocationName:        r.FormValue("locName"),
+			LocationDescription: r.FormValue("locDesc")}
+		// FIXME: This trashes thee contents of the form and doesn't give very
+		// informative error messages.  See if we can do something better.
+		flash := ""
+
+		if action == "updateLocation" {
+			lidString := r.FormValue("locID")
+			lid, err := strconv.Atoi(lidString)
+			if err != nil {
+				log.Printf("Error parsing locationid: %v", err)
+				flash = "?flash=Website+Error"
+			} else {
+				l.LocationID = event.LocationID(lid)
+			}
+		}
+
+		if flash == "" {
+			cstring := r.FormValue("locCapacity")
+			if cstring != "" {
+				capacity, err := strconv.Atoi(cstring)
+				if err != nil {
+					log.Printf("Error parsing capacity: %v", err)
+					flash = "?flash=Capacity+must+be+a+number"
+				}
+				l.IsPlace = true
+				l.Capacity = capacity
+			}
+		}
+
+		if flash == "" {
+			var err error
+			switch action {
+			case "newLocation":
+				_, err = event.NewLocation(&l)
+			case "updateLocation":
+				err = event.LocationUpdate(&l)
+			}
+			if event.IsValidationError(err) {
+				log.Printf("Error creating new location: %v", err)
+				flash = "?flash=Validation+Error"
+			} else if err != nil {
+				log.Printf("Error creating new location: %v", err)
+				flash = "?flash=Internal+Error"
+			}
+		}
+		http.Redirect(w, r, "locations"+flash, http.StatusFound)
 	}
 }
 

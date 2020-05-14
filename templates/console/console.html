@@ -5,6 +5,9 @@
       <li class="nav-item">
       <a class="nav-link {{if .console}} active{{end}}" href="/admin/console">Console</a>
       </li>
+      <li class="nav-item">
+      <a class="nav-link {{if .locations}} active{{end}}" href="/admin/locations">Locations</a>
+      </li>
     </ul>
   </nav>
 </div>
@@ -84,6 +87,37 @@
       {{template "admin/slots-form" .LockedSlots}}
       </li>
     </ul>
+  </div>
+</div>
+{{end}}
+
+{{define "admin/locations"}}
+<div class="row">
+  {{template "admin/sidebar" .}}
+  <div class="col-10">
+    <h2>Location setup</h2>
+     <div class="container">
+     {{range .Locations}}
+       <form action="updateLocation" method="POST">
+       <div class="form-row">
+       <input type="hidden" id="locID" name="locID" value="{{.LocationID}}">
+       <div class="col-auto"><label for="locName">Location Name</label><input id="locName" name="locName" type="text" class="form-control" value="{{.LocationName}}"></div>
+       <div class="col-auto"><label for="locDesc">Description</label><input id="locDesc" name="locDesc" type="text" class="form-control" size=50 value="{{.LocationDescription}}"></div>
+       <div class="col-auto"><label for="locCapacity">Capacity</label><input id="locCapacity" name="locCapacity" type="text" class="form-control" size=6 value="{{.Capacity}}"></div>
+       <div class="col-auto"><input type="submit" value="Update Location" class="btn btn-secondary"></div>
+       </div>
+      </form>
+
+     {{end}}
+       <form action="newLocation" method="POST">
+       <div class="form-row">
+       <div class="col-auto"><label for="locName">Location Name</label><input id="locName" name="locName" type="text" class="form-control"></div>
+       <div class="col-auto"><label for="locDesc">Description</label><input id="locDesc" name="locDesc" type="text" class="form-control" size=50></div>
+       <div class="col-auto"><label for="locCapacity">Capacity</label><input id="locCapacity" name="locCapacity" type="text" class="form-control" size=6></div>
+       <div class="col-auto"><input type="submit" value="Add Location" class="btn btn-primary"></div>
+       </div>
+      </form>
+    </div>
   </div>
 </div>
 {{end}}
