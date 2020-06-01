@@ -30,9 +30,11 @@ var (
 	ErrUserNotFound             = errors.New("UserID not found")
 	ErrDiscussionNotFound       = errors.New("DiscussionID not found")
 	ErrLocationNotFound         = errors.New("LocationID not found")
+	ErrDayNotFound              = errors.New("DayID not found")
 	ErrUserOrDiscussionNotFound = errors.New("UserID or DiscussionID not found")
 	errLocationNoName           = ValidationError(errors.New("Location must have a name"))
 	errLocationInvalidCapacity  = ValidationError(errors.New("Invalid capacity"))
+	errDayNoName                = ValidationError(errors.New("Day must have a name"))
 )
 
 func IsValidationError(err error) bool {
