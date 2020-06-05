@@ -67,6 +67,6 @@ CREATE TABLE event_schedule(
     locationid   integer not null,
     foreign key(discussionid) references event_discussions(discussionid),
     foreign key(slotid) references event_slots(slotid),
-    foreign key(locationid) references event_slots(locationid),
+    foreign key(locationid) references event_locations(locationid),
     unique(slotid, locationid));
 

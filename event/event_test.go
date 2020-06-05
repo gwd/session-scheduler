@@ -96,6 +96,11 @@ func (tc testContext) cleanup() {
 
 func TestEvent(t *testing.T) {
 	t.Logf("testUnitUser")
+
+	if testUnitTimetable(t) {
+		return
+	}
+
 	if testUnitUser(t) {
 		return
 	}

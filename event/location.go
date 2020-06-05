@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+
+	"github.com/jmoiron/sqlx"
 )
 
 // import "github.com/gwd/session-scheduler/id"
@@ -41,27 +43,17 @@ func NewLocation(l *Location) (LocationID, error) {
 		return l.LocationID, err
 	}
 
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return l.LocationID, fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
+	err = txLoop(func(eq sqlx.Ext) error {
 		// Find the highest locationid.  Returning 0 if no rows means the
 		// next one chosen will be 1, as we intend.
 		var maxlocid int
-		err = tx.Get(&maxlocid, `select ifnull(max(locationid), 0) from event_locations`)
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return l.LocationID, fmt.Errorf("Getting  max locationid: %v", err)
+		err := sqlx.Get(eq, &maxlocid, `select ifnull(max(locationid), 0) from event_locations`)
+		if err != nil {
+			return errOrRetry("Getting  max locationid", err)
 		}
 
 		l.LocationID = LocationID(maxlocid + 1)
-		_, err = tx.Exec(`
+		_, err = eq.Exec(`
             insert into event_locations(locationid, locationname, locationdescription, isplace, capacity)
                 values (?, ?, ?, ?, ?)`,
 			l.LocationID,
@@ -69,20 +61,14 @@ func NewLocation(l *Location) (LocationID, error) {
 			l.LocationDescription,
 			l.IsPlace,
 			l.Capacity)
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return l.LocationID, fmt.Errorf("Inserting location: %v", err)
+		if err != nil {
+			return errOrRetry("Inserting location", err)
 		}
 
-		err = tx.Commit()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			err = fmt.Errorf("Commiting transaction: %v", err)
-		}
-		return l.LocationID, err
-	}
+		return nil
+	})
+
+	return l.LocationID, err
 }
 
 /// LocationFindById
@@ -155,18 +141,9 @@ func LocationUpdate(l *Location) error {
 		return err
 	}
 
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
+	err := txLoop(func(eq sqlx.Ext) error {
 		// TODO: Delete (nullify?) the schedule if changing isplace or capacity
-
-		_, err = tx.Exec(`
+		_, err := eq.Exec(`
             update event_locations
                 set locationname =?,
                     locationdescription = ?,
@@ -174,22 +151,10 @@ func LocationUpdate(l *Location) error {
                     capacity = ?
                 where locationid = ?`,
 			l.LocationName, l.LocationDescription, l.IsPlace, l.Capacity, l.LocationID)
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
+		return err
+	})
 
-		err = tx.Commit()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
+	return err
 }
 
 func LocationGetAll() (locations []Location, err error) {

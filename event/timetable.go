@@ -4,20 +4,24 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+
+	"github.com/jmoiron/sqlx"
+
+	"github.com/gwd/session-scheduler/id"
 )
 
 type TimetableDiscussion struct {
-	ID        DiscussionID
-	Title     string
-	Attendees int
-	Score     int
+	DiscussionID DiscussionID
+	Title        string
+	Attendees    int
+	Score        int
 	// Copy of the "canonical" location, updated every time the
 	// schedule is run
 	LocationInfo Location
 }
 
 type TimetableSlot struct {
-	Time    string
+	Time    Time // NB: Must duplicate this so that sqlx's StructScan doesn't get confused
 	IsBreak bool
 
 	// Which room will each discussion be in?
@@ -42,9 +46,34 @@ func TimetableGetLockedSlots() []DisplaySlot {
 	return nil
 }
 
-func GetTimetable() Timetable {
-	// FIXME: Timetable
-	return Timetable{}
+func GetTimetable() (tt Timetable, err error) {
+	err = txLoop(func(eq sqlx.Ext) error {
+		err := sqlx.Select(eq, &tt.Days,
+			`select dayname from event_days order by dayid asc`)
+		if err != nil {
+			return errOrRetry("Getting day list", err)
+		}
+
+		for i := range tt.Days {
+			td := &tt.Days[i]
+			dayID := i + 1
+
+			err := sqlx.Select(eq, &td.Slots,
+				`select slottime as time, isbreak
+                     from event_slots
+                     where dayid=?
+                     order by slotidx asc`, dayID)
+			if err != nil {
+				return errOrRetry("Getting slots for one day", err)
+			}
+		}
+
+		// FIXME: Still need to fill in Discussions from schedule
+
+		return nil
+	})
+
+	return tt, err
 }
 
 type DayID int
@@ -54,9 +83,53 @@ type Day struct {
 	DayName string
 }
 
+const slotIDLength = 8
+
+type SlotID string
+
+type Slot struct {
+	SlotID
+	DayID
+	SlotIDX  int
+	SlotTime string
+	IsBreak  bool
+	IsLocked bool
+}
+
 func checkDayParams(d *Day) error {
 	if d.DayName == "" {
 		return errDayNoName
+	}
+	return nil
+}
+
+// getMaxDay: Find the highest dayid.  Returning 0 if no rows means the
+// next one chosen will be 1, as we intend.
+func getMaxDay(q sqlx.Queryer) (int, error) {
+	var maxdayid int
+	err := sqlx.Get(q, &maxdayid, `select ifnull(max(dayid), 0) from event_days`)
+	return maxdayid, err
+}
+
+// getMaxSlotIdx: Find the highest slot index for a given day.  Returning
+// 0 if no rows means the next one chosen will be 1, as we intend.
+func getMaxSlotIdx(q sqlx.Queryer, dayid DayID) (int, error) {
+	var maxSlotIdx int
+	err := sqlx.Get(q, &maxSlotIdx, `
+        select ifnull(max(slotidx), 0)
+            from event_slots
+            where dayid=?`, dayid)
+	return maxSlotIdx, err
+}
+
+func dayAddTx(eq sqlx.Ext, d *Day) error {
+	_, err := eq.Exec(`
+            insert into event_days(dayid, dayname)
+                values (?, ?)`,
+		d.DayID,
+		d.DayName)
+	if err != nil {
+		return errOrRetry("Inserting day", err)
 	}
 	return nil
 }
@@ -76,26 +149,18 @@ func NewDay(d *Day) (DayID, error) {
 		}
 		defer tx.Rollback()
 
-		// Find the highest dayid.  Returning 0 if no rows means the
-		// next one chosen will be 1, as we intend.
-		var maxdayid int
-		err = tx.Get(&maxdayid, `select ifnull(max(dayid), 0) from event_days`)
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return d.DayID, fmt.Errorf("Getting  max dayid: %v", err)
+		maxdayid, err := getMaxDay(tx)
+		if err != nil {
+			return d.DayID, errOrRetry("Getting  max dayid", err)
 		}
 
 		d.DayID = DayID(maxdayid + 1)
-		_, err = tx.Exec(`
-            insert into event_days(dayid, dayname)
-                values (?, ?)`,
-			d.DayID,
-			d.DayName)
+
+		err = dayAddTx(tx, d)
 		if shouldRetry(err) {
 			continue
 		} else if err != nil {
-			return d.DayID, fmt.Errorf("Inserting day: %v", err)
+			return d.DayID, err
 		}
 
 		err = tx.Commit()
@@ -109,7 +174,7 @@ func NewDay(d *Day) (DayID, error) {
 }
 
 /// DayFindById
-func DayFindById(did DayID) (*Day, error) {
+func DayFindByID(did DayID) (*Day, error) {
 	day := &Day{}
 	for {
 		err := event.Get(day,
@@ -126,6 +191,80 @@ func DayFindById(did DayID) (*Day, error) {
 	}
 }
 
+func daySlotsDeleteTx(eq sqlx.Ext, did DayID, firstDelIdx int) error {
+	log.Printf("Attempting to delete dayid %d slotidx %d",
+		did, firstDelIdx)
+
+	// Check to make sure none of the slots are locked
+	var lockedSlots int
+	err := sqlx.Get(eq, &lockedSlots,
+		`select count(*) 
+             from event_slots 
+             where dayid=? and slotidx >= ? and islocked = true`,
+		did, firstDelIdx)
+	if err != nil {
+		return errOrRetry("Looking for locked slots", err)
+	}
+
+	if lockedSlots > 0 {
+		return fmt.Errorf("Cannot delete slot range, %d are locked", lockedSlots)
+	}
+
+	// Delete schedule entries for slots we're about to delete
+	_, err = eq.Exec(
+		`delete from event_schedule
+             where slotid in
+                 (select slotid from event_slots
+                      where dayid=? and slotidx >= ?)`, did, firstDelIdx)
+	if err != nil {
+		return errOrRetry("Deleting schedule entries for slot range", err)
+	}
+
+	// Delete the slots
+	res, err := eq.Exec(`delete from event_slots where dayid=? and slotidx >= ?`,
+		did, firstDelIdx)
+	if err != nil {
+		return errOrRetry("Deleting slots range", err)
+	}
+
+	rowsdeleted, err := res.RowsAffected()
+	if err != nil {
+		return errOrRetry("Getting rows affected by slot deletion", err)
+	}
+	log.Printf("Deleted %d slots", rowsdeleted)
+
+	return nil
+}
+
+func deleteDayTx(eq sqlx.Ext, did DayID) error {
+	// First delete the slots associated with this day
+	err := daySlotsDeleteTx(eq, did, 1)
+	if err != nil {
+		return err
+	}
+
+	// Delete the day
+	res, err := eq.Exec(`delete from event_days where dayid=?`, did)
+	if err != nil {
+		return errOrRetry("Deleting day from event_days", err)
+	}
+
+	rcount, err := res.RowsAffected()
+	if shouldRetry(err) {
+		return err
+	} else if err != nil {
+		log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
+	}
+	switch {
+	case rcount == 0:
+		return ErrDayNotFound
+	case rcount > 1:
+		log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
+		return ErrInternal
+	}
+	return nil
+}
+
 // DeleteDay
 func DeleteDay(did DayID) error {
 	for {
@@ -137,29 +276,11 @@ func DeleteDay(did DayID) error {
 		}
 		defer tx.Rollback()
 
-		// TODO: Delete (nullify?) the schedule as well
-		res, err := event.Exec(`delete from event_days where dayid=?`, did)
-		switch {
-		case shouldRetry(err):
-			continue
-		case err == nil:
-			break
-		default:
-			return fmt.Errorf("Deleting day from event_days: %v", err)
-		}
-
-		rcount, err := res.RowsAffected()
+		err = deleteDayTx(tx, did)
 		if shouldRetry(err) {
 			continue
 		} else if err != nil {
-			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
-		}
-		switch {
-		case rcount == 0:
-			return ErrDayNotFound
-		case rcount > 1:
-			log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
-			return ErrInternal
+			return err
 		}
 
 		err = tx.Commit()
@@ -172,7 +293,16 @@ func DeleteDay(did DayID) error {
 	}
 }
 
-// DayUpdate
+func dayUpdateTx(e sqlx.Execer, d *Day) error {
+	_, err := e.Exec(`
+            update event_days
+                set dayname =?
+                where dayid = ?`,
+		d.DayName, d.DayID)
+	return err
+}
+
+// DayUpdate: Set d.DayID's fields
 func DayUpdate(d *Day) error {
 	if err := checkDayParams(d); err != nil {
 		return err
@@ -187,13 +317,202 @@ func DayUpdate(d *Day) error {
 		}
 		defer tx.Rollback()
 
-		// TODO: Delete (nullify?) the schedule if changing isplace or capacity
+		err = dayUpdateTx(tx, d)
+		if shouldRetry(err) {
+			continue
+		} else if err != nil {
+			return err
+		}
 
-		_, err = tx.Exec(`
-            update event_days
-                set dayname =?
-                where dayid = ?`,
-			d.DayName, d.DayID)
+		err = tx.Commit()
+		if shouldRetry(err) {
+			continue
+		} else if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+}
+
+func timetableSlotAddTx(eq sqlx.Ext, dayid DayID, slotIdx int, slot *TimetableSlot) error {
+	slotId := SlotID(id.GenerateID("slot", slotIDLength))
+	_, err := eq.Exec(`
+        insert into event_slots(slotid, slotidx, dayid, slottime, isbreak, islocked)
+            values(?, ?, ?, ?, ?, FALSE)`,
+		slotId, slotIdx, dayid, slot.Time, slot.IsBreak)
+	if err != nil {
+		return errOrRetry("Inserting new slot", err)
+	}
+	return nil
+}
+
+func timetableSlotUpdateTx(eq sqlx.Ext, dayID DayID, slotidx int, slot *TimetableSlot) error {
+	// FIXME: Also need to delete schedule entries if going isBreak ==
+	// false => true (and return an error if that slot is locked)
+	_, err := eq.Exec(`
+        update event_slots
+            set slottime=?, isbreak=?
+            where dayid=? and slotidx=?`,
+		slot.Time, slot.IsBreak, dayID, slotidx)
+	if err != nil {
+		return errOrRetry("Updating slot", err)
+	}
+	return nil
+}
+
+func timetableDayAddTx(eq sqlx.Ext, d *Day, slots []TimetableSlot) error {
+	// Add day
+	err := dayAddTx(eq, d)
+	if err != nil {
+		return errOrRetry("Adding day", err)
+	}
+
+	// Add slots
+	for i := range slots {
+		if err := timetableSlotAddTx(eq, d.DayID, i+1, &slots[i]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func timetableDayUpdateTx(eq sqlx.Ext, d *Day, slots []TimetableSlot) error {
+	// Update day
+	err := dayUpdateTx(eq, d)
+	if err != nil {
+		return errOrRetry("Updating day", err)
+	}
+
+	curMaxSlotIdx, err := getMaxSlotIdx(eq, d.DayID)
+	if err != nil {
+		return err
+	}
+
+	// Remove extraneous slots, if any
+	if curMaxSlotIdx > len(slots) {
+		err = daySlotsDeleteTx(eq, d.DayID, len(slots)+1)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Update / add slots
+	for i := range slots {
+		slotIdx := i + 1
+		if i < curMaxSlotIdx {
+			// Update slot
+			err = timetableSlotUpdateTx(eq, d.DayID, slotIdx, &slots[i])
+		} else {
+			// Add slot
+			err = timetableSlotAddTx(eq, d.DayID, slotIdx, &slots[i])
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func timetableSetTx(eq sqlx.Ext, tt *Timetable) error {
+	// NB DayIDs start at 1, so there's an offset of 1 between
+	// tt.Days index and dayid.
+	curmaxdayid, err := getMaxDay(eq)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("TimetableSet: curmaxdayid %d", curmaxdayid)
+
+	////
+	// First, delete all extraneous days.
+
+	// To make this more concrete, suppose tt.Days[] has length 3,
+	// and curmaxdayid is 5.  That means dayids for tt.Days[] goes
+	// from 1 to 3, and we want to delete dayids 4-5, and then set
+	// curmaxdayid to 3.
+	for dayid := len(tt.Days) + 1; dayid <= curmaxdayid; dayid++ {
+		log.Printf("TimetableSet: Deleting day %d", dayid)
+		err = deleteDayTx(eq, DayID(dayid))
+		if err != nil {
+			return err
+		}
+	}
+	if curmaxdayid > len(tt.Days) {
+		curmaxdayid = len(tt.Days)
+	}
+
+	////
+	// Now update or add days
+
+	// Suppose tt.Days[] is 5 and curmaxdayid is 3; so we want to
+	// update day ids 1-3, corresponding to indexes 0-2, and add day ids 4-5,
+	// corresponding to indexes 3-4.
+	log.Printf("Days to process: %d", len(tt.Days))
+	for i := range tt.Days {
+		log.Printf("Processing day index %d", i)
+		td := &tt.Days[i]
+		day := Day{
+			DayID:   DayID(i + 1),
+			DayName: td.DayName,
+		}
+		err = checkDayParams(&day)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("day index %d, passed check", i)
+
+		// Sanity-check: Distance between last slot and first slot must be < 24 hours
+		if len(td.Slots) > 2 {
+			if td.Slots[len(td.Slots)-1].Time.Sub(td.Slots[0].Time.Time).Hours() > 24.0 {
+				return fmt.Errorf("Slots span more than 24 hours!")
+			}
+		}
+
+		log.Printf("day index %d, passed slot check", i)
+
+		if i < curmaxdayid {
+			log.Printf("day index %d, Updating day", i)
+			err = timetableDayUpdateTx(eq, &day, td.Slots)
+		} else {
+			log.Printf("day index %d, Adding day", i)
+			err = timetableDayAddTx(eq, &day, td.Slots)
+		}
+
+		if err != nil {
+			log.Printf("didx %d, Thing returned %v", i, err)
+			return err
+		}
+		log.Printf("Done processing day %d", i)
+	}
+	return nil
+}
+
+// Set the timetable.  This will compare the timetable to the one
+// currently in the database, creating, deleting, or updating days and
+// slots as necessary.
+//
+// If a <day, slot> combination disappears, the schedule entries for
+// that day will be deleted; otherwise they will remain.  If a <day,
+// slot> combination which is locked would be deleted, an error will
+// be returned instead.
+//
+// Dealing with time zones and so on is the concern of the caller.
+func TimetableSet(tt *Timetable) error {
+	for {
+		tx, err := event.Beginx()
+		if shouldRetry(err) {
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Starting transaction: %v", err)
+		}
+		defer tx.Rollback()
+
+		err = timetableSetTx(tx, tt)
 		if shouldRetry(err) {
 			continue
 		} else if err != nil {

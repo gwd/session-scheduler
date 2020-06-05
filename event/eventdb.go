@@ -55,8 +55,34 @@ func errOrRetry(comment string, err error) error {
 	return fmt.Errorf("%s: %v", comment, err)
 }
 
-func openDb(filename string) (*sqlx.DB, error) {
+func txLoop(txFunc func(eq sqlx.Ext) error) error {
+	for {
+		tx, err := event.Beginx()
+		if shouldRetry(err) {
+			continue
+		} else if err != nil {
+			return fmt.Errorf("Starting transaction: %v", err)
+		}
+		defer tx.Rollback()
 
+		err = txFunc(tx)
+		if shouldRetry(err) {
+			continue
+		} else if err != nil {
+			return err
+		}
+
+		err = tx.Commit()
+		if shouldRetry(err) {
+			continue
+		} else if err != nil {
+			err = fmt.Errorf("Commiting transaction: %v", err)
+		}
+		return err
+	}
+}
+
+func openDb(filename string) (*sqlx.DB, error) {
 	db, err := sqlx.Open("sqlite3", fmt.Sprintf("file:%s?cache=shared&_foreign_keys=on", filename))
 	if err != nil {
 		return nil, err
@@ -123,6 +149,51 @@ func upgradeDbv1(ext sqlx.Ext) error {
 	if err != nil {
 		return errOrRetry("Adding event_locations:locationdescription: %v", err)
 	}
+
+	// event_slots and event_schedule have more substantial changes;
+	// just drop the old table and make a new one.  First make sure we
+	// aren't dropping any slots.  (Schedule we can just throw away.)
+	{
+		var slotcount int
+		err = sqlx.Get(ext, &slotcount, `select count(*) from event_slots`)
+		if err != nil {
+			return errOrRetry("Getting slot count for upgrade", err)
+		}
+		if slotcount != 0 {
+			return fmt.Errorf("%d slots present, cannot upgrade.  Delete slots and try updrade again.",
+				slotcount)
+		}
+	}
+
+	_, err = ext.Exec(`
+drop table event_slots;
+CREATE TABLE event_slots(
+    slotid   text primary key,
+    slotidx  integer not null, /* Order within a day */
+    dayid    integer not null,
+    slottime string not null,  /* Output of time.MarshalText() */
+    isbreak  boolean not null,
+    islocked boolean not null,
+    foreign  key(dayid) references event_days(dayid),
+    unique(dayid, slotidx));`)
+	if err != nil {
+		return errOrRetry("Upgrading event_slots table", err)
+	}
+
+	_, err = ext.Exec(`
+drop table event_schedule;
+CREATE TABLE event_schedule(
+    discussionid text not null,
+    slotid       text not null,
+    locationid   integer not null,
+    foreign key(discussionid) references event_discussions(discussionid),
+    foreign key(slotid) references event_slots(slotid),
+    foreign key(locationid) references event_locations(locationid),
+    unique(slotid, locationid));`)
+	if err != nil {
+		return errOrRetry("Upgrading event_schedule table", err)
+	}
+
 	return nil
 }
 
@@ -196,13 +267,14 @@ CREATE TABLE event_days(
 
 	_, err = ext.Exec(`
 CREATE TABLE event_slots(
-    slotid   integer primary key,
+    slotid   text primary key,
+    slotidx  integer not null, /* Order within a day */
     dayid    integer not null,
-    slottime string not null, /* Output of time.MarshalText() */
+    slottime string not null,  /* Output of time.MarshalText() */
     isbreak  boolean not null,
     islocked boolean not null,
     foreign  key(dayid) references event_days(dayid),
-    unique(dayid, slotid))`)
+    unique(dayid, slotidx))`)
 	if err != nil {
 		return errOrRetry("Creating table event_slots", err)
 	}
@@ -214,7 +286,7 @@ CREATE TABLE event_schedule(
     locationid   integer not null,
     foreign key(discussionid) references event_discussions(discussionid),
     foreign key(slotid) references event_slots(slotid),
-    foreign key(locationid) references event_slots(locationid),
+    foreign key(locationid) references event_locations(locationid),
     unique(slotid, locationid))`)
 	if err != nil {
 		return errOrRetry("Creating table event_schedule", err)
