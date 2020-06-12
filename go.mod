@@ -3,6 +3,7 @@ module github.com/gwd/session-scheduler
 require (
 	github.com/corpix/uarand v0.1.0 // indirect
 	github.com/hako/durafmt v0.0.0-20190612201238-650ed9f29a84
+	github.com/hjson/hjson-go v3.0.1+incompatible
 	github.com/icrowley/fake v0.0.0-20180203215853-4178557ae428
 	github.com/jmoiron/sqlx v1.2.1-0.20200324155115-ee514944af4b
 	github.com/julienschmidt/httprouter v1.2.0

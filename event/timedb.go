@@ -52,6 +52,11 @@ func Date(year int, month time.Month, day, hour, min, sec, nsec int, loc *time.L
 	return Time{Time: time.Date(year, month, day, hour, min, sec, nsec, loc)}
 }
 
+func ParseInLocation(layout, value string, loc TZLocation) (Time, error) {
+	t, err := time.ParseInLocation(layout, value, loc.Location)
+	return Time{Time: t}, err
+}
+
 func (t *Time) Scan(src interface{}) error {
 	var ts []byte
 

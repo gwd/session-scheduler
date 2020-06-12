@@ -100,6 +100,8 @@ func main() {
 		serve()
 	case "schedule":
 		MakeSchedule(false)
+	case "editTimetable":
+		EditTimetable(locstring)
 	default:
 		log.Fatalf("Unknown command: %s", cmd)
 	}
