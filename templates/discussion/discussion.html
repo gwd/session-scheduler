@@ -173,11 +173,17 @@
 {{define "discussion/form"}}
 <div class="form-group">
   <label for="newTitle">Title</label>
-  <input type="text" name="title" id="newTitle" class="form-control" value="{{.Title}}" placeholder="Title of session">
+  <input type="text" name="title" id="newTitle" class="form-control"
+  value="{{.Title}}" placeholder="Title of session">
+    <small>Add [TALK] to the beginning if this is
+    intended to be primarily a talk</small>
+
 </div>
 <div class="form-group">
   <label for="newDescription">Session description</label>
-  <textarea id="newDescription" class="form-control"  name="description" placeholder="What do you want to talk  about?"rows="4">{{.DescriptionRaw}}</textarea>
+  <textarea id="newDescription" class="form-control"
+  name="description" placeholder="What do you want to talk about?"rows="4">{{.DescriptionRaw}}</textarea>
+  <small>Github-style Markdown is supported for formatting</small>
 </div>
 {{if .IsAdmin}}
 <fieldset>
