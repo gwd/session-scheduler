@@ -194,6 +194,17 @@ CREATE TABLE event_schedule(
 		return errOrRetry("Upgrading event_schedule table", err)
 	}
 
+	_, err = ext.Exec(`
+CREATE TABLE event_discussions_possible_slots(
+    discussionid text not null,
+    slotid       text not null,
+    foreign key(discussionid) references event_discussions(discussionid),
+    foreign key(slotid) references event_slots(slotid),
+    unique(discussionid, slotid))`)
+	if err != nil {
+		return errOrRetry("Creating table event_discussions_possible_slots", err)
+	}
+
 	return nil
 }
 
@@ -277,6 +288,17 @@ CREATE TABLE event_slots(
     unique(dayid, slotidx))`)
 	if err != nil {
 		return errOrRetry("Creating table event_slots", err)
+	}
+
+	_, err = ext.Exec(`
+CREATE TABLE event_discussions_possible_slots(
+    discussionid text not null,
+    slotid       text not null,
+    foreign key(discussionid) references event_discussions(discussionid),
+    foreign key(slotid) references event_slots(slotid),
+    unique(discussionid, slotid))`)
+	if err != nil {
+		return errOrRetry("Creating table event_discussions_possible_slots", err)
 	}
 
 	_, err = ext.Exec(`

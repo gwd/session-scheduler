@@ -42,6 +42,15 @@ type Timetable struct {
 	Days []TimetableDay
 }
 
+// DisplaySlot used both for discussion possible slots, as well as for
+// schedule locked slots.
+type DisplaySlot struct {
+	SlotID      SlotID
+	SlotTime    Time
+	TimeDisplay string
+	Checked     bool
+}
+
 func TimetableGetLockedSlots() []DisplaySlot {
 	// FIXME: Timetable
 	return nil

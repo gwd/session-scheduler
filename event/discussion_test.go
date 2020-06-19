@@ -252,7 +252,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		}
 
 		// Look for that discussion by did
-		gotdisc, err := DiscussionFindById(discussions[i].DiscussionID)
+		gotdisc, err := DiscussionFindByIdFull(discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Finding the discussion we just created by ID: %v", err)
 			return
@@ -261,7 +261,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			t.Errorf("Couldn't find just-created discussion by id %s!", discussions[i].DiscussionID)
 			return
 		}
-		if !compareDiscussions(&discussions[i], gotdisc, t) {
+		if !compareDiscussions(&discussions[i], &gotdisc.Discussion, t) {
 			t.Errorf("Discussion data mismatch")
 			return
 		}
@@ -276,7 +276,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		// Try to find a non-existent ID.  Should return nil for both.
 		var fakedid DiscussionID
 		fakedid.generate()
-		gotdisc, err := DiscussionFindById(fakedid)
+		gotdisc, err := DiscussionFindByIdFull(fakedid)
 		if err != nil {
 			t.Errorf("Unexpected error finding non-existent discussion: %v", err)
 			return
@@ -310,7 +310,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err := DiscussionFindById(discussions[i].DiscussionID)
+		gotdisc, err := DiscussionFindByIdFull(discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
@@ -324,11 +324,11 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			copy.IsPublic = false
 		}
 
-		if !compareDiscussions(gotdisc, &copy, t) {
+		if !compareDiscussions(&gotdisc.Discussion, &copy, t) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
-		discussions[i] = *gotdisc
+		discussions[i] = gotdisc.Discussion
 
 		//
 		// Invert SetPublic
@@ -339,7 +339,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err = DiscussionFindById(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
@@ -355,11 +355,11 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			copy.ApprovedDescription = ""
 		}
 
-		if !compareDiscussions(gotdisc, &copy, t) {
+		if !compareDiscussions(&gotdisc.Discussion, &copy, t) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
-		discussions[i] = *gotdisc
+		discussions[i] = gotdisc.Discussion
 
 		//
 		// Second "Normal" title / discussion update
@@ -375,7 +375,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err = DiscussionFindById(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
@@ -389,11 +389,11 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			copy.IsPublic = false
 		}
 
-		if !compareDiscussions(gotdisc, &copy, t) {
+		if !compareDiscussions(&gotdisc.Discussion, &copy, t) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
-		discussions[i] = *gotdisc
+		discussions[i] = gotdisc.Discussion
 
 		//
 		// Change owner
@@ -411,7 +411,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err = DiscussionFindById(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
@@ -425,11 +425,11 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			copy.IsPublic = false
 		}
 
-		if !compareDiscussions(gotdisc, &copy, t) {
+		if !compareDiscussions(&gotdisc.Discussion, &copy, t) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
-		discussions[i] = *gotdisc
+		discussions[i] = gotdisc.Discussion
 
 		//
 		// Bad input: No title, no description
@@ -454,14 +454,14 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			}
 		}
 
-		gotdisc, err = DiscussionFindById(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
 		}
 
 		// Nothing should have changed
-		if !compareDiscussions(gotdisc, &discussions[i], t) {
+		if !compareDiscussions(&gotdisc.Discussion, &discussions[i], t) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
@@ -479,14 +479,14 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err = DiscussionFindById(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
 		}
 
 		// Nothing should have changed
-		if !compareDiscussions(gotdisc, &discussions[i], t) {
+		if !compareDiscussions(&gotdisc.Discussion, &discussions[i], t) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
@@ -500,8 +500,8 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	t.Logf("Testing DiscussionIterate")
 	{
 		i := 0
-		err := DiscussionIterate(func(d *Discussion) error {
-			if !compareDiscussions(&discussions[i], d, t) {
+		err := DiscussionIterate(func(d *DiscussionFull) error {
+			if !compareDiscussions(&discussions[i], &d.Discussion, t) {
 				return fmt.Errorf("DiscussionIterate mismatch")
 			}
 			i++
@@ -519,8 +519,8 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	t.Logf("Testing DiscussionIterate error reporting")
 	{
 		i := 0
-		err := DiscussionIterate(func(d *Discussion) error {
-			if !compareDiscussions(&discussions[i], d, t) {
+		err := DiscussionIterate(func(d *DiscussionFull) error {
+			if !compareDiscussions(&discussions[i], &d.Discussion, t) {
 				return fmt.Errorf("DiscussionIterate mismatch")
 			}
 			i++
@@ -546,7 +546,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		for uidx := range users {
 			uid := users[uidx].UserID
 			i := 0
-			err := DiscussionIterateUser(uid, func(d *Discussion) error {
+			err := DiscussionIterateUser(uid, func(d *DiscussionFull) error {
 				if d.Owner != uid {
 					return fmt.Errorf("Got user %v, expecting %v!", d.Owner, uid)
 				}
@@ -581,7 +581,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		{
 			i := 0
 			stopErr := fmt.Errorf("Done")
-			err := DiscussionIterateUser(uid, func(d *Discussion) error {
+			err := DiscussionIterateUser(uid, func(d *DiscussionFull) error {
 				if d.Owner != uid {
 					return fmt.Errorf("Got user %v, expecting %v!", d.Owner, uid)
 				}
@@ -611,7 +611,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			}
 
 			// Try finding the discussion
-			gotdisc, err := DiscussionFindById(did)
+			gotdisc, err := DiscussionFindByIdFull(did)
 			if err != nil {
 				t.Errorf("Finding deleted discussion: %v", err)
 				return
@@ -637,7 +637,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 				return
 			}
 
-			err = DiscussionIterateUser(uid, func(d *Discussion) error {
+			err = DiscussionIterateUser(uid, func(d *DiscussionFull) error {
 				return fmt.Errorf("Shouldn't be called!")
 			})
 			if err != nil {
@@ -648,7 +648,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	}
 
 	for didx := range discussions {
-		gotdisc, err := DiscussionFindById(discussions[didx].DiscussionID)
+		gotdisc, err := DiscussionFindByIdFull(discussions[didx].DiscussionID)
 		if err != nil {
 			t.Errorf("DiscussionFindById for (allegedly)-deleted discussion: %v", err)
 			return
@@ -660,7 +660,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	}
 
 	{
-		err := DiscussionIterate(func(d *Discussion) error {
+		err := DiscussionIterate(func(d *DiscussionFull) error {
 			return fmt.Errorf("Shouldn't be called!")
 		})
 		if err != nil {

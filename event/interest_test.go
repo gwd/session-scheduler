@@ -310,8 +310,8 @@ func testUnitInterest(t *testing.T) (exit bool) {
 		// First, assign all of user N's discussions to user 0.
 		uidx := len(users) - 1
 		toDelete := []Discussion{}
-		err := DiscussionIterateUser(users[uidx].UserID, func(d *Discussion) error {
-			toDelete = append(toDelete, *d)
+		err := DiscussionIterateUser(users[uidx].UserID, func(df *DiscussionFull) error {
+			toDelete = append(toDelete, df.Discussion)
 			return nil
 		})
 		for i := range toDelete {

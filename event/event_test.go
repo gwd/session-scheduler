@@ -120,4 +120,8 @@ func TestEvent(t *testing.T) {
 	if testUnitLocation(t) {
 		return
 	}
+
+	if testUnitPossibleSlots(t) {
+		return
+	}
 }

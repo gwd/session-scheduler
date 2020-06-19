@@ -20,7 +20,7 @@ CREATE TABLE event_interest(
 
 CREATE TABLE event_discussions(
     discussionid        text primary key,
-    owner               text not null,
+    owner               text not null, /* FIXME: Would be better as ownerid */
     title               text not null,
     description         text,
     approvedtitle       text,

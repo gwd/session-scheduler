@@ -167,8 +167,15 @@ func (user *User) SetInterest(disc *Discussion, interest int) error {
 	}
 }
 
+func userGetInterestTx(q sqlx.Queryer, uid UserID, did DiscussionID, interest *int) error {
+	return sqlx.Get(q, interest, `
+		select interest
+            from event_interest
+            where userid=? and discussionid=?`,
+		uid, did)
+}
+
 func (user *User) GetInterest(disc *Discussion) (int, error) {
-	var interest int
 	// NB this will return 0 even for non-existent users and
 	// discussions.  If we wanted to change this, we'd have to return
 	// an error code.  We'd also need to either set interest to 0
@@ -178,22 +185,17 @@ func (user *User) GetInterest(disc *Discussion) (int, error) {
 	// or setting up a query such that we could distinguish between
 	// "user/discussion pair exists but has no interest entry" and
 	// "user/discussion pair does not exist".
-	for {
-		err := event.Get(&interest, `
-		    select interest
-                from event_interest
-                where userid=? and discussionid=?`,
-			user.UserID, disc.DiscussionID)
-		switch {
-		case shouldRetry(err):
-			continue
-		case err != nil && err != sql.ErrNoRows:
-			log.Printf("ERROR getting interest: %v", err)
-			return 0, err
-		default:
-			return interest, nil
+	var interest int
+	err := txLoop(func(eq sqlx.Ext) error {
+		err := userGetInterestTx(eq, user.UserID, disc.DiscussionID, &interest)
+		if err == sql.ErrNoRows {
+			err = nil
+		} else if err != nil {
+			err = errOrRetry("Error getting interest for user", err)
 		}
-	}
+		return err
+	})
+	return interest, err
 }
 
 func passwordHash(newPassword string) (string, error) {
@@ -411,20 +413,23 @@ func DeleteUser(userid UserID) error {
 	}
 }
 
+func userGetTx(q sqlx.Queryer, userid UserID, user *User) error {
+	return sqlx.Get(q, user,
+		`select * from event_users where userid=?`,
+		userid)
+}
+
 func UserFind(userid UserID) (*User, error) {
-	var user User
-	for {
-		err := event.Get(&user, `select * from event_users where userid=?`,
-			userid)
-		switch {
-		case shouldRetry(err):
-			continue
-		case err == sql.ErrNoRows:
-			return nil, nil
-		default:
-			return &user, err
+	user := &User{}
+	err := txLoop(func(eq sqlx.Ext) error {
+		err := userGetTx(eq, userid, user)
+		if err == sql.ErrNoRows {
+			user = nil
+			err = nil
 		}
-	}
+		return err
+	})
+	return user, err
 }
 
 // Return nil for user not present

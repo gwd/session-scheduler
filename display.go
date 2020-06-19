@@ -49,30 +49,21 @@ func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay)
 }
 
 type DiscussionDisplay struct {
-	DiscussionID   event.DiscussionID
-	Title          string
-	Description    template.HTML
-	DescriptionRaw string
-	Owner          *event.User
-	// Interested     []*event.User // Doesn't seem to be used
-	IsPublic bool
-	// IsUser: Used to determine whether to display 'interest'
-	IsUser bool
-	// MayEdit: Used to determine whether to show edit / delete buttons
-	MayEdit bool
-	// IsAdmin: Used to determine whether to show slot scheduling options
-	IsAdmin       bool
-	Interest      int
-	Location      event.Location
-	Time          string
-	IsFinal       bool
-	PossibleSlots []event.DisplaySlot
-	// AllUsers: Used to generate a dropdown for admins to change the
-	// owner.  Only geneated for admin user.
+	event.DiscussionFull
+
+	DescriptionRaw  string
+	DescriptionHTML template.HTML
+	TitleDisplay    string
+	IsUser          bool
+	MayEdit         bool
+	IsAdmin         bool
+	TimeDisplay     string
+	Interest        int
+
 	AllUsers []event.User
 }
 
-func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDisplay {
+func DiscussionGetDisplay(d *event.DiscussionFull, cur *event.User) *DiscussionDisplay {
 	showMain := true
 
 	// Only display a discussion if:
@@ -88,25 +79,19 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 	}
 
 	dd := &DiscussionDisplay{
-		DiscussionID: d.DiscussionID,
-		IsPublic:     d.IsPublic,
+		DiscussionFull: *d,
 	}
 
 	if showMain {
-		dd.Title = d.Title
+		dd.TitleDisplay = d.Title
 		dd.DescriptionRaw = d.Description
 	} else {
 		dd.Title = d.ApprovedTitle
 		dd.DescriptionRaw = d.ApprovedDescription
 	}
 
-	dd.Description = ProcessText(dd.DescriptionRaw)
+	dd.DescriptionHTML = ProcessText(dd.DescriptionRaw)
 
-	dd.Location = d.Location()
-
-	dd.IsFinal, dd.Time = d.Slot()
-
-	dd.Owner, _ = event.UserFind(d.Owner)
 	if cur != nil {
 		if cur.Username != event.AdminUsername {
 			dd.IsUser = true
@@ -115,14 +100,16 @@ func DiscussionGetDisplay(d *event.Discussion, cur *event.User) *DiscussionDispl
 		dd.MayEdit = cur.MayEditDiscussion(d)
 		if cur.IsAdmin {
 			dd.IsAdmin = true
-			//dd.PossibleSlots = event.TimetableFillDisplaySlots(d.PossibleSlots)
 			var err error
 			dd.AllUsers, err = event.UserGetAll()
 			if err != nil {
 				// Report error but continue
 				log.Printf("INTERNAL ERROR: Getting all users: %v", err)
 			}
+		} else {
+			dd.PossibleSlots = nil
 		}
+
 	}
 	return dd
 }

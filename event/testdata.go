@@ -26,7 +26,7 @@ func TestGenerateInterest() {
 		} else {
 			log.Printf("User %s will be themselves", user.Username)
 		}
-		DiscussionIterate(func(disc *Discussion) error {
+		DiscussionIterate(func(disc *DiscussionFull) error {
 			r := rand.Intn(100)
 			interest := 0
 
@@ -49,7 +49,7 @@ func TestGenerateInterest() {
 
 			log.Printf("Setting uid %s interest in discussion %s to %d",
 				user.Username, disc.Title, interest)
-			if err := user.SetInterest(disc, interest); err != nil {
+			if err := user.SetInterest(&disc.Discussion, interest); err != nil {
 				log.Fatalf("Setting interest: %v", err)
 			}
 			return nil

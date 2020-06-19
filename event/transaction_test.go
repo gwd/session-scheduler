@@ -125,7 +125,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			}
 
 			// Look for that discussion by did
-			gotdisc, err := DiscussionFindById(disc.DiscussionID)
+			gotdisc, err := DiscussionFindByIdFull(disc.DiscussionID)
 			if err != nil {
 				t.Errorf("ERROR: Finding the discussion we just created by ID: %v", err)
 				return
@@ -134,7 +134,7 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 				t.Errorf("ERROR: Couldn't find just-created discussion by id %s!", disc.DiscussionID)
 				return
 			}
-			if !compareDiscussions(&disc, gotdisc, t) {
+			if !compareDiscussions(&disc, &gotdisc.Discussion, t) {
 				t.Errorf("ERROR: Discussion data mismatch")
 				return
 			}
@@ -142,8 +142,8 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 
 		// Get all discussions & set an interest in some of them
 		discussions := []Discussion{}
-		err = DiscussionIterate(func(d *Discussion) error {
-			discussions = append(discussions, *d)
+		err = DiscussionIterate(func(d *DiscussionFull) error {
+			discussions = append(discussions, d.Discussion)
 			return nil
 		})
 		if err != nil {
@@ -188,8 +188,8 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 
 		// Get discussions for this user and perform some operations on them
 		discussions = []Discussion{}
-		err = DiscussionIterateUser(user.UserID, func(d *Discussion) error {
-			discussions = append(discussions, *d)
+		err = DiscussionIterateUser(user.UserID, func(df *DiscussionFull) error {
+			discussions = append(discussions, df.Discussion)
 			return nil
 		})
 		if err != nil {

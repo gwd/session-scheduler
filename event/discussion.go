@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/gwd/session-scheduler/id"
 )
 
@@ -61,12 +63,13 @@ type Discussion struct {
 	IsPublic bool
 }
 
-// Annotated for display to an individual user
-
-type DisplaySlot struct {
-	Label   string
-	Index   int
-	Checked bool
+type DiscussionFull struct {
+	Discussion
+	OwnerInfo     User
+	Location      Location
+	Time          Time
+	IsFinal       bool
+	PossibleSlots []DisplaySlot
 }
 
 func (d *Discussion) GetURL() string {
@@ -333,6 +336,63 @@ func DiscussionUpdate(disc *Discussion) error {
 	}
 }
 
+// No entries at all means all entries are OK
+func possibleSlotsDBToDisplay(pslots []DisplaySlot) {
+	anyTrue := false
+	for i := range pslots {
+		anyTrue = anyTrue || pslots[i].Checked
+	}
+	if !anyTrue {
+		for i := range pslots {
+			pslots[i].Checked = true
+		}
+	}
+}
+
+func DiscussionSetPossibleSlots(discussionid DiscussionID, pslots []DisplaySlot) error {
+	checked := []struct {
+		DiscussionID DiscussionID
+		SlotID       SlotID
+	}{}
+
+	// Make a list of all possible slots
+	for i := range pslots {
+		if pslots[i].Checked {
+			checked = append(checked, struct {
+				DiscussionID DiscussionID
+				SlotID       SlotID
+			}{
+				DiscussionID: discussionid,
+				SlotID:       pslots[i].SlotID,
+			})
+		}
+	}
+
+	err := txLoop(func(eq sqlx.Ext) error {
+		// Always drop all restrictions
+		_, err := eq.Exec(`
+            delete from event_discussions_possible_slots
+                where discussionid=?`, discussionid)
+		if err != nil {
+			return errOrRetry("Dropping discussion slot restrictions", err)
+		}
+
+		// Only need to add any back if there are negative values
+		if len(checked) < len(pslots) {
+			_, err = sqlx.NamedExec(eq, `
+                insert into event_discussions_possible_slots
+                    values(:discussionid, :slotid)`, checked)
+			if err != nil {
+				return errOrRetry("Adding new slots", err)
+			}
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 // Sets the given discussion ID to public or private.
 //
 // If public is true, it copies the title and description into the
@@ -458,72 +518,111 @@ func MakePossibleSlots(len int) []bool {
 	return pslots
 }
 
-func DiscussionFindById(discussionid DiscussionID) (*Discussion, error) {
-	disc := &Discussion{}
-	for {
-		err := event.Get(disc,
+func discussionFindByIdFullTx(q sqlx.Queryer, did DiscussionID) (*DiscussionFull, error) {
+	var disc *DiscussionFull
+	err := txLoop(func(eq sqlx.Ext) error {
+		disc = &DiscussionFull{}
+		err := sqlx.Get(eq, disc,
 			`select * from event_discussions where discussionid = ?`,
-			discussionid)
-		switch {
-		case shouldRetry(err):
-			continue
-		case err == sql.ErrNoRows:
-			return nil, nil
-		default:
-			return disc, err
+			did)
+		if err == sql.ErrNoRows {
+			disc = nil
+			return nil
+		} else if err != nil {
+			return errOrRetry("Getting discussion data", err)
 		}
-	}
+
+		err = userGetTx(eq, disc.Owner, &disc.OwnerInfo)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("INTERNAL ERROR: Could not get info for owner %v!", disc.Owner)
+		} else if err != nil {
+			return errOrRetry("Getting discussion owner info", err)
+		}
+
+		// Get the schedule info
+		row := eq.QueryRowx(`
+            select locationid,
+                   locationname,
+                   locationdescription,
+                   isplace,
+                   capacity,
+                   slottime,
+                   islocked
+                from event_locations
+                    natural join event_schedule
+                    natural join event_slots
+                where discussionid=?`, disc.DiscussionID)
+		err = row.Scan(&disc.Location.LocationID,
+			&disc.Location.LocationName,
+			&disc.Location.LocationDescription,
+			&disc.Location.IsPlace,
+			&disc.Location.Capacity,
+			&disc.Time,
+			&disc.IsFinal)
+		if err != nil && err != sql.ErrNoRows {
+			return errOrRetry("Getting schedule information for discussion", err)
+		}
+
+		err = sqlx.Select(q, &disc.PossibleSlots, `
+		    select slotid,
+		           slottime,
+		           (discussionid is not null) as checked
+		        from event_slots natural left outer join
+                     (select * 
+                        from event_discussions_possible_slots
+		                where discussionid=?)
+                order by dayid, slotidx`, disc.DiscussionID)
+		if err != nil && err != sql.ErrNoRows {
+			return errOrRetry("Getting possible slots for discussion", err)
+		}
+
+		possibleSlotsDBToDisplay(disc.PossibleSlots)
+
+		return nil
+	})
+	return disc, err
 }
 
-func discussionIterateQuery(query string, args []interface{}, f func(*Discussion) error) error {
-	for {
-		rows, err := event.Queryx(query, args...)
-		switch {
-		case shouldRetry(err):
-			continue
-		case err != nil:
-			return err
+func DiscussionFindByIdFull(discussionid DiscussionID) (*DiscussionFull, error) {
+	return discussionFindByIdFullTx(event.DB, discussionid)
+}
+
+func discussionIterateQuery(query string, args []interface{}, f func(*DiscussionFull) error) error {
+	return txLoop(func(eq sqlx.Ext) error {
+		// First, get a list of all the appropriate discussion IDs
+		dids := []DiscussionID{}
+		err := sqlx.Select(eq, &dids, query, args...)
+		if err != nil {
+			return errOrRetry("Getting list of discussions to process", err)
 		}
-		defer rows.Close()
-		processed := 0
-		for rows.Next() {
-			var disc Discussion
-			if err := rows.StructScan(&disc); err != nil {
-				return err
-			}
-			err = f(&disc)
+
+		for _, did := range dids {
+			// For each discussion, load up "full" discussion information...
+			disc, err := discussionFindByIdFullTx(eq, did)
 			if err != nil {
 				return err
 			}
-			processed++
-		}
-
-		// For some reason we often get the transaction conflict error
-		// from rows.Err() rather than from the original Queryx.
-		// Retrying is fine as long as we haven't actually processed
-		// any rows yet.  If we have, throw an error.  (There's an
-		// argument to makign this a panic() instead.)
-		err = rows.Err()
-		if shouldRetry(err) {
-			if processed == 0 {
-				rows.Close()
-				continue
+			err = f(disc)
+			if err != nil {
+				// FIXME: This may return a retry, in which case
+				// "accumulative" operations will get duplicate
+				// entries
+				return err
 			}
-			err = fmt.Errorf("INTERNAL ERROR: Got transaction retry error after processing %d callbacks",
-				processed)
 		}
-
-		return err
-	}
+		return nil
+	})
 }
 
-func DiscussionIterate(f func(*Discussion) error) error {
-	return discussionIterateQuery(`select * from event_discussions order by discussionid`, nil, f)
+func DiscussionIterate(f func(*DiscussionFull) error) error {
+	return discussionIterateQuery(`select discussionid from event_discussions order by discussionid`, nil, f)
 }
 
 // FIXME: This will simply do nothing if the userid doesn't exist.  It
 // would be nice for the caller to distinguish between "User does not
 // exist" and "User has no discussions".
-func DiscussionIterateUser(userid UserID, f func(*Discussion) error) (err error) {
-	return discussionIterateQuery(`select * from event_discussions where owner=? order by discussionid`, []interface{}{userid}, f)
+func DiscussionIterateUser(userid UserID, f func(*DiscussionFull) error) (err error) {
+	return discussionIterateQuery(
+		`select discussionid from event_discussions where owner=? order by discussionid`,
+		[]interface{}{userid}, f)
 }
