@@ -518,14 +518,18 @@ func UserIterate(f func(u *User) error) error {
 	}
 }
 
-func UserGetAll() (users []User, err error) {
-	for {
-		err = event.Select(&users, `select * from event_users order by userid`)
-		switch {
-		case shouldRetry(err):
-			continue
-		default:
-			return users, err
+func userGetAllTx(q sqlx.Queryer, usersp *[]User) error {
+	return sqlx.Select(q, usersp, `select * from event_users order by userid`)
+}
+
+func UserGetAll() ([]User, error) {
+	var users []User
+	err := txLoop(func(eq sqlx.Ext) error {
+		err := userGetAllTx(eq, &users)
+		if err != nil {
+			return errOrRetry("Getting list of all users", err)
 		}
-	}
+		return nil
+	})
+	return users, err
 }

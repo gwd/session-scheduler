@@ -29,6 +29,7 @@ CREATE TABLE event_discussions(
     foreign key(owner) references event_users(userid),
     unique(title));
 
+/* If a discussion has no possible slots, that means there are no restrictions. */
 CREATE TABLE event_discussions_possible_slots(
     discussionid text not null,
     slotid       text not null,
