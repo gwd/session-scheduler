@@ -21,8 +21,9 @@ type TimetableDiscussion struct {
 }
 
 type TimetableSlot struct {
-	Time    Time // NB: Must duplicate this so that sqlx's StructScan doesn't get confused
-	IsBreak bool
+	Time        Time // NB: Must duplicate this so that sqlx's StructScan doesn't get confused
+	TimeDisplay string
+	IsBreak     bool
 
 	// Which room will each discussion be in?
 	// (Separate because placement and scheduling are separate steps)
@@ -46,7 +47,11 @@ func TimetableGetLockedSlots() []DisplaySlot {
 	return nil
 }
 
-func GetTimetable() (tt Timetable, err error) {
+// GetTimetable will get a structured form of the entire timetable.
+// If tfmt is non-empty, TimetableStot.TimeDisplay will be formatted
+// with the specified time.  If tzl is non-nil, the location will be
+// converted to that location before displaying.
+func GetTimetable(tfmt string, tzl *TZLocation) (tt Timetable, err error) {
 	err = txLoop(func(eq sqlx.Ext) error {
 		err := sqlx.Select(eq, &tt.Days,
 			`select dayname from event_days order by dayid asc`)
@@ -65,6 +70,16 @@ func GetTimetable() (tt Timetable, err error) {
                      order by slotidx asc`, dayID)
 			if err != nil {
 				return errOrRetry("Getting slots for one day", err)
+			}
+
+			if tfmt != "" {
+				for j := range td.Slots {
+					t := td.Slots[j].Time.Time
+					if tzl.Location != nil {
+						t = t.In(tzl.Location)
+					}
+					td.Slots[j].TimeDisplay = t.Format(tfmt)
+				}
 			}
 		}
 

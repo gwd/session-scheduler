@@ -25,7 +25,9 @@ const (
 	VerificationCode     = "ServeVerificationCode"
 )
 
-const DefaultLocation = "Europe/Berlin"
+var DefaultLocation = "Europe/Berlin"
+
+var DefaultLocationTZ event.TZLocation
 
 func main() {
 	var err error
@@ -85,6 +87,12 @@ func main() {
 		log.Fatalf("Getting default location: %v", err)
 	}
 
+	DefaultLocation = locstring
+	DefaultLocationTZ, err = event.LoadLocation(locstring)
+	if err != nil {
+		log.Fatalf("Couldn't load location %s: %v", locstring, err)
+	}
+
 	err = event.Load(event.EventOptions{AdminPwd: *adminPwd, DefaultLocation: locstring})
 	if err != nil {
 		log.Fatalf("Loading schedule data: %v", err)
@@ -101,7 +109,7 @@ func main() {
 	case "schedule":
 		MakeSchedule(false)
 	case "editTimetable":
-		EditTimetable(locstring)
+		EditTimetable()
 	default:
 		log.Fatalf("Unknown command: %s", cmd)
 	}

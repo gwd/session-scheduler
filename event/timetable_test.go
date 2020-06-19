@@ -60,7 +60,7 @@ func testUnitTimetable(t *testing.T) (exit bool) {
 		return
 	}
 
-	gottt, err := GetTimetable()
+	gottt, err := GetTimetable("", nil)
 	if err != nil {
 		t.Errorf("ERROR Getting empty timetable: %v", err)
 		return
@@ -93,7 +93,7 @@ func testUnitTimetable(t *testing.T) (exit bool) {
 		t.Errorf("ERROR Basic TimetableSet: %v", err)
 		return
 	}
-	gottt, err = GetTimetable()
+	gottt, err = GetTimetable("", nil)
 	if err != nil {
 		t.Errorf("ERROR Getting non-empty timetable: %v", err)
 		return
@@ -110,7 +110,7 @@ func testUnitTimetable(t *testing.T) (exit bool) {
 		t.Errorf("ERROR Basic TimetableSet update: %v", err)
 		return
 	}
-	gottt, err = GetTimetable()
+	gottt, err = GetTimetable("", nil)
 	if err != nil {
 		t.Errorf("ERROR Getting non-empty timetable: %v", err)
 		return
@@ -143,7 +143,7 @@ func testUnitTimetable(t *testing.T) (exit bool) {
 		t.Errorf("ERROR Day / slot add failed: %v", err)
 		return
 	}
-	gottt, err = GetTimetable()
+	gottt, err = GetTimetable("", nil)
 	if err != nil {
 		t.Errorf("ERROR Getting non-empty timetable: %v", err)
 		return
@@ -162,7 +162,7 @@ func testUnitTimetable(t *testing.T) (exit bool) {
 		t.Errorf("ERROR Day / slot removal failed: %v", err)
 		return
 	}
-	gottt, err = GetTimetable()
+	gottt, err = GetTimetable("", nil)
 	if err != nil {
 		t.Errorf("ERROR Getting non-empty timetable: %v", err)
 		return

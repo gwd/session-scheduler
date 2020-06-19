@@ -31,15 +31,15 @@ var header = `// Location is the normal timezone location; e.g., 'Europe/Berlin'
 
 var format = "2006 Jan 2 15:04"
 
-func EditTimetable(locstring string) {
+func EditTimetable() {
 	// Get timetable.  If it's not empty, marshal it to json (perhaps
 	// with a comment at the top?).  Otherwise, use the starter schedule
-	tt, err := event.GetTimetable()
+	tt, err := event.GetTimetable("", nil)
 	if err != nil {
 		log.Fatalf("Getting timetable: %v")
 	}
 
-	var ett TimetableEdit
+	ett := TimetableEdit{Location: DefaultLocation}
 
 	if len(tt.Days) > 0 {
 		// If the timetable is non-empty, copy from tt into ett
@@ -57,17 +57,13 @@ func EditTimetable(locstring string) {
 		}
 	} else {
 		// Set up an example timetable
-		ett = TimetableEdit{
-			locstring,
-			[]TimetableEditDay{
-				{"Monday",
-					[]TimetableEditSlot{
-						{"2020 Jul 6 14:00", false},
-						{"2020 Jul 6 14:30", false},
-						{"2020 Jul 6 15:00", true},
-						{"2020 Jul 6 15:30", false}}},
-			},
-		}
+		ett.Days = []TimetableEditDay{
+			{"Monday",
+				[]TimetableEditSlot{
+					{"2020 Jul 6 14:00", false},
+					{"2020 Jul 6 14:30", false},
+					{"2020 Jul 6 15:00", true},
+					{"2020 Jul 6 15:30", false}}}}
 	}
 
 	outb, err := hjson.MarshalWithOptions(ett, hjson.EncoderOptions{BracesSameLine: true, Eol: "\n", IndentBy: "  "})
