@@ -169,7 +169,7 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		return
 	case "setLocked":
 		r.ParseForm()
-		locked, err := FormCheckToBool(r.Form["locked"])
+		locked, err := FormCheckToSlotID(r.Form["locked"])
 		if err != nil {
 			return
 		}

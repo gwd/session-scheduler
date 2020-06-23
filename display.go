@@ -63,6 +63,41 @@ type DiscussionDisplay struct {
 	AllUsers []event.User
 }
 
+func SlotsSetTimeDisplay(slots []event.DisplaySlot, fmt string) {
+	for i := range slots {
+		slots[i].TimeDisplay = slots[i].SlotTime.Format(fmt)
+	}
+}
+
+const slotTimeFormat = "Mon 3:04 PM 2 Jan"
+
+// DiscussionGetDisplayRetry returns a DiscussionDisplay suitable for
+// passing back into a new discussion template after a validation
+// error.  We only need Title and DescriptionRaw for normal users.
+// Admins additionally need AllUsers and DiscussionFull.PossibleSlots.
+func DiscussionGetDisplayRetry(df *event.DiscussionFull, cur *event.User) *DiscussionDisplay {
+	dd := &DiscussionDisplay{
+		DiscussionFull: *df,
+		DescriptionRaw: df.Description,
+	}
+
+	if cur != nil && cur.IsAdmin {
+		dd.IsAdmin = true
+		var err error
+		dd.AllUsers, err = event.UserGetAll()
+		if err != nil {
+			// Report error but continue
+			log.Printf("INTERNAL ERROR: Getting all users: %v", err)
+		}
+
+		SlotsSetTimeDisplay(dd.PossibleSlots, slotTimeFormat)
+	} else {
+		dd.PossibleSlots = nil
+	}
+
+	return dd
+}
+
 func DiscussionGetDisplay(d *event.DiscussionFull, cur *event.User) *DiscussionDisplay {
 	showMain := true
 
@@ -92,12 +127,16 @@ func DiscussionGetDisplay(d *event.DiscussionFull, cur *event.User) *DiscussionD
 
 	dd.DescriptionHTML = ProcessText(dd.DescriptionRaw)
 
+	if !dd.Time.IsZero() {
+		dd.TimeDisplay = dd.Time.Format(slotTimeFormat)
+	}
+
 	if cur != nil {
 		if cur.Username != event.AdminUsername {
 			dd.IsUser = true
-			dd.Interest, _ = cur.GetInterest(d)
+			dd.Interest, _ = cur.GetInterest(&d.Discussion)
 		}
-		dd.MayEdit = cur.MayEditDiscussion(d)
+		dd.MayEdit = cur.MayEditDiscussion(&d.Discussion)
 		if cur.IsAdmin {
 			dd.IsAdmin = true
 			var err error
@@ -106,6 +145,8 @@ func DiscussionGetDisplay(d *event.DiscussionFull, cur *event.User) *DiscussionD
 				// Report error but continue
 				log.Printf("INTERNAL ERROR: Getting all users: %v", err)
 			}
+
+			SlotsSetTimeDisplay(dd.PossibleSlots, slotTimeFormat)
 		} else {
 			dd.PossibleSlots = nil
 		}
@@ -115,7 +156,7 @@ func DiscussionGetDisplay(d *event.DiscussionFull, cur *event.User) *DiscussionD
 }
 
 func DiscussionGetListUser(u *event.User, cur *event.User) (list []*DiscussionDisplay) {
-	event.DiscussionIterateUser(u.UserID, func(d *event.Discussion) error {
+	event.DiscussionIterateUser(u.UserID, func(d *event.DiscussionFull) error {
 		dd := DiscussionGetDisplay(d, cur)
 		if dd != nil {
 			list = append(list, dd)
@@ -127,13 +168,17 @@ func DiscussionGetListUser(u *event.User, cur *event.User) (list []*DiscussionDi
 }
 
 func DiscussionGetList(cur *event.User) (list []*DiscussionDisplay) {
-	event.DiscussionIterate(func(d *event.Discussion) error {
+	err := event.DiscussionIterate(func(d *event.DiscussionFull) error {
 		dd := DiscussionGetDisplay(d, cur)
 		if dd != nil {
 			list = append(list, dd)
 		}
 		return nil
 	})
+
+	if err != nil {
+		log.Printf("ERROR DiscussionGetList: %v", err)
+	}
 
 	return
 }

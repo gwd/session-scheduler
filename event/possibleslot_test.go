@@ -24,6 +24,17 @@ func comparePossibleSlots(a []DisplaySlot, b []bool, t *testing.T) bool {
 
 	return ret
 }
+
+func CheckedToSlotList(ds []DisplaySlot) []SlotID {
+	slots := []SlotID{}
+	for i := range ds {
+		if ds[i].Checked {
+			slots = append(slots, ds[i].SlotID)
+		}
+	}
+	return slots
+}
+
 func testUnitPossibleSlots(t *testing.T) (exit bool) {
 	// Any "early" exit is a failure
 	exit = true
@@ -74,7 +85,7 @@ func testUnitPossibleSlots(t *testing.T) (exit bool) {
 			}},
 		},
 	}
-	totalSlots := 8
+	totalSlots := 7
 
 	possibleslots := make([][]bool, len(discussions))
 	for i := range discussions {
@@ -114,7 +125,7 @@ func testUnitPossibleSlots(t *testing.T) (exit bool) {
 		tmp[i].Checked = false
 	}
 	fmt.Printf(" [0] %v\n", possibleslots[0])
-	err = DiscussionSetPossibleSlots(discussions[0].DiscussionID, tmp)
+	err = DiscussionSetPossibleSlots(discussions[0].DiscussionID, CheckedToSlotList(tmp))
 	if err != nil {
 		t.Errorf("Setting possible slots: %v", err)
 		return
@@ -125,7 +136,7 @@ func testUnitPossibleSlots(t *testing.T) (exit bool) {
 		possibleslots[1][i] = false
 		tmp[i].Checked = false
 	}
-	err = DiscussionSetPossibleSlots(discussions[1].DiscussionID, tmp)
+	err = DiscussionSetPossibleSlots(discussions[1].DiscussionID, CheckedToSlotList(tmp))
 	if err != nil {
 		t.Errorf("Setting possible slots: %v", err)
 		return
@@ -159,11 +170,12 @@ func testUnitPossibleSlots(t *testing.T) (exit bool) {
 	fmt.Printf(" [0] %v\n", possibleslots[0])
 
 	for i := range possibleslots {
+		nPos := 3
 		newValue := !(i == 0 || i == 1)
 		n := make([]bool, totalSlots)
-		copy(n[:4], possibleslots[i][:4])
-		n[4] = newValue
-		copy(n[5:], possibleslots[i][4:])
+		copy(n[:nPos], possibleslots[i][:nPos])
+		n[nPos] = newValue
+		copy(n[nPos+1:], possibleslots[i][nPos:])
 		possibleslots[i] = n
 	}
 	for i := range discussions {

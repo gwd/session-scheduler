@@ -349,7 +349,7 @@ func possibleSlotsDBToDisplay(pslots []DisplaySlot) {
 	}
 }
 
-func DiscussionSetPossibleSlots(discussionid DiscussionID, pslots []DisplaySlot) error {
+func DiscussionSetPossibleSlots(discussionid DiscussionID, pslots []SlotID) error {
 	checked := []struct {
 		DiscussionID DiscussionID
 		SlotID       SlotID
@@ -357,20 +357,25 @@ func DiscussionSetPossibleSlots(discussionid DiscussionID, pslots []DisplaySlot)
 
 	// Make a list of all possible slots
 	for i := range pslots {
-		if pslots[i].Checked {
-			checked = append(checked, struct {
-				DiscussionID DiscussionID
-				SlotID       SlotID
-			}{
-				DiscussionID: discussionid,
-				SlotID:       pslots[i].SlotID,
-			})
-		}
+		checked = append(checked, struct {
+			DiscussionID DiscussionID
+			SlotID       SlotID
+		}{
+			DiscussionID: discussionid,
+			SlotID:       pslots[i],
+		})
 	}
 
 	err := txLoop(func(eq sqlx.Ext) error {
+		var nslots int
+		err := sqlx.Get(eq, &nslots, `
+            select count(*) from event_slots where isbreak = false`)
+		if err != nil {
+			return errOrRetry("Getting number of slots", err)
+		}
+
 		// Always drop all restrictions
-		_, err := eq.Exec(`
+		_, err = eq.Exec(`
             delete from event_discussions_possible_slots
                 where discussionid=?`, discussionid)
 		if err != nil {
@@ -378,7 +383,7 @@ func DiscussionSetPossibleSlots(discussionid DiscussionID, pslots []DisplaySlot)
 		}
 
 		// Only need to add any back if there are negative values
-		if len(checked) < len(pslots) {
+		if len(checked) < nslots {
 			_, err = sqlx.NamedExec(eq, `
                 insert into event_discussions_possible_slots
                     values(:discussionid, :slotid)`, checked)
@@ -518,6 +523,38 @@ func MakePossibleSlots(len int) []bool {
 	return pslots
 }
 
+func discussionGetPossibleSlotsTx(q sqlx.Queryer, did DiscussionID, psp *[]DisplaySlot) error {
+	err := sqlx.Select(q, psp, `
+		    select slotid,
+		           slottime,
+		           (discussionid is not null) as checked
+		        from event_slots natural left outer join
+                     (select * 
+                        from event_discussions_possible_slots
+		                where discussionid=?)
+                where isbreak = false
+                order by dayid, slotidx`, did)
+	if err == nil {
+		possibleSlotsDBToDisplay(*psp)
+	} else if err == sql.ErrNoRows {
+		err = nil
+	}
+	return err
+}
+
+func DiscussionGetPossibleSlots(did DiscussionID) ([]DisplaySlot, error) {
+	var ds []DisplaySlot
+	err := txLoop(func(eq sqlx.Ext) error {
+		err := discussionGetPossibleSlotsTx(eq, did, &ds)
+		if err != nil {
+			return errOrRetry("Getting possible slots for discussion", err)
+		}
+		return nil
+	})
+
+	return ds, err
+}
+
 func discussionFindByIdFullTx(q sqlx.Queryer, did DiscussionID) (*DiscussionFull, error) {
 	var disc *DiscussionFull
 	err := txLoop(func(eq sqlx.Ext) error {
@@ -563,20 +600,10 @@ func discussionFindByIdFullTx(q sqlx.Queryer, did DiscussionID) (*DiscussionFull
 			return errOrRetry("Getting schedule information for discussion", err)
 		}
 
-		err = sqlx.Select(q, &disc.PossibleSlots, `
-		    select slotid,
-		           slottime,
-		           (discussionid is not null) as checked
-		        from event_slots natural left outer join
-                     (select * 
-                        from event_discussions_possible_slots
-		                where discussionid=?)
-                order by dayid, slotidx`, disc.DiscussionID)
-		if err != nil && err != sql.ErrNoRows {
+		err = discussionGetPossibleSlotsTx(q, disc.DiscussionID, &disc.PossibleSlots)
+		if err != nil {
 			return errOrRetry("Getting possible slots for discussion", err)
 		}
-
-		possibleSlotsDBToDisplay(disc.PossibleSlots)
 
 		return nil
 	})

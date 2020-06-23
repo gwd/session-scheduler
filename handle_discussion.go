@@ -34,17 +34,17 @@ func HandleDiscussionCreate(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 
-	d := event.Discussion{
+	d := event.DiscussionFull{Discussion: event.Discussion{
 		Owner:       owner.UserID,
 		Title:       r.FormValue("title"),
-		Description: r.FormValue("description")}
-	err := event.NewDiscussion(&d)
+		Description: r.FormValue("description")}}
+	err := event.NewDiscussion(&d.Discussion)
 
 	if err != nil {
 		if event.IsValidationError(err) {
 			RenderTemplate(w, r, "discussion/new", map[string]interface{}{
 				"Error":      err.Error(),
-				"Discussion": DiscussionGetDisplay(&d, owner),
+				"Discussion": DiscussionGetDisplayRetry(&d, owner),
 			})
 			return
 		}
@@ -107,9 +107,9 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	switch itype {
 	case "discussion":
-		d, _ := event.DiscussionFindById(event.DiscussionID(uid))
+		df, _ := event.DiscussionFindByIdFull(event.DiscussionID(uid))
 
-		if d == nil {
+		if df == nil {
 			break
 		}
 
@@ -122,11 +122,11 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// Only display edit or delete confirmation pages if the
 		// current user can perform that action
 		if (action == "edit" || action == "delete") &&
-			!MayEditDiscussion(cur, d) {
+			!MayEditDiscussion(cur, &df.Discussion) {
 			break
 		}
 
-		display = DiscussionGetDisplay(d, cur)
+		display = DiscussionGetDisplay(df, cur)
 	case "user":
 		user, _ := event.UserFind(event.UserID(uid))
 
@@ -164,9 +164,15 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	})
 }
 
-func FormCheckToBool(formData []string) (bslot []bool, err error) {
-	// FIXME: Locked Slots
-	return nil, nil
+func FormCheckToSlotID(formData []string) (slots []event.SlotID, err error) {
+	slots = make([]event.SlotID, len(formData))
+
+	for i := range formData {
+		// FIXME: Check to make sure these are actual slot ids?
+		slots[i] = event.SlotID(formData[i])
+	}
+
+	return slots, nil
 }
 
 func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -203,8 +209,8 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 	switch itype {
 	case "discussion":
-		d, _ := event.DiscussionFindById(event.DiscussionID(uid))
-		if d == nil {
+		df, _ := event.DiscussionFindByIdFull(event.DiscussionID(uid))
+		if df == nil {
 			log.Printf("Invalid discussion: %s", uid)
 			return
 		}
@@ -227,16 +233,16 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				log.Printf("Negative interest (%d)", interest)
 				return
 			}
-			cur.SetInterest(d, interest)
+			cur.SetInterest(&df.Discussion, interest)
 
 			if tmp := r.FormValue("redirectURL"); tmp != "" {
 				redirectURL = tmp
 			}
 
 		case "edit":
-			if !cur.MayEditDiscussion(d) {
+			if !cur.MayEditDiscussion(&df.Discussion) {
 				log.Printf("WARNING user %s doesn't have permission to edit discussion %s",
-					cur.Username, d.DiscussionID)
+					cur.Username, df.DiscussionID)
 				return
 			}
 
@@ -247,40 +253,52 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			discussionNext := *d
+			discussionNext := df
 			discussionNext.Title = r.FormValue("title")
 			discussionNext.Description = r.FormValue("description")
 
-			//var possibleSlots []bool
+			var possibleSlots []event.SlotID
 
 			if cur.IsAdmin {
 				var err error
-				//possibleSlots, err = FormCheckToBool(r.Form["possible"])
+				possibleSlots, err = FormCheckToSlotID(r.Form["possible"])
 				if err != nil {
-					return
+					log.Printf("Error converting form slots to display slots: %v", err)
+					possibleSlots = nil
 				}
 				discussionNext.Owner = event.UserID(r.FormValue("owner"))
 			}
 
-			err := event.DiscussionUpdate(&discussionNext)
+			err := event.DiscussionUpdate(&discussionNext.Discussion)
 			if err != nil {
+				errDisplay := err.Error()
+				if !event.IsValidationError(err) {
+					log.Printf("INTERNAL ERROR from DiscussionUpdate: %v", err)
+					errDisplay = "Internal error occurred.  Please notify the site's administrator."
+				}
 				if event.IsValidationError(err) {
-					RenderTemplate(w, r, "edit", map[string]interface{}{
-						"Error":   err.Error(),
-						"Display": discussionNext,
+					RenderTemplate(w, r, "discussion/edit", map[string]interface{}{
+						"Error":   errDisplay,
+						"Display": DiscussionGetDisplayRetry(discussionNext, cur),
 					})
 					return
 				}
-				panic(err)
+			}
+
+			if possibleSlots != nil {
+				err = event.DiscussionSetPossibleSlots(discussionNext.DiscussionID, possibleSlots)
+				if err != nil {
+					log.Printf("Error setting possible slots: %v", err)
+				}
 			}
 		case "delete":
-			if !cur.MayEditDiscussion(d) {
+			if !cur.MayEditDiscussion(&df.Discussion) {
 				log.Printf("WARNING user %s doesn't have permission to edit discussion %s",
-					cur.Username, d.DiscussionID)
+					cur.Username, df.DiscussionID)
 				return
 			}
 
-			event.DeleteDiscussion(d.DiscussionID)
+			event.DeleteDiscussion(df.DiscussionID)
 
 			// Can't redirect to 'view' as it's been deleted
 			http.Redirect(w, r, "/list/discussion", http.StatusFound)
@@ -292,7 +310,7 @@ func HandleUidPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 				return
 			}
 
-			if err := event.DiscussionSetPublic(d.DiscussionID, r.FormValue("newvalue") == "true"); err != nil {
+			if err := event.DiscussionSetPublic(df.DiscussionID, r.FormValue("newvalue") == "true"); err != nil {
 				// FIXME
 				log.Printf("DiscussionSetPublic: %v", err)
 			}
