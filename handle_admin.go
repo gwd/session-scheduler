@@ -43,7 +43,9 @@ func HandleAdminConsole(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		default:
 			content["IsCurrent"] = true
 		}
-		//content["LockedSlots"] = event.TimetableGetLockedSlots()
+		ls := event.TimetableGetLockedSlots()
+		SlotsSetTimeDisplay(ls, slotTimeFormat)
+		content["LockedSlots"] = ls
 		fallthrough
 	case "locations":
 		var err error
@@ -174,9 +176,13 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 			return
 		}
 		log.Printf("New locked slots: %v", locked)
-		// FIXME: LockedSlots.  We'll need to pass in slot ids now.
-		//event.LockedSlotsSet(locked)
-		http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)
+		err = event.TimetableSetLockedSlots(locked)
+		if err != nil {
+			log.Printf("INTERNAL ERROR setting slots: %v", err)
+			http.Redirect(w, r, "console?flash=Error+setting+slots", http.StatusFound)
+		} else {
+			http.Redirect(w, r, "console?flash=Locked+slots+updated", http.StatusFound)
+		}
 		return
 	case "newLocation", "updateLocation":
 		l := event.Location{

@@ -51,9 +51,51 @@ type DisplaySlot struct {
 	Checked     bool
 }
 
+// FIXME: Add testing for [GS]etLockedSlots
+
 func TimetableGetLockedSlots() []DisplaySlot {
-	// FIXME: Timetable
-	return nil
+	var ds []DisplaySlot
+	err := txLoop(func(eq sqlx.Ext) error {
+		err := sqlx.Select(eq, &ds, `
+            select slotid,
+                   slottime,
+                   islocked as checked
+                from event_slots
+                where isbreak = false
+                order by dayid, slotidx`)
+		if err != nil {
+			return errOrRetry("Getting locked slots", err)
+		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("INTERNAL ERROR getting locked slots: %v", err)
+		ds = nil
+	}
+	return ds
+}
+
+func TimetableSetLockedSlots(pslots []SlotID) error {
+	return txLoop(func(eq sqlx.Ext) error {
+		var q string
+		var args []interface{}
+		var err error
+		if len(pslots) > 0 {
+			q, args, err = sqlx.In(`
+            update event_slots
+                set islocked = (slotid in (?))`, pslots)
+			if err != nil {
+				return err
+			}
+		} else {
+			q = `update event_slots set islocked = false`
+		}
+		_, err = eq.Exec(q, args...)
+		if err != nil {
+			return errOrRetry("Updating locked slots", err)
+		}
+		return nil
+	})
 }
 
 // GetTimetable will get a structured form of the entire timetable.
@@ -72,7 +114,15 @@ func GetTimetable(tfmt string, tzl *TZLocation) (tt Timetable, err error) {
 			td := &tt.Days[i]
 			dayID := i + 1
 
-			err := sqlx.Select(eq, &td.Slots,
+			err := sqlx.Get(eq, &td.IsFinal,
+				`select count(*)==0
+                     from event_slots
+                     where dayid=? and isbreak=false and islocked=false`, dayID)
+			if err != nil {
+				return errOrRetry("Getting day finality", err)
+			}
+
+			err = sqlx.Select(eq, &td.Slots,
 				`select slottime as time, isbreak
                      from event_slots
                      where dayid=?

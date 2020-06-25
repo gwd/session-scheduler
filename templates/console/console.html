@@ -17,8 +17,8 @@
 <form action="/admin/setLocked" class="form-group col" method="POST">
   {{range .}}
   <div class="custom-control custom-switch{{if .Checked}} bg-success{{end}}">
-    <input type="checkbox" class="custom-control-input" name="locked" value="{{.Index}}" id="locked{{.Index}}"{{if .Checked}} checked{{end}}>
-    <label class="custom-control-label" for="locked{{.Index}}">{{.Label}}</label>
+    <input type="checkbox" class="custom-control-input" name="locked" value="{{.SlotID}}" id="locked{{.SlotID}}"{{if .Checked}} checked{{end}}>
+    <label class="custom-control-label" for="locked{{.SlotID}}">{{.TimeDisplay}}</label>
   </div>
   {{end}}
   <input type="submit" value="Update locked slots" class="btn btn-primary">
