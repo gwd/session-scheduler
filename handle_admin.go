@@ -81,9 +81,9 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 	switch action {
 	case "runschedule":
-		err := MakeSchedule(true)
+		err := MakeSchedule(false)
 		if err == nil {
-			http.Redirect(w, r, "console?flash=Schedule+Started", http.StatusFound)
+			http.Redirect(w, r, "console?flash=Schedule+Finished", http.StatusFound)
 		} else {
 			log.Printf("Error generating schedule: %v", err)
 			http.Redirect(w, r, "console?flash=Error+starting+schedule: See Log", http.StatusFound)

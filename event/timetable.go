@@ -131,6 +131,33 @@ func GetTimetable(tfmt string, tzl *TZLocation) (tt Timetable, err error) {
 				return errOrRetry("Getting slots for one day", err)
 			}
 
+			for j := range td.Slots {
+				ts := &td.Slots[j]
+				err = sqlx.Select(eq, &ts.Discussions, `
+with intjoin (userid, discussionid, interest) as
+  (select userid, discussionid, interest
+       from event_interest
+       	    natural join event_schedule
+	    natural join event_slots
+       where dayid=? and slotidx=?),
+maxint (userid, discussionid, maxint) as
+    (select x.userid, discussionid, maxint
+     from intjoin x
+        join (select userid, max(interest) as maxint
+                    from intjoin
+               group by userid) y
+	on x.userid = y.userid and x.interest = y.maxint),
+discint (discussionid, attendees, score) as
+	(select discussionid, count(*) as attendees, sum(maxint) as score
+             from maxint
+    	     group by discussionid)
+select discussionid, title, attendees, score
+    from discint natural join event_discussions`, dayID, j+1)
+				if err != nil {
+					return errOrRetry("Getting discussion info for slot", err)
+				}
+			}
+
 			if tfmt != "" {
 				for j := range td.Slots {
 					t := td.Slots[j].Time.Time
@@ -141,8 +168,6 @@ func GetTimetable(tfmt string, tzl *TZLocation) (tt Timetable, err error) {
 				}
 			}
 		}
-
-		// FIXME: Still need to fill in Discussions from schedule
 
 		return nil
 	})

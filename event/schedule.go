@@ -1,9 +1,9 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -28,12 +28,6 @@ type SearchOptions struct {
 }
 
 var opt SearchOptions
-
-func MakeSchedule(optArg SearchOptions) error {
-	// FIXME: Schedule
-
-	return errors.New("Not Implemented!")
-}
 
 func SchedLastUpdate() string {
 	lastUpdate := "Never"
@@ -68,7 +62,7 @@ type schedule struct {
 type searchDiscussion struct {
 	DiscussionID  DiscussionID
 	Owner         UserID
-	PossibleSlots []SlotID
+	PossibleSlots map[SlotID]bool
 	UserInterest  []struct {
 		UserID   UserID
 		Interest int
@@ -165,10 +159,11 @@ func makeSnapshot() (*searchStore, error) {
 
 			// If unrestricted, jus tcopy ss.Slots; otherwise, get a list
 			// of unlocked slots
+			var pslots []SlotID
 			if count == 0 {
-				d.PossibleSlots = append([]SlotID(nil), ss.Slots...)
+				pslots = append([]SlotID(nil), ss.Slots...)
 			} else {
-				err = sqlx.Select(eq, &d.PossibleSlots,
+				err = sqlx.Select(eq, &pslots,
 					`select slotid
                          from event_discussions_possible_slots
                              natural join event_slots
@@ -179,10 +174,14 @@ func makeSnapshot() (*searchStore, error) {
 				if err != nil {
 					return errOrRetry("Getting possible unlocked slots", err)
 				}
-				if len(d.PossibleSlots) == 0 {
+				if len(pslots) == 0 {
 					return fmt.Errorf("Unscheduled discussion %v restricted to locked slots",
 						d.DiscussionID)
 				}
+			}
+			d.PossibleSlots = make(map[SlotID]bool)
+			for _, slotid := range pslots {
+				d.PossibleSlots[slotid] = true
 			}
 
 			// Get user interest in this discussion
@@ -241,31 +240,144 @@ func scheduleSet(s *schedule) error {
 			}
 
 			// Add new schedule entries
-			ds := []struct {
-				SlotID       SlotID
-				DiscussionID DiscussionID
-				LocationID   LocationID
-			}{}
-			for j := range ss.Discussions {
-				ds = append(ds, struct {
+			if len(ss.Discussions) > 0 {
+				ds := []struct {
 					SlotID       SlotID
 					DiscussionID DiscussionID
 					LocationID   LocationID
-				}{
-					SlotID:       ss.SlotID,
-					DiscussionID: ss.Discussions[j].DiscussionID,
-					LocationID:   LocationID(j + 1) /* FIXME */})
-			}
-			_, err = sqlx.NamedExec(eq, `
+				}{}
+				for j := range ss.Discussions {
+					ds = append(ds, struct {
+						SlotID       SlotID
+						DiscussionID DiscussionID
+						LocationID   LocationID
+					}{
+						SlotID:       ss.SlotID,
+						DiscussionID: ss.Discussions[j].DiscussionID,
+						LocationID:   LocationID(j + 1) /* FIXME */})
+				}
+				_, err = sqlx.NamedExec(eq, `
                 insert into event_schedule
                     values(:discussionid, :slotid, :locationid)`,
-				ds)
-			if err != nil {
-				log.Printf("Failed inserting schedule entries %v", ds)
-				return errOrRetry("Adding new schedule entries", err)
+					ds)
+				if err != nil {
+					log.Printf("Failed inserting schedule entries %v", ds)
+					return errOrRetry("Adding new schedule entries", err)
+				}
 			}
 		}
 		return nil
 	})
 	return err
+}
+
+func scheduleMakeEmpty(ss *searchStore) *schedule {
+	sched := &schedule{}
+	for i := range ss.Slots {
+		sched.Slots = append(sched.Slots, scheduleSlot{SlotID: ss.Slots[i]})
+	}
+	for i := range ss.Discussions {
+		sched.UnplacedDiscussions = append(sched.UnplacedDiscussions, &ss.Discussions[i])
+	}
+	return sched
+}
+
+func addDiscussionInterest(userMaxInt map[UserID]int, disc *searchDiscussion) {
+	for j := range disc.UserInterest {
+		ui := &disc.UserInterest[j]
+		if ui.Interest > userMaxInt[ui.UserID] {
+			userMaxInt[ui.UserID] = ui.Interest
+		}
+	}
+}
+
+// How much would we increase the score by adding hyp to this discussion?
+func scoreSlotDelta(discussions []*searchDiscussion, hyp *searchDiscussion) int {
+	userMaxInt := map[UserID]int{}
+
+	for i := range discussions {
+		addDiscussionInterest(userMaxInt, discussions[i])
+	}
+
+	pre := 0
+	for _, interest := range userMaxInt {
+		pre += interest
+	}
+
+	addDiscussionInterest(userMaxInt, hyp)
+
+	post := 0
+
+	for _, interest := range userMaxInt {
+		post += interest
+	}
+	return post - pre
+}
+
+func makeScheduleHeuristic(ss *searchStore) (*schedule, error) {
+	sched := scheduleMakeEmpty(ss)
+
+	// Sort discussion list by interest, high to low
+	sort.Slice(sched.UnplacedDiscussions, func(i, j int) bool {
+		return sched.UnplacedDiscussions[i].MaxInterest > sched.UnplacedDiscussions[j].MaxInterest
+	})
+
+	// Starting at the top, look for a slot to put it in which will maximize this score
+	for _, disc := range sched.UnplacedDiscussions {
+		log.Printf("Scheduling discussion %v (max score %d)",
+			disc.DiscussionID, disc.MaxInterest)
+
+		// Find the slot that increases the score the most
+		best := struct{ score, index int }{score: 0, index: -1}
+		for i := range sched.Slots {
+			log.Printf(" Evaluating slot %d", i)
+			if !disc.PossibleSlots[sched.Slots[i].SlotID] {
+				log.Printf("  Impossible, skipping")
+				continue
+			}
+
+			// OK, how much will we increase the score by putting this discussion here?
+			score := scoreSlotDelta(sched.Slots[i].Discussions, disc)
+			log.Printf("  Total value: %d", score)
+			if score > best.score {
+				best.score = score
+				best.index = i
+			}
+		}
+
+		// If we've found a slot, put it there
+		if best.index < 0 {
+			// FIXME: Do something useful (least-busy slot?)
+			log.Printf(" Can't find a good slot!")
+		} else {
+			log.Printf(" Putting discussion in slot %d",
+				best.index)
+
+			// Make it so
+			sched.Slots[best.index].Discussions = append(sched.Slots[best.index].Discussions, disc)
+		}
+	}
+
+	sched.UnplacedDiscussions = nil
+
+	return sched, nil
+}
+
+func MakeSchedule(opt SearchOptions) error {
+	ss, err := makeSnapshot()
+	if err != nil {
+		return err
+	}
+
+	sched, err := makeScheduleHeuristic(ss)
+	if err != nil {
+		return err
+	}
+
+	err = scheduleSet(sched)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

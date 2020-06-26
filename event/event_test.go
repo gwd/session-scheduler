@@ -97,6 +97,10 @@ func (tc testContext) cleanup() {
 func TestEvent(t *testing.T) {
 	t.Logf("testUnitUser")
 
+	if testScheduleHeuristic(t) {
+		return
+	}
+
 	if testUnitSchedule(t) {
 		return
 	}
