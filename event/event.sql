@@ -41,7 +41,7 @@ CREATE TABLE event_discussions_possible_slots(
 CREATE TABLE event_locations(
     locationid          integer primary key,
     locationname        text not null,
-    locationdescription text not null,
+    locationurl	        text not null,
     isplace             boolean not null,
     capacity            integer not null);
 

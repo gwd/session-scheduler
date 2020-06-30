@@ -9,10 +9,10 @@ import (
 
 func testNewLocation(t *testing.T) (Location, bool) {
 	loc := Location{
-		LocationName:        fake.Word(),
-		LocationDescription: fake.Paragraphs(),
-		IsPlace:             rand.Intn(2) == 0,
-		Capacity:            rand.Intn(200) + 1,
+		LocationName: fake.Word(),
+		LocationURL:  "https://" + fake.DomainName(),
+		IsPlace:      rand.Intn(2) == 0,
+		Capacity:     rand.Intn(200) + 1,
 	}
 
 	if _, err := NewLocation(&loc); err != nil {
@@ -30,9 +30,9 @@ func compareLocations(l1, l2 *Location, t *testing.T) bool {
 			l1.LocationName, l2.LocationName)
 		ret = false
 	}
-	if l1.LocationDescription != l2.LocationDescription {
-		t.Logf("mismatch LocationDescription: %v != %v",
-			l1.LocationDescription, l2.LocationDescription)
+	if l1.LocationURL != l2.LocationURL {
+		t.Logf("mismatch LocationURL: %v != %v",
+			l1.LocationURL, l2.LocationURL)
 		ret = false
 	}
 	if l1.IsPlace != l2.IsPlace {
@@ -58,19 +58,19 @@ func testUnitLocation(t *testing.T) (exit bool) {
 
 	t.Logf("Trying to make invalid locations")
 	{
-		_, err := NewLocation(&Location{LocationName: "", LocationDescription: "<URL>", Capacity: 10})
+		_, err := NewLocation(&Location{LocationName: "", LocationURL: "<URL>", Capacity: 10})
 		if err == nil {
 			t.Errorf("ERROR: Created location with empty name!")
 			return
 		}
 
-		_, err = NewLocation(&Location{LocationName: "Blah", LocationDescription: "<URL>", Capacity: 0})
+		_, err = NewLocation(&Location{LocationName: "Blah", LocationURL: "<URL>", Capacity: 0})
 		if err == nil {
 			t.Errorf("ERROR: Created location with zero capacity!")
 			return
 		}
 
-		_, err = NewLocation(&Location{LocationName: "Blah", LocationDescription: "<URL>", Capacity: -100})
+		_, err = NewLocation(&Location{LocationName: "Blah", LocationURL: "<URL>", Capacity: -100})
 		if err == nil {
 			t.Errorf("ERROR: Created location with negative capacity!")
 			return
@@ -129,7 +129,7 @@ func testUnitLocation(t *testing.T) (exit bool) {
 	for i := range locations {
 		copy := locations[i]
 		copy.LocationName = fake.Word()
-		copy.LocationDescription = fake.Paragraphs()
+		copy.LocationURL = "https://" + fake.DomainName()
 		err := LocationUpdate(&copy)
 		if err != nil {
 			t.Errorf("Updating location: %v", err)

@@ -145,9 +145,9 @@ func upgradeDbv1(ext sqlx.Ext) error {
 	// to add a default, even if we don't expect there to be any rows
 	// to update.  Testing for the non-upgaded case should catch any
 	// insertions which don't include this column.
-	_, err = ext.Exec(`alter table event_locations add column locationdescription text not null default ""`)
+	_, err = ext.Exec(`alter table event_locations add column locationurl text not null default ""`)
 	if err != nil {
-		return errOrRetry("Adding event_locations:locationdescription: %v", err)
+		return errOrRetry("Adding event_locations:locationurl: %v", err)
 	}
 
 	// event_slots and event_schedule have more substantial changes;
@@ -261,7 +261,7 @@ CREATE TABLE event_interest(
 CREATE TABLE event_locations(
     locationid   integer primary key,
     locationname text not null,
-    locationdescription text not null,
+    locationurl  text not null,
     isplace      boolean not null,
     capacity     integer not null)`)
 	if err != nil {

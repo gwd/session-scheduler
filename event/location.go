@@ -13,11 +13,11 @@ import (
 type LocationID int
 
 type Location struct {
-	LocationID          LocationID
-	LocationName        string
-	LocationDescription string
-	IsPlace             bool
-	Capacity            int
+	LocationID   LocationID
+	LocationName string
+	LocationURL  string
+	IsPlace      bool
+	Capacity     int
 }
 
 const (
@@ -54,11 +54,11 @@ func NewLocation(l *Location) (LocationID, error) {
 
 		l.LocationID = LocationID(maxlocid + 1)
 		_, err = eq.Exec(`
-            insert into event_locations(locationid, locationname, locationdescription, isplace, capacity)
+            insert into event_locations(locationid, locationname, locationurl, isplace, capacity)
                 values (?, ?, ?, ?, ?)`,
 			l.LocationID,
 			l.LocationName,
-			l.LocationDescription,
+			l.LocationURL,
 			l.IsPlace,
 			l.Capacity)
 		if err != nil {
@@ -146,11 +146,11 @@ func LocationUpdate(l *Location) error {
 		_, err := eq.Exec(`
             update event_locations
                 set locationname =?,
-                    locationdescription = ?,
+                    locationurl = ?,
                     isplace = ?,
                     capacity = ?
                 where locationid = ?`,
-			l.LocationName, l.LocationDescription, l.IsPlace, l.Capacity, l.LocationID)
+			l.LocationName, l.LocationURL, l.IsPlace, l.Capacity, l.LocationID)
 		return err
 	})
 

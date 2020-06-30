@@ -102,7 +102,7 @@
        <div class="form-row">
        <input type="hidden" id="locID" name="locID" value="{{.LocationID}}">
        <div class="col-auto"><label for="locName">Location Name</label><input id="locName" name="locName" type="text" class="form-control" value="{{.LocationName}}"></div>
-       <div class="col-auto"><label for="locDesc">Description</label><input id="locDesc" name="locDesc" type="text" class="form-control" size=50 value="{{.LocationDescription}}"></div>
+       <div class="col-auto"><label for="locURL">URL</label><input id="locURL" name="locnURL" type="text" class="form-control" size=50 value="{{.LocationURL}}"></div>
        <div class="col-auto"><label for="locCapacity">Capacity</label><input id="locCapacity" name="locCapacity" type="text" class="form-control" size=6 value="{{.Capacity}}"></div>
        <div class="col-auto"><input type="submit" value="Update Location" class="btn btn-secondary"></div>
        </div>
@@ -112,7 +112,7 @@
        <form action="newLocation" method="POST">
        <div class="form-row">
        <div class="col-auto"><label for="locName">Location Name</label><input id="locName" name="locName" type="text" class="form-control"></div>
-       <div class="col-auto"><label for="locDesc">Description</label><input id="locDesc" name="locDesc" type="text" class="form-control" size=50></div>
+       <div class="col-auto"><label for="locURL">URL</label><input id="locURL" name="locURL" type="text" class="form-control" size=50></div>
        <div class="col-auto"><label for="locCapacity">Capacity</label><input id="locCapacity" name="locCapacity" type="text" class="form-control" size=6></div>
        <div class="col-auto"><input type="submit" value="Add Location" class="btn btn-primary"></div>
        </div>

@@ -186,8 +186,8 @@ func HandleAdminAction(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		return
 	case "newLocation", "updateLocation":
 		l := event.Location{
-			LocationName:        r.FormValue("locName"),
-			LocationDescription: r.FormValue("locDesc")}
+			LocationName: r.FormValue("locName"),
+			LocationURL:  r.FormValue("locURL")}
 		// FIXME: This trashes thee contents of the form and doesn't give very
 		// informative error messages.  See if we can do something better.
 		flash := ""

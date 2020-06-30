@@ -580,7 +580,7 @@ func discussionFindByIdFullTx(q sqlx.Queryer, did DiscussionID) (*DiscussionFull
 		row := eq.QueryRowx(`
             select locationid,
                    locationname,
-                   locationdescription,
+                   locationurl,
                    isplace,
                    capacity,
                    slottime,
@@ -591,7 +591,7 @@ func discussionFindByIdFullTx(q sqlx.Queryer, did DiscussionID) (*DiscussionFull
                 where discussionid=?`, disc.DiscussionID)
 		err = row.Scan(&disc.Location.LocationID,
 			&disc.Location.LocationName,
-			&disc.Location.LocationDescription,
+			&disc.Location.LocationURL,
 			&disc.Location.IsPlace,
 			&disc.Location.Capacity,
 			&disc.Time,

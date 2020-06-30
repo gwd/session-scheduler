@@ -15,9 +15,8 @@ type TimetableDiscussion struct {
 	Title        string
 	Attendees    int
 	Score        int
-	// Copy of the "canonical" location, updated every time the
-	// schedule is run
-	LocationInfo Location
+	LocationName string
+	LocationURL  string
 }
 
 type TimetableSlot struct {
@@ -134,24 +133,25 @@ func GetTimetable(tfmt string, tzl *TZLocation) (tt Timetable, err error) {
 			for j := range td.Slots {
 				ts := &td.Slots[j]
 				err = sqlx.Select(eq, &ts.Discussions, `
-with intjoin (userid, discussionid, interest) as
-  (select userid, discussionid, interest
+with intjoin (userid, discussionid, interest, locationname, locationurl) as
+  (select userid, discussionid, interest, locationname, locationurl
        from event_interest
-       	    natural join event_schedule
-	    natural join event_slots
+           natural join event_schedule
+	       natural join event_slots
+           natural join event_locations
        where dayid=? and slotidx=?),
-maxint (userid, discussionid, maxint) as
-    (select x.userid, discussionid, maxint
+maxint (userid, discussionid, maxint, locationname, locationurl) as
+    (select x.userid, discussionid, maxint, locationname, locationurl
      from intjoin x
         join (select userid, max(interest) as maxint
                     from intjoin
                group by userid) y
 	on x.userid = y.userid and x.interest = y.maxint),
-discint (discussionid, attendees, score) as
-	(select discussionid, count(*) as attendees, sum(maxint) as score
+discint (discussionid, attendees, score, locationname, locationurl) as
+	(select discussionid, count(*) as attendees, sum(maxint) as score, locationname, locationurl
              from maxint
     	     group by discussionid)
-select discussionid, title, attendees, score
+select discussionid, title, attendees, score, locationname, locationurl
     from discint natural join event_discussions`, dayID, j+1)
 				if err != nil {
 					return errOrRetry("Getting discussion info for slot", err)
