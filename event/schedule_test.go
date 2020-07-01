@@ -211,6 +211,10 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 		ss.Discussions = append(ss.Discussions, &searchDiscussion{DiscussionID: discussions[didx].DiscussionID})
 		slotidx = (slotidx + 1) % len(sched.Slots)
 	}
+
+	store.CurrentSchedule = &sched
+	placeDiscussions(store)
+
 	err = scheduleSet(&sched)
 	if err != nil {
 		t.Errorf("Setting schedule: %v", err)

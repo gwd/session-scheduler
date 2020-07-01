@@ -50,7 +50,10 @@ func SchedGetState() SchedState {
 }
 
 type scheduleSlot struct {
-	SlotID      SlotID
+	SlotID SlotID
+
+	// These should be sorted in order of expected attendees, high to
+	// low.
 	Discussions []*searchDiscussion
 }
 
@@ -68,6 +71,10 @@ type searchDiscussion struct {
 		Interest int
 	}
 	MaxInterest int
+
+	// Filled in by placement
+	SlotID     SlotID
+	LocationID LocationID
 }
 
 type searchStore struct {
@@ -83,7 +90,7 @@ type searchStore struct {
 	Discussions []searchDiscussion
 
 	// All locations
-	//Locations []Location
+	Locations []LocationID
 
 	CurrentSchedule *schedule
 }
@@ -129,6 +136,13 @@ func makeSnapshot() (*searchStore, error) {
 		err = userGetAllTx(eq, &ss.Users)
 		if err != nil {
 			return err
+		}
+
+		// Get all locations
+		err = sqlx.Select(eq, &ss.Locations,
+			`select locationid from event_locations`)
+		if err != nil {
+			return errOrRetry("Getting locations", err)
 		}
 
 		// Get Discussions not scheduled to locked slots
@@ -208,6 +222,27 @@ func makeSnapshot() (*searchStore, error) {
 	return ss, nil
 }
 
+// FIXME: This doesn't handle IsPlace == false
+func placeDiscussions(ss *searchStore) error {
+	s := ss.CurrentSchedule
+
+	for i := range s.Slots {
+		slot := &s.Slots[i]
+		if len(slot.Discussions) > len(ss.Locations) {
+			return fmt.Errorf("Invalid schedule: %d discussions in slot, but only %d locations",
+				len(slot.Discussions), len(ss.Locations))
+		}
+
+		// Set SlotID, LocationID
+		for j := range slot.Discussions {
+			slot.Discussions[j].SlotID = slot.SlotID
+			slot.Discussions[j].LocationID = ss.Locations[j]
+		}
+	}
+
+	return nil
+}
+
 func scheduleSet(s *schedule) error {
 	err := txLoop(func(eq sqlx.Ext) error {
 		for i := range s.Slots {
@@ -241,27 +276,12 @@ func scheduleSet(s *schedule) error {
 
 			// Add new schedule entries
 			if len(ss.Discussions) > 0 {
-				ds := []struct {
-					SlotID       SlotID
-					DiscussionID DiscussionID
-					LocationID   LocationID
-				}{}
-				for j := range ss.Discussions {
-					ds = append(ds, struct {
-						SlotID       SlotID
-						DiscussionID DiscussionID
-						LocationID   LocationID
-					}{
-						SlotID:       ss.SlotID,
-						DiscussionID: ss.Discussions[j].DiscussionID,
-						LocationID:   LocationID(j + 1) /* FIXME */})
-				}
 				_, err = sqlx.NamedExec(eq, `
                 insert into event_schedule
                     values(:discussionid, :slotid, :locationid)`,
-					ds)
+					ss.Discussions)
 				if err != nil {
-					log.Printf("Failed inserting schedule entries %v", ds)
+					log.Printf("Failed inserting schedule entries %v", ss.Discussions)
 					return errOrRetry("Adding new schedule entries", err)
 				}
 			}
@@ -316,6 +336,7 @@ func scoreSlotDelta(discussions []*searchDiscussion, hyp *searchDiscussion) int 
 
 func makeScheduleHeuristic(ss *searchStore) (*schedule, error) {
 	sched := scheduleMakeEmpty(ss)
+	unplaced := []*searchDiscussion(nil)
 
 	// Sort discussion list by interest, high to low
 	sort.Slice(sched.UnplacedDiscussions, func(i, j int) bool {
@@ -332,7 +353,11 @@ func makeScheduleHeuristic(ss *searchStore) (*schedule, error) {
 		for i := range sched.Slots {
 			log.Printf(" Evaluating slot %d", i)
 			if !disc.PossibleSlots[sched.Slots[i].SlotID] {
-				log.Printf("  Impossible, skipping")
+				log.Printf("  Slot disallowed, skipping")
+				continue
+			}
+			if len(sched.Slots[i].Discussions) >= len(ss.Locations) {
+				log.Printf("  Slot full, skipping")
 				continue
 			}
 
@@ -349,6 +374,7 @@ func makeScheduleHeuristic(ss *searchStore) (*schedule, error) {
 		if best.index < 0 {
 			// FIXME: Do something useful (least-busy slot?)
 			log.Printf(" Can't find a good slot!")
+			unplaced = append(unplaced, disc)
 		} else {
 			log.Printf(" Putting discussion in slot %d",
 				best.index)
@@ -358,7 +384,7 @@ func makeScheduleHeuristic(ss *searchStore) (*schedule, error) {
 		}
 	}
 
-	sched.UnplacedDiscussions = nil
+	sched.UnplacedDiscussions = unplaced
 
 	return sched, nil
 }
@@ -369,12 +395,17 @@ func MakeSchedule(opt SearchOptions) error {
 		return err
 	}
 
-	sched, err := makeScheduleHeuristic(ss)
+	ss.CurrentSchedule, err = makeScheduleHeuristic(ss)
 	if err != nil {
 		return err
 	}
 
-	err = scheduleSet(sched)
+	err = placeDiscussions(ss)
+	if err != nil {
+		return err
+	}
+
+	err = scheduleSet(ss.CurrentSchedule)
 	if err != nil {
 		return err
 	}

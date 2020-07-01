@@ -125,21 +125,9 @@ func testScheduleHeuristic(t *testing.T) (exit bool) {
 	// TESTING
 	//
 
-	ss, err := makeSnapshot()
+	err = MakeSchedule(SearchOptions{})
 	if err != nil {
-		t.Errorf("Taking snapshot: %v", err)
-		return
-	}
-
-	sched, err := makeScheduleHeuristic(ss)
-	if err != nil {
-		t.Errorf("Making heuristic schedule: %v", err)
-		return
-	}
-
-	err = scheduleSet(sched)
-	if err != nil {
-		t.Errorf("Setting schedule: %v", err)
+		t.Errorf("Making Schedule: %v", err)
 		return
 	}
 
