@@ -152,7 +152,8 @@ discint (discussionid, attendees, score, locationname, locationurl) as
              from maxint
     	     group by discussionid)
 select discussionid, title, attendees, score, locationname, locationurl
-    from discint natural join event_discussions`, dayID, j+1)
+    from discint natural join event_discussions
+    order by attendees desc`, dayID, j+1)
 				if err != nil {
 					return errOrRetry("Getting discussion info for slot", err)
 				}
