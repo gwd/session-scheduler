@@ -6,9 +6,9 @@
 
 + Heuristic scheduler
 
-- A way to set your own timezone
++ View the schedule in a particular timezone
 
-- View the schedule in your own timezone
+- A way to set your own default timezone 
 
 - Scheduler state (current / whatever)
 

@@ -6,10 +6,25 @@
       {{end}}
 {{end}}
 
+{{define "schedule/form-location-option"}}
+<option value="{{.}}">{{.}}</option>
+{{end}}
+
+
+
 {{define "schedule/view"}}
 <div class="container">	  
 <div class="row">
 <div class="col">
+  <form class="form-inline m-3">
+  <label class="mr-2" for="location">Timezone: </label>
+    <select onchange="this.form.submit()" class="form-control" name="location" id="location">
+      {{template "schedule/form-location-option" .CurrentLocation}}
+      {{range .Locations}}
+      {{template "schedule/form-location-option" .}}
+      {{end}}
+    </select>
+    </form>
   {{range .Timetable.Days}}
     <div class="container col container-fluid">
       <a id="{{.DayName}}"><strong>{{.DayName}}</strong></a>

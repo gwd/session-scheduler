@@ -11,6 +11,7 @@ import (
 	"github.com/gwd/session-scheduler/event"
 	"github.com/gwd/session-scheduler/id"
 	"github.com/gwd/session-scheduler/keyvalue"
+	"github.com/gwd/session-scheduler/timezones"
 )
 
 var kvs *keyvalue.KeyValueStore
@@ -29,8 +30,15 @@ var DefaultLocation = "Europe/Berlin"
 
 var DefaultLocationTZ event.TZLocation
 
+var TimezoneList []string
+
 func main() {
 	var err error
+
+	TimezoneList, err = timezones.GetTimezoneList()
+	if err != nil {
+		log.Fatal("Getting timezone list: %v", err)
+	}
 
 	kvs, err = keyvalue.OpenFile("data/serverconfig.sqlite")
 	if err != nil {
