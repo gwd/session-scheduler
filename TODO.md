@@ -1,12 +1,11 @@
 # Changes before final websete
 
-+ A way to add location
+- Timetable slots cannot be removed if they contain an assigned
+session
 
-+ A way to set up the timetable
+- Scheduled sessions cannot be deleted (and no error is reported!)
 
-+ Heuristic scheduler
-
-+ View the schedule in a particular timezone
+- MD rendering doesn't seem to work
 
 - A way to set your own default timezone 
 
