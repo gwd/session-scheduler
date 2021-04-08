@@ -5,8 +5,6 @@ session
 
 - Scheduled sessions cannot be deleted (and no error is reported!)
 
-- MD rendering doesn't seem to work
-
 - A way to set your own default timezone 
 
 - Scheduler state (current / whatever)

@@ -5,17 +5,11 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/microcosm-cc/bluemonday"
 
-	// blackfriday v2 has a bug where it doesn't make paragraphs
-	// properly.  github_flavored_markdown uses blackfriday v1, which
-	// doesn't seem to suffer from this problem.  Leave the code
-	// present but commented out, in case we can get it fixed.  (It's
-	// more fully-featured.)
-
-	// "gopkg.in/russross/blackfriday.v2"
-	"github.com/shurcooL/github_flavored_markdown"
+	"github.com/russross/blackfriday/v2"
 )
 
 var layoutFuncs = template.FuncMap{
@@ -100,8 +94,15 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, name string, data ma
 var sanitizer = bluemonday.UGCPolicy()
 
 func ProcessText(input string) template.HTML {
-	//unsafe := blackfriday.Run([]byte(input), blackfriday.WithExtensions(blackfriday.HardLineBreak))
-	//unsafe := blackfriday.Run([]byte(input))
-	unsafe := github_flavored_markdown.Markdown([]byte(input))
-	return template.HTML(sanitizer.SanitizeBytes(unsafe))
+	// HTML standard requires CRLF for submitted text, but blackfriday
+	// for some reason only handles LF ATM; see
+	// https://github.com/russross/blackfriday/issues/423
+	// Brute-force the problem.
+	unix := strings.ReplaceAll(input, "\r\n", "\n")
+
+	unsafe := blackfriday.Run([]byte(unix))
+
+	html := template.HTML(sanitizer.SanitizeBytes(unsafe))
+
+	return html
 }

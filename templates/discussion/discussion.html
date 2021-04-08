@@ -31,7 +31,7 @@
     <div>Time: {{.TimeDisplay}} {{template "schedule/finalbadge" .IsFinal}}</div>
     <div>Location: {{.Location.LocationName}}</div>
     {{end}}
-    <p class="card-text">{{.Description}}</p>
+    <p class="card-text">{{.DescriptionHTML}}</p>
     {{if .IsUser}}
     <div class="btn-group input-group" role="group">
       <form action="setinterest" method="POST">
