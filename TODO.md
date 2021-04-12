@@ -19,6 +19,8 @@ session
 # Short-term usability improvements
 
 * Document `deploy.sh` and `run.sh` expected use case
+* Add editTimetable to command-line help
+* Document editTimetable
 * Document inactive mode, &c
 
 # Priority improvements
@@ -35,14 +37,12 @@ session
 
 # Potential improvements
 
-* Config file for setting schedule rather than hard-coding
 * Creating / editing schedule in webapp
-* Admin: Allow admin to delete users
-* Admin: Allow to delete all sessions from a user
-* Make webserver actually multi-threaded (get rid of Big Lock)
 * Automated backup
 
 # Clean-up
 
 * Lots of visual improvements
-* Make structure more rational
+* Make code structure more rational
+
+* Use "embed" to package up the templates &c
