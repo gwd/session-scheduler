@@ -95,12 +95,12 @@
       {{if .CurrentUser}}
         {{if .CurrentUser.IsAdmin}}
           <form action="/uid/discussion/{{.Discussion.DiscussionID}}/setpublic" method="POST">
-            <div class="custom-control custom-switch">
-	      <input type="checkbox" class="custom-control-input"
+            <div class="form-check form-switch">
+	      <input type="checkbox" class="form-check-input"
 	       name="public" value="{{.Discussion.DiscussionID}}" id="p{{.Discussion.DiscussionID}}"
 	       {{if .Discussion.IsPublic}} checked{{end}}
 	       onChange="this.form.submit()">
-	      <label class="custom-control-label" for="p{{.Discussion.DiscussionID}}"> </label>
+	      <label class="form-check-label" for="p{{.Discussion.DiscussionID}}"> </label>
 	      <input type="hidden" name="newvalue" value={{if .Discussion.IsPublic}}"false"{{else}}"true"{{end}}>
 	    </div>
 	    <input type="submit" value="Set" class="btn btn-primary noscript">

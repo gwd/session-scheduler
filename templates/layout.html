@@ -1,62 +1,53 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <script src="/assets/js/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
-    <script src="/assets/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
   </head>
-	<body>
-	<header class="navbar navbar-expand-md navbar-dark bg-dark" role="navigation">
-            <a class="navbar-brand" href="/">Xen Design Sessions</a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+  <body>
+    <script src="/assets/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <header class="navbar navbar-expand-md navbar-dark bg-dark" role="navigation">
+            <a class="navbar-brand mx-3" href="/">Xen Design Sessions</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarContent">
-	      <ul class="navbar-nav mr-auto">
+            <div class="collapse navbar-collapse d-flex flex-row justify-content-between" id="navbarContent">
+	      <div class="navbar-nav">
 	    {{if .ShowToolbar}}
-		<li class="nav-item">
-		<a class="nav-link" href="/list/discussion">Sessions</a></li>
-		<li class="nav-item">
-		<a class="nav-link" href="/discussion/new">Propose</a></li>
+		<a class="nav-link" href="/list/discussion">Sessions</a>
+		<a class="nav-link" href="/discussion/new">Propose</a>
 		{{if .IsScheduleActive}}
-		<li class="nav-item">
-		<a class="nav-link" href="/schedule">Schedule</a></li>
+		<a class="nav-link" href="/schedule">Schedule</a>
 		{{end}}
-		<li class="nav-item">
-		<a class="nav-link" href="/list/user">Attendees</a></li>
+		<a class="nav-link" href="/list/user">Attendees</a>
 	    {{end}}
-	      </ul>
+	      </div>
+	      <div class="navbar-nav">
 		{{if .IsTestMode}}
-		<span class="badge badge-danger">Test Mode</span>
+		<span class="badge bg-danger">Test Mode</span>
 		{{end}}
-	      <ul class="navbar-nav navbar-right">
 		{{if .CurrentUser}}
 		{{if .CurrentUser.IsAdmin}}
 		{{if .IsWebsiteActive}}
-		<span class="badge badge-primary">Active</span>
+		<div><span class="badge bg-primary">Active</span></div>
 		{{else}}
-		<span class="badge badge-secondary">Inactive</span>
+		<div><span class="badge bg-secondary align-self-center">Inactive</span></div>
 		{{end}}
-		<li class="nav-item">
-		<a href="/admin/console" class="nav-link">Console</a><li>
+		<a href="/admin/console" class="nav-link">Console</a>
 		{{end}}
-		<li class="nav-item">
 		<a href="/uid/user/self/view" class="nav-link">
-		{{if and (not .CurrentUser.IsVerified) (not .CurrentUser.IsAdmin)}}<span class="badge badge-warning">Unverified</span>{{end}}
-		{{.CurrentUser.Username}}</a></li>
-		<li class="nav-item">
-		<a href="/sign-out" class="nav-link">Sign Out</a></li>
+		{{if and (not .CurrentUser.IsVerified) (not
+		.CurrentUser.IsAdmin)}}<span class="badge bg-warning text-dark">Unverified</span>{{end}}
+		{{.CurrentUser.Username}}</a>
+		<a href="/sign-out" class="nav-link">Sign Out</a>
 		{{else}}
 		{{if .IsWebsiteActive}}
-		<li class="nav-item">
-		  <a href="/register" class="nav-link">Register</a></li>
+                <a href="/register" class="nav-link">Register</a>
 		{{end}}
-		<li class="nav-item">
-		<a href="/login" class="nav-link">Login</a></li>
+		<a href="/login" class="nav-link">Login</a>
 	      {{end}}
-	      </ul>
+	      </div>
 	    </div>
 	    </div>
 	</header>
@@ -64,8 +55,7 @@
 	  {{if .Flash}}
 	  <div class="alert alert-info alert-dismissible fade show" role="alert">
 	    {{.Flash}}
-	    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-	    <span aria-hidden="true">&times;</span>
+	    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
 	    </button>
 	  </div>
 	  {{end}}

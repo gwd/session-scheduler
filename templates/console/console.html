@@ -16,9 +16,9 @@
 {{define "admin/slots-form"}}
 <form action="/admin/setLocked" class="form-group col" method="POST">
   {{range .}}
-  <div class="custom-control custom-switch{{if .Checked}} bg-success{{end}}">
-    <input type="checkbox" class="custom-control-input" name="locked" value="{{.SlotID}}" id="locked{{.SlotID}}"{{if .Checked}} checked{{end}}>
-    <label class="custom-control-label" for="locked{{.SlotID}}">{{.TimeDisplay}}</label>
+  <div class="form-check form-switch{{if .Checked}} bg-success{{end}}">
+    <input type="checkbox" class="form-check-input" name="locked" value="{{.SlotID}}" id="locked{{.SlotID}}"{{if .Checked}} checked{{end}}>
+    <label class="form-check-label" for="locked{{.SlotID}}">{{.TimeDisplay}}</label>
   </div>
   {{end}}
   <input type="submit" value="Update locked slots" class="btn btn-primary">
@@ -62,21 +62,21 @@
       </li>
       <li class="list-group-item">
 	<form action="/admin/setstatus" method="POST">
-          <div class="custom-control custom-switch">
-	    <input type="checkbox" class="custom-control-input" name="status" value="websiteActive" id="website" {{if .IsWebsiteActive}} checked{{end}} onChange="this.form.submit()">
-	    <label class="custom-control-label" for="website">Website 'Active'</label>
+          <div class="form-check form-switch">
+	    <input type="checkbox" class="form-check-input" name="status" value="websiteActive" id="website" {{if .IsWebsiteActive}} checked{{end}} onChange="this.form.submit()">
+	    <label class="form-check-label" for="website">Website 'Active'</label>
 	  </div>
-          <div class="custom-control custom-switch">
-	    <input type="checkbox" class="custom-control-input" name="status" value="scheduleActive" id="schedule" {{if .IsScheduleActive}} checked{{end}} onChange="this.form.submit()">
-	    <label class="custom-control-label" for="schedule">Schedule 'Active'</label>
+          <div class="form-check form-switch">
+	    <input type="checkbox" class="form-check-input" name="status" value="scheduleActive" id="schedule" {{if .IsScheduleActive}} checked{{end}} onChange="this.form.submit()">
+	    <label class="form-check-label" for="schedule">Schedule 'Active'</label>
 	  </div>
-          <div class="custom-control custom-switch">
-	    <input type="checkbox" class="custom-control-input" name="status" value="vcodeSent" id="vcodesent" {{if .IsVcodeSent}} checked{{end}} onChange="this.form.submit()">
-	    <label class="custom-control-label" for="vcodesent">Verification Code Sent</label>
+          <div class="form-check form-switch">
+	    <input type="checkbox" class="form-check-input" name="status" value="vcodeSent" id="vcodesent" {{if .IsVcodeSent}} checked{{end}} onChange="this.form.submit()">
+	    <label class="form-check-label" for="vcodesent">Verification Code Sent</label>
 	  </div>
-          <div class="custom-control custom-switch">
-	    <input type="checkbox" class="custom-control-input" name="status" value="requireVerification" id="verification" {{if .RequireVerification}} checked{{end}} onChange="this.form.submit()">
-	    <label class="custom-control-label" for="verification">Require verification for new accounts and sessions</label>
+          <div class="form-check form-switch">
+	    <input type="checkbox" class="form-check-input" name="status" value="requireVerification" id="verification" {{if .RequireVerification}} checked{{end}} onChange="this.form.submit()">
+	    <label class="form-check-label" for="verification">Require verification for new accounts and sessions</label>
 	  </div>
 	  <input type="submit" value="Set" class="btn btn-primary noscript">
 	  <script>

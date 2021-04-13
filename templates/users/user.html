@@ -67,12 +67,12 @@
       {{if .CurrentUser}}
         {{if .CurrentUser.IsAdmin}}
           <form action="/uid/user/{{.User.UserID}}/setverified" method="POST">
-            <div class="custom-control custom-switch">
-	      <input type="checkbox" class="custom-control-input"
+            <div class="form-check form-switch">
+	      <input type="checkbox" class="form-check-input"
 	       name="verified" value="{{.User.UserID}}" id="p{{.User.UserID}}"
 	       {{if .User.IsVerified}} checked{{end}}
 	       onChange="this.form.submit()">
-	      <label class="custom-control-label" for="p{{.User.UserID}}"> </label>
+	      <label class="form-check-label" for="p{{.User.UserID}}"> </label>
 	      <input type="hidden" name="newvalue" value={{if .User.IsVerified}}"false"{{else}}"true"{{end}}>
 	    </div>
 	    <input type="submit" value="Set" class="btn btn-primary noscript">
