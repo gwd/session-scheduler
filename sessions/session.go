@@ -70,11 +70,8 @@ func RequestSession(r GetCookier) *Session {
 	}
 
 	session, err := store.Find(cookie.Value)
-	if err != nil {
-		panic(err)
-	}
-
-	if session == nil {
+	// FIXME: Do something with the error
+	if err != nil || session == nil {
 		return nil
 	}
 
