@@ -107,6 +107,117 @@ func compareDiscussions(d1, d2 *Discussion, t *testing.T) bool {
 	return ret
 }
 
+func testDeleteDiscussionsAndUsers(t *testing.T, m *mirrorData) (exit bool) {
+	exit = true
+
+	// General approach:
+	//
+	// 1. Delete one discussion from each user.  Do all the normal "did it disappear" &c checks.
+	//
+	// 2. Delete the whole user.  Then run DiscussionIterateUser() and verify that nothing happens.
+	//
+	// Afterwards, iterate through our list of m.discussions and verify
+	// that they're all gone.  (And also run DiscussionIterate again
+	// for good measure.)
+	for uidx := range m.users {
+		uid := m.users[uidx].UserID
+
+		// First, find one discussion to delete from this user
+		var did DiscussionID
+		{
+			i := 0
+			stopErr := fmt.Errorf("Done")
+			err := DiscussionIterateUser(uid, func(d *DiscussionFull) error {
+				if d.Owner != uid {
+					return fmt.Errorf("Got user %v, expecting %v!", d.Owner, uid)
+				}
+				if i == 0 {
+					did = d.DiscussionID
+					i++
+					return nil
+				}
+				return stopErr
+			})
+			// Valid results:
+			// err == nil, i == 0: User has no m.discussions
+			// err == nil, i == 1: User has exactly one discussion
+			// err == stopErr: User has more than one discussion, and we correctly stopped
+			if !((err == stopErr) || (i < 2 && err == nil)) {
+				t.Errorf("DiscussionIterateUser(%v): unexpected error %v", uid, err)
+				return
+			}
+		}
+
+		if did != "" {
+			// If we have a discussion, delete it
+			err := DeleteDiscussion(did)
+			if err != nil {
+				t.Errorf("Deleting discussion(%v): %v", did, err)
+				return
+			}
+
+			// Try finding the discussion
+			gotdisc, err := DiscussionFindByIdFull(did)
+			if err != nil {
+				t.Errorf("Finding deleted discussion: %v", err)
+				return
+			}
+			if gotdisc != nil {
+				t.Errorf("Got response from deleted discussion: %v", gotdisc)
+				return
+			}
+
+			// Try deleting it again
+			err = DeleteDiscussion(did)
+			if err == nil {
+				t.Errorf("DeleteDiscussion a second time succeeded!")
+				return
+			}
+		}
+
+		// Now, delete the user
+		{
+			err := DeleteUser(uid)
+			if err != nil {
+				t.Errorf("DeleteUser(%v): %v", uid, err)
+				return
+			}
+
+			err = DiscussionIterateUser(uid, func(d *DiscussionFull) error {
+				return fmt.Errorf("Shouldn't be called!")
+			})
+			if err != nil {
+				t.Errorf("DiscussionIterateUser for deleted user %v: %v", uid, err)
+				return
+			}
+		}
+	}
+
+	for didx := range m.discussions {
+		gotdisc, err := DiscussionFindByIdFull(m.discussions[didx].DiscussionID)
+		if err != nil {
+			t.Errorf("DiscussionFindById for (allegedly)-deleted discussion: %v", err)
+			return
+		}
+		if gotdisc != nil {
+			t.Errorf("DiscussionFindById succeeded for allegedly-deleted discussion!")
+			return
+		}
+	}
+
+	{
+		err := DiscussionIterate(func(d *DiscussionFull) error {
+			return fmt.Errorf("Shouldn't be called!")
+		})
+		if err != nil {
+			t.Errorf("DiscussionIterate when all m.discussions should have been deleted: %v", err)
+			return
+		}
+	}
+
+	return false
+}
+
 func testUnitDiscussion(t *testing.T) (exit bool) {
 	exit = true
 
@@ -545,110 +656,9 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		}
 	}
 
-	t.Logf("Testing DeleteDiscussion / DeleteUsers with discussions")
-	// General approach:
-	//
-	// 1. Delete one discussion from each user.  Do all the normal "did it disappear" &c checks.
-	//
-	// 2. Delete the whole user.  Then run DiscussionIterateUser() and verify that nothing happens.
-	//
-	// Afterwards, iterate through our list of discussions and verify
-	// that they're all gone.  (And also run DiscussionIterate again
-	// for good measure.)
-	for uidx := range m.users {
-		uid := m.users[uidx].UserID
-
-		// First, find one discussion to delete from this user
-		var did DiscussionID
-		{
-			i := 0
-			stopErr := fmt.Errorf("Done")
-			err := DiscussionIterateUser(uid, func(d *DiscussionFull) error {
-				if d.Owner != uid {
-					return fmt.Errorf("Got user %v, expecting %v!", d.Owner, uid)
-				}
-				if i == 0 {
-					did = d.DiscussionID
-					i++
-					return nil
-				}
-				return stopErr
-			})
-			// Valid results:
-			// err == nil, i == 0: User has no discussions
-			// err == nil, i == 1: User has exactly one discussion
-			// err == stopErr: User has more than one discussion, and we correctly stopped
-			if !((err == stopErr) || (i < 2 && err == nil)) {
-				t.Errorf("DiscussionIterateUser(%v): unexpected error %v", uid, err)
-				return
-			}
-		}
-
-		if did != "" {
-			// If we have a discussion, delete it
-			err := DeleteDiscussion(did)
-			if err != nil {
-				t.Errorf("Deleting discussion(%v): %v", did, err)
-				return
-			}
-
-			// Try finding the discussion
-			gotdisc, err := DiscussionFindByIdFull(did)
-			if err != nil {
-				t.Errorf("Finding deleted discussion: %v", err)
-				return
-			}
-			if gotdisc != nil {
-				t.Errorf("Got response from deleted discussion: %v", gotdisc)
-				return
-			}
-
-			// Try deleting it again
-			err = DeleteDiscussion(did)
-			if err == nil {
-				t.Errorf("DeleteDiscussion a second time succeeded!")
-				return
-			}
-		}
-
-		// Now, delete the user
-		{
-			err := DeleteUser(uid)
-			if err != nil {
-				t.Errorf("DeleteUser(%v): %v", uid, err)
-				return
-			}
-
-			err = DiscussionIterateUser(uid, func(d *DiscussionFull) error {
-				return fmt.Errorf("Shouldn't be called!")
-			})
-			if err != nil {
-				t.Errorf("DiscussionIterateUser for deleted user %v: %v", uid, err)
-				return
-			}
-		}
-	}
-
-	for didx := range m.discussions {
-		gotdisc, err := DiscussionFindByIdFull(m.discussions[didx].DiscussionID)
-		if err != nil {
-			t.Errorf("DiscussionFindById for (allegedly)-deleted discussion: %v", err)
-			return
-		}
-		if gotdisc != nil {
-			t.Errorf("DiscussionFindById succeeded for allegedly-deleted discussion!")
-			return
-		}
-	}
-
-	{
-		err := DiscussionIterate(func(d *DiscussionFull) error {
-			return fmt.Errorf("Shouldn't be called!")
-		})
-		if err != nil {
-			t.Errorf("DiscussionIterate when all discussions should have been deleted: %v", err)
-			return
-		}
+	t.Logf("Testing DeleteDiscussion / DeleteM.Users with m.discussions")
+	if testDeleteDiscussionsAndUsers(t, m) {
+		return
 	}
 
 	tc.cleanup()

@@ -269,6 +269,14 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 		}
 	}
 
+	//
+	// Re-test other operations: Delete discussions and users
+	//
+	t.Logf("Testing DeleteDiscussion / DeleteUsers with discussions")
+	if testDeleteDiscussionsAndUsers(t, m) {
+		return
+	}
+
 	tc.cleanup()
 
 	return false
