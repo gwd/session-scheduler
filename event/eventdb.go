@@ -132,13 +132,6 @@ func openDb(filename string) (*sqlx.DB, error) {
 			return nil, fmt.Errorf("Initializing database: %v", err)
 		}
 		commit = true
-	case 1:
-		err = upgradeDbv1(tx)
-		if err != nil {
-			return nil, fmt.Errorf("Upgrading database: %v", err)
-		}
-
-		commit = true
 	case codeSchemaVersion:
 		break
 	default:
@@ -155,79 +148,6 @@ func openDb(filename string) (*sqlx.DB, error) {
 	}
 
 	return db, nil
-}
-
-func upgradeDbv1(ext sqlx.Ext) error {
-	_, err := ext.Exec(fmt.Sprintf("pragma user_version=%d", 2))
-	if err != nil {
-		return errOrRetry("Updating user_version", err)
-	}
-
-	// NB when adding a column with a 'not null' restriction, we have
-	// to add a default, even if we don't expect there to be any rows
-	// to update.  Testing for the non-upgaded case should catch any
-	// insertions which don't include this column.
-	_, err = ext.Exec(`alter table event_locations add column locationurl text not null default ""`)
-	if err != nil {
-		return errOrRetry("Adding event_locations:locationurl: %v", err)
-	}
-
-	// event_slots and event_schedule have more substantial changes;
-	// just drop the old table and make a new one.  First make sure we
-	// aren't dropping any slots.  (Schedule we can just throw away.)
-	{
-		var slotcount int
-		err = sqlx.Get(ext, &slotcount, `select count(*) from event_slots`)
-		if err != nil {
-			return errOrRetry("Getting slot count for upgrade", err)
-		}
-		if slotcount != 0 {
-			return fmt.Errorf("%d slots present, cannot upgrade.  Delete slots and try updrade again.",
-				slotcount)
-		}
-	}
-
-	_, err = ext.Exec(`
-drop table event_slots;
-CREATE TABLE event_slots(
-    slotid   text primary key,
-    slotidx  integer not null, /* Order within a day */
-    dayid    integer not null,
-    slottime string not null,  /* Output of time.MarshalText() */
-    isbreak  boolean not null,
-    islocked boolean not null,
-    foreign  key(dayid) references event_days(dayid),
-    unique(dayid, slotidx));`)
-	if err != nil {
-		return errOrRetry("Upgrading event_slots table", err)
-	}
-
-	_, err = ext.Exec(`
-drop table event_schedule;
-CREATE TABLE event_schedule(
-    discussionid text not null,
-    slotid       text not null,
-    locationid   integer not null,
-    foreign key(discussionid) references event_discussions(discussionid),
-    foreign key(slotid) references event_slots(slotid),
-    foreign key(locationid) references event_locations(locationid),
-    unique(slotid, locationid));`)
-	if err != nil {
-		return errOrRetry("Upgrading event_schedule table", err)
-	}
-
-	_, err = ext.Exec(`
-CREATE TABLE event_discussions_possible_slots(
-    discussionid text not null,
-    slotid       text not null,
-    foreign key(discussionid) references event_discussions(discussionid),
-    foreign key(slotid) references event_slots(slotid),
-    unique(discussionid, slotid))`)
-	if err != nil {
-		return errOrRetry("Creating table event_discussions_possible_slots", err)
-	}
-
-	return nil
 }
 
 func initDb(ext sqlx.Ext) error {
