@@ -329,68 +329,47 @@ func UserUpdate(userNext, modifier *User, currentPassword, newPassword string) e
 }
 
 func DeleteUser(userid UserID) error {
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
+	return txLoop(func(eq sqlx.Ext) error {
 		// Delete foreign key references first
 
 		// Delete interest of this user in any discussion
-		_, err = tx.Exec(`
+		_, err := eq.Exec(`
            delete from event_interest
                where userid = ?`, userid)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Deleting discussion from event_interest: %v", err)
+		if err != nil {
+			return errOrRetry("Deleting discussion from event_interest", err)
 		}
 
 		// Delete interest in any users in discussions owned by this user
-		_, err = tx.Exec(`
+		_, err = eq.Exec(`
            delete from event_interest
                where discussionid in (
                    select discussionid
                        from event_discussions
                        where owner = ?)`, userid)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Deleting interest in discussions owned by %v: %v",
-				userid, err)
+		if err != nil {
+			return errOrRetry("Deleting interest in discussions owned by user", err)
 		}
 
 		// And delete any discussions owned by this user
-		_, err = deleteDiscussionCommon(tx,
+		_, err = deleteDiscussionCommon(eq,
 			`discussionid in 
                  (select discussionid from event_discussions where owner = ?)`,
 			userid)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Deleting all discussions for user: %v", err)
+		if err != nil {
+			return errOrRetry("Deleting all discussions for user", err)
 		}
 
-		res, err := tx.Exec(`
+		res, err := eq.Exec(`
         delete from event_users where userid=?`,
 			userid)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Deleting record for user %v: %v",
-				userid, err)
+		if err != nil {
+			return errOrRetry("Deleting record for user", err)
 		}
 		rcount, err := res.RowsAffected()
-		if err != nil {
+		if shouldRetry(err) {
+			return err
+		} else if err != nil {
 			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
 		}
 		switch {
@@ -401,15 +380,8 @@ func DeleteUser(userid UserID) error {
 			return ErrInternal
 		}
 
-		err = tx.Commit()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return err
-		}
 		return nil
-	}
+	})
 }
 
 func userGetTx(q sqlx.Queryer, userid UserID, user *User) error {
