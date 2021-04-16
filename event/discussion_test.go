@@ -118,26 +118,8 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	m := &mirrorData{}
 
 	// Make 6 users for testing
-	testUserCount := 6
-	m.users = make([]User, testUserCount)
-	m.userMap = make(map[UserID]int)
-
-	for i := range m.users {
-		subexit := false
-		m.users[i], subexit = testNewUser(t)
-		if subexit {
-			return
-		}
-		m.userMap[m.users[i].UserID] = i
-		if m.users[i].IsVerified {
-			m.verified++
-		} else {
-			m.unverified++
-		}
-	}
-	if m.verified == 0 || m.unverified == 0 {
-		t.Errorf("Don't have a mix of verified / unverified (%d %d)", m.verified, m.unverified)
-		return
+	if testNewUsers(t, m, 6) {
+		return true
 	}
 
 	// Try making an invalid discussion

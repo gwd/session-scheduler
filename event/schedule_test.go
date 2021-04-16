@@ -21,14 +21,8 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 	// SETUP: Make some users, some discussions, a timetable, and some locations
 	//
 	t.Logf("Setting up users, discussion, timetable")
-	testUserCount := 10
-	m.users = make([]User, testUserCount)
-	for i := range m.users {
-		subexit := false
-		m.users[i], subexit = testNewUser(t)
-		if subexit {
-			return
-		}
+	if testNewUsers(t, m, 10) {
+		return
 	}
 
 	testDiscussionCount := 12

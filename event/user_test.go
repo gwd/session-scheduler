@@ -51,6 +51,32 @@ func testNewUser(t *testing.T) (User, bool) {
 	return user, false
 }
 
+// Reset mirrorData and create testUserCount users
+func testNewUsers(t *testing.T, m *mirrorData, testUserCount int) (exit bool) {
+	m.users = make([]User, testUserCount)
+	m.userMap = make(map[UserID]int)
+
+	for i := range m.users {
+		subexit := false
+		m.users[i], subexit = testNewUser(t)
+		if subexit {
+			return false
+		}
+		m.userMap[m.users[i].UserID] = i
+		if m.users[i].IsVerified {
+			m.verified++
+		} else {
+			m.unverified++
+		}
+	}
+	if m.verified == 0 || m.unverified == 0 {
+		t.Errorf("Don't have a mix of verified / unverified (%d %d)", m.verified, m.unverified)
+		return true
+	}
+
+	return false
+}
+
 func compareUsers(u1, u2 *User, t *testing.T) bool {
 	ret := true
 	if u1.UserID != u2.UserID {
