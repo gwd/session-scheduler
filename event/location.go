@@ -2,7 +2,6 @@ package event
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -91,29 +90,16 @@ func LocationFindById(lid LocationID) (*Location, error) {
 
 // DeleteLocation
 func DeleteLocation(lid LocationID) error {
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
+	return txLoop(func(eq sqlx.Ext) error {
 		// TODO: Delete (nullify?) the schedule as well
 		res, err := event.Exec(`delete from event_locations where locationid=?`, lid)
-		switch {
-		case shouldRetry(err):
-			continue
-		case err == nil:
-			break
-		default:
-			return fmt.Errorf("Deleting location from event_locations: %v", err)
+		if err != nil {
+			return errOrRetry("Deleting location from event_locations", err)
 		}
 
 		rcount, err := res.RowsAffected()
 		if shouldRetry(err) {
-			continue
+			return err
 		} else if err != nil {
 			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
 		}
@@ -125,14 +111,8 @@ func DeleteLocation(lid LocationID) error {
 			return ErrInternal
 		}
 
-		err = tx.Commit()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
 		return nil
-	}
+	})
 }
 
 // LocationUpdate

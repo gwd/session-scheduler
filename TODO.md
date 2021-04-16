@@ -3,6 +3,11 @@
 - Timetable slots cannot be removed if they contain an assigned
 session
 
+- Locations (probably) cannot be removed if something has been
+scheduled in them
+
+- If locations change type or capacity, schedule should be nullified
+
 - A way to set your own default timezone 
 
 - Scheduler state (current / whatever)
@@ -35,15 +40,16 @@ session
 
 # Potential improvements
 
-* Creating / editing schedule in webapp
 * Automated backup
+
+* Use "embed" to package up the templates &c
+
+* Creating / editing schedule in webapp
 
 # Clean-up
 
 * Lots of visual improvements
 * Make code structure more rational
-
-* Use "embed" to package up the templates &c
 
 * Use mirrorData in `heuristic_test.go`, `interest_test.go`,
   `possibleslot_test.go`, and `transaction_test.go`
