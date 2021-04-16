@@ -454,39 +454,60 @@ func DiscussionSetPublic(discussionid DiscussionID, public bool) error {
 	}
 }
 
+func deleteDiscussionCommon(eq sqlx.Ext, where string, arg interface{}) (int64, error) {
+	_, err := eq.Exec(`
+           delete from event_interest where `+where,
+		arg)
+	if err != nil {
+		return 0, errOrRetry("Deleting discussion from event_interest", err)
+	}
+
+	_, err = eq.Exec(`
+           delete from event_discussions_possible_slots where `+where, arg)
+	if err != nil {
+		return 0, errOrRetry("Deleting discussion from event_discussions_possible_slots", err)
+	}
+
+	_, err = eq.Exec(`
+           delete from event_schedule where `+where, arg)
+	if err != nil {
+		return 0, errOrRetry("Deleting discussion from event_schedule", err)
+	}
+
+	res, err := eq.Exec(`
+            delete from event_discussions
+                where `+where, arg)
+	if err != nil {
+		return 0, errOrRetry("Deleting discussion from event_discussions", err)
+	}
+
+	rcount, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
+	}
+
+	return rcount, nil
+}
+
 func DeleteDiscussion(did DiscussionID) error {
 	log.Printf("Deleting discussion %s", did)
 
 	return txLoop(func(eq sqlx.Ext) error {
-		// Delete foreign key references first
-		_, err := eq.Exec(`
-           delete from event_interest
-               where discussionid = ?`, did)
-		if err != nil {
-			return errOrRetry("Deleting discussion from event_interest", err)
+		rcount, err := deleteDiscussionCommon(eq, "discussionid = ?", did)
+
+		if err == nil {
+			switch {
+			case rcount == 0:
+				return ErrDiscussionNotFound
+			case rcount > 1:
+				log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
+				return ErrInternal
+			}
 		}
 
-		res, err := eq.Exec(`
-        delete from event_discussions
-            where discussionid = ?`, did)
-		if err != nil {
-			return errOrRetry("Deleting discussion from event_discussions", err)
-		}
-
-		rcount, err := res.RowsAffected()
-		if err != nil {
-			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
-		}
-		switch {
-		case rcount == 0:
-			return ErrDiscussionNotFound
-		case rcount > 1:
-			log.Printf("ERROR Expected to change 1 row, changed %d", rcount)
-			return ErrInternal
-		}
-
-		return nil
+		return err
 	})
+
 }
 
 func MakePossibleSlots(len int) []bool {
