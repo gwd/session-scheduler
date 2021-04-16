@@ -2,6 +2,7 @@ package event
 
 import (
 	"math/rand"
+	"runtime/debug"
 	"testing"
 
 	"github.com/icrowley/fake"
@@ -284,6 +285,8 @@ func testTransaction(t *testing.T) (exit bool) {
 	if tc == nil {
 		return
 	}
+
+	debug.SetTraceback("all")
 
 	// Have several goroutines create and delete users
 	{
