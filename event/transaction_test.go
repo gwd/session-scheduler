@@ -80,6 +80,12 @@ func transactionRoutineUserCreateReadDelete(t *testing.T, iterations int, exitCh
 			return
 		}
 
+		_, err = gotuser.GetLocationTZ()
+		if err != nil {
+			t.Errorf("ERROR: Getting user's location: %v", err)
+			return
+		}
+
 		for j := 0; j < 5; j++ {
 			verified := rand.Intn(2) == 0
 			err := user.SetVerified(verified)

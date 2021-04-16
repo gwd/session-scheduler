@@ -198,6 +198,21 @@ func (user *User) GetInterest(disc *Discussion) (int, error) {
 	return interest, err
 }
 
+func (user *User) GetLocationTZ() (TZLocation, error) {
+	var tz TZLocation
+	err := txLoop(func(eq sqlx.Ext) error {
+		err := sqlx.Get(eq, &tz, `
+            select location
+                from event_users
+                where userid=?`, user.UserID)
+		if err != nil {
+			err = errOrRetry("Getting location for user", err)
+		}
+		return err
+	})
+	return tz, err
+}
+
 func passwordHash(newPassword string) (string, error) {
 	hashedPasswordBytes, err := bcrypt.GenerateFromPassword([]byte(newPassword), hashCost)
 	return string(hashedPasswordBytes), err

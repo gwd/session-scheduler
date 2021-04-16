@@ -15,14 +15,15 @@ type UserProfile struct {
 }
 
 type UserDisplay struct {
-	UserID      event.UserID
-	Username    string
-	IsAdmin     bool
-	IsVerified  bool // Has entered the verification code
-	MayEdit     bool
-	Profile     UserProfile
-	Description template.HTML // Sanitised description, suitable for displaying
-	List        []*DiscussionDisplay
+	UserID          event.UserID
+	Username        string
+	IsAdmin         bool
+	IsVerified      bool // Has entered the verification code
+	MayEdit         bool
+	DefaultLocation string
+	Profile         UserProfile
+	Description     template.HTML // Sanitised description, suitable for displaying
+	List            []*DiscussionDisplay
 }
 
 func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay) {
@@ -40,6 +41,7 @@ func UserGetDisplay(u *event.User, cur *event.User, long bool) (ud *UserDisplay)
 		ud.Profile.Email = u.Email
 		ud.Profile.Company = u.Company
 		ud.Profile.Description = u.Description
+		ud.DefaultLocation = u.Location.String()
 		ud.Description = ProcessText(u.Description)
 	}
 	// But show discussions to everyone.  (This is already available

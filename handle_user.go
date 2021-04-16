@@ -11,7 +11,10 @@ import (
 )
 
 func HandleUserNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	RenderTemplate(w, r, "user/new", nil)
+	RenderTemplate(w, r, "user/new", map[string]interface{}{
+		"DefaultLocation": DefaultLocation,
+		"Locations":       TimezoneList,
+	})
 }
 
 func parseProfile(r *http.Request, user *event.User) {
@@ -19,6 +22,12 @@ func parseProfile(r *http.Request, user *event.User) {
 	user.Company = r.FormValue("Company")
 	user.Email = r.FormValue("Email")
 	user.Description = r.FormValue("Description")
+	if loc := r.FormValue("Location"); loc != "" {
+		tzl, err := event.LoadLocation(loc)
+		if err == nil {
+			user.Location = tzl
+		}
+	}
 }
 
 func HandleUserCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

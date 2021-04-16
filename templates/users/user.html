@@ -24,6 +24,7 @@
     <div>Description: {{.Description}}</div>
     {{end}}
     {{if .MayEdit}}
+    <div>Default Timezone: {{.DefaultLocation}}</div>
     <div class="m-1"><a href="edit" class="btn btn-primary" role="button">Edit</a>
     {{if .IsAdmin}}
     <a href="delete" class="btn btn-danger" role="button">Delete</a>
@@ -168,8 +169,17 @@
 			</div>
 			<div class="form-group">
 			  <label for="newEmail">Email (Optional)</label>
-			  <input type="email" name="Email" value="{{.Email}}" id="newEmail" class="form-control" placeholder="name@example.com" autocomplete="email work">
+			  <input type="email" name="Email" value="{{.Display.Profile.Email}}" id="newEmail" class="form-control" placeholder="name@example.com" autocomplete="email work">
 			</div>
+                        <div class="form-group">
+                          <label for="location">Default timezone: </label>
+                          <select name="Location" id="location" class="form-control">
+                          {{template "schedule/form-location-option" .Display.DefaultLocation}}
+                          {{range .Locations}}
+                          {{template "schedule/form-location-option" .}}
+                          {{end}}
+                          </select>
+                        </div>
 			{{template "user/profile/form" .Display.Profile}}
 			<input type="submit" value="Save" class="btn btn-primary">
 		</form>
@@ -220,6 +230,15 @@
       <p class="text-muted">Please contact george dot dunlap at citrix dot com if you haven't received a verification code</p>
     </div>
     {{end}}
+    <div class="form-group">
+      <label for="location">Default timezone: </label>
+      <select name="Location" id="location" class="form-control">
+        {{template "schedule/form-location-option" .DefaultLocation}}
+        {{range .Locations}}
+        {{template "schedule/form-location-option" .}}
+        {{end}}
+      </select>
+    </div>
     {{template "user/profile/form" .Profile}}
     <input type="submit" value="Register" class="btn btn-primary">
   </form>

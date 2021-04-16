@@ -103,7 +103,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	var display interface{}
+	data := map[string]interface{}{}
 
 	switch itype {
 	case "discussion":
@@ -126,7 +126,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			break
 		}
 
-		display = DiscussionGetDisplay(df, cur)
+		data["Display"] = DiscussionGetDisplay(df, cur)
 	case "user":
 		user, _ := event.UserFind(event.UserID(uid))
 
@@ -135,8 +135,11 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 
 		// Only display edit confirmation page if the current user can edit.
-		if action == "edit" && !MayEditUser(cur, user) {
-			break
+		if action == "edit" {
+			if !MayEditUser(cur, user) {
+				break
+			}
+			data["Locations"] = TimezoneList
 		}
 
 		// Only display a delete confirmation page for admins
@@ -144,13 +147,13 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			break
 		}
 
-		display = UserGetDisplay(user, cur, true)
+		data["Display"] = UserGetDisplay(user, cur, true)
 	default:
 		return
 	}
 
 	// Check for nil return values from GetDisplay functions, as will as nil interface value
-	if display == nil || reflect.ValueOf(display).IsNil() {
+	if display := data["Display"]; display == nil || reflect.ValueOf(display).IsNil() {
 		RenderTemplate(w, r, "uid/notfound", map[string]interface{}{
 			"Utype": itype,
 		})
@@ -159,9 +162,7 @@ func HandleUid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	//log.Printf("%s/%s: Display %v", itype, action, display)
 
-	RenderTemplate(w, r, itype+"/"+action, map[string]interface{}{
-		"Display": display,
-	})
+	RenderTemplate(w, r, itype+"/"+action, data)
 }
 
 func FormCheckToSlotID(formData []string) (slots []event.SlotID, err error) {

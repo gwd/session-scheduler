@@ -19,29 +19,25 @@ func HandleScheduleView(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		return
 	}
 
+	cur := RequestUser(r)
+
 	curLocationString := DefaultLocation
 	curLocationTZ := DefaultLocationTZ
 
 	if loc := r.FormValue("location"); loc != "" {
-		// If we've gone to a specific URL, use that location, and set a
-		// cookie to remember it.
+		// If we've gone to a specific URL, use that location
 		tz, err := event.LoadLocation(loc)
 		if err == nil {
 			curLocationString = loc
 			curLocationTZ = tz
-			// http.SetCookie(w, &http.Cookie{
-			// 	Name:    locationCookieName,
-			// 	Value:   loc,
-			// 	Expires: time.Now().Add(time.Hour * 24 * 365)})
 		}
-	} else if cookie, err := r.Cookie(locationCookieName); err == nil {
-		// Otherwise, if there's a cookie, use that value.
-		tz, err := event.LoadLocation(cookie.Value)
+	} else if cur != nil {
+		// Otherwise, if we're logged in, use the user's preference
+		tz, err := cur.GetLocationTZ()
 		if err == nil {
-			curLocationString = cookie.Value
+			curLocationString = tz.String()
 			curLocationTZ = tz
 		}
-
 	}
 
 	// FIXME: Handle the error

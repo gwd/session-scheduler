@@ -1,5 +1,7 @@
 # Changes before final websete
 
+* Use "embed" to package up the templates &c
+
 - Timetable slots cannot be removed if they contain an assigned
 session
 
@@ -7,8 +9,6 @@ session
 scheduled in them
 
 - If locations change type or capacity, schedule should be nullified
-
-- A way to set your own default timezone 
 
 - Scheduler state (current / whatever)
 
@@ -41,8 +41,6 @@ scheduled in them
 # Potential improvements
 
 * Automated backup
-
-* Use "embed" to package up the templates &c
 
 * Creating / editing schedule in webapp
 
