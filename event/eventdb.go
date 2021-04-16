@@ -81,6 +81,7 @@ func txLoop(txFunc func(eq sqlx.Ext) error) error {
 
 		err = txFunc(tx)
 		if shouldRetry(err) {
+			tx.Rollback()
 			continue
 		} else if err != nil {
 			return err
@@ -88,6 +89,7 @@ func txLoop(txFunc func(eq sqlx.Ext) error) error {
 
 		err = tx.Commit()
 		if shouldRetry(err) {
+			tx.Rollback()
 			continue
 		} else if err != nil {
 			err = fmt.Errorf("Commiting transaction: %v", err)
