@@ -4,6 +4,7 @@ import (
 	//"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/mattn/go-sqlite3"
@@ -55,8 +56,21 @@ func errOrRetry(comment string, err error) error {
 	return fmt.Errorf("%s: %v", comment, err)
 }
 
+const (
+	minTxRetries = 5
+	maxTxTime    = time.Second
+)
+
 func txLoop(txFunc func(eq sqlx.Ext) error) error {
+	start := time.Now()
+	count := 0
 	for {
+		count++
+		if count > minTxRetries && time.Now().Sub(start) > maxTxTime {
+			return fmt.Errorf("Internal error: Transaction taking too long (reps %v time %v)",
+				count, time.Now().Sub(start))
+		}
+
 		tx, err := event.Beginx()
 		if shouldRetry(err) {
 			continue
