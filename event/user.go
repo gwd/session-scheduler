@@ -368,16 +368,15 @@ func DeleteUser(userid UserID) error {
 		}
 
 		// And delete any discussions owned by this user
-		_, err = tx.Exec(`
-        delete from event_discussions
-            where owner = ?`,
+		_, err = deleteDiscussionCommon(tx,
+			`discussionid in 
+                 (select discussionid from event_discussions where owner = ?)`,
 			userid)
 		if shouldRetry(err) {
 			tx.Rollback()
 			continue
 		} else if err != nil {
-			return fmt.Errorf("Deleting discussions owned by %v: %v",
-				userid, err)
+			return fmt.Errorf("Deleting all discussions for user: %v", err)
 		}
 
 		res, err := tx.Exec(`

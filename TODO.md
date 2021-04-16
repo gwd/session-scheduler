@@ -3,8 +3,6 @@
 - Timetable slots cannot be removed if they contain an assigned
 session
 
-- Scheduled sessions cannot be deleted (and no error is reported!)
-
 - A way to set your own default timezone 
 
 - Scheduler state (current / whatever)
