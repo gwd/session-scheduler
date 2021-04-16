@@ -109,26 +109,13 @@ func NewDiscussion(disc *Discussion) error {
 		return err
 	}
 
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
+	return txLoop(func(eq sqlx.Ext) error {
 		count := 0
-		err = tx.Get(&count,
+		err := sqlx.Get(eq, &count,
 			`select count(*) from event_discussions where owner=?`,
 			disc.Owner)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Getting discussion count for user %v: %v",
-				disc.Owner, err)
+		if err != nil {
+			return errOrRetry("Getting discussion count for user: %v", err)
 		}
 
 		if count >= maxDiscussionsPerUser {
@@ -138,13 +125,10 @@ func NewDiscussion(disc *Discussion) error {
 		disc.DiscussionID.generate()
 
 		// New discussions are non-public by default unless owner is verified
-		err = tx.Get(&disc.IsPublic,
+		err = sqlx.Get(eq, &disc.IsPublic,
 			`select isverified from event_users where userid = ?`,
 			owner)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
+		if err != nil {
 			return err
 		}
 
@@ -155,37 +139,18 @@ func NewDiscussion(disc *Discussion) error {
 			disc.ApprovedTitle = ""
 			disc.ApprovedDescription = ""
 		}
-		_, err = tx.Exec(
+		_, err = eq.Exec(
 			`insert into event_discussions values (?, ?, ?, ?, ?, ?, ?)`,
 			disc.DiscussionID, disc.Owner, disc.Title, disc.Description,
 			disc.ApprovedTitle, disc.ApprovedDescription,
 			disc.IsPublic)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
+		if err != nil {
 			return err
 		}
 
 		// Owners are assumed to want to attend their own session
-		err = setInterestTx(tx, disc.Owner, disc.DiscussionID, InterestMax)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		err = tx.Commit()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		return nil
-	}
+		return setInterestTx(eq, disc.Owner, disc.DiscussionID, InterestMax)
+	})
 }
 
 // GetMaxScore returns the maximum possible score a discussion could
@@ -239,30 +204,17 @@ func DiscussionUpdate(disc *Discussion) error {
 		return err
 	}
 
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
+	return txLoop(func(eq sqlx.Ext) error {
 		var curOwner UserID
 		var ownerIsVerified bool
-		row := tx.QueryRow(
+		row := eq.QueryRowx(
 			`select owner, isverified
                  from event_discussions
                    join event_users on owner = userid
                  where discussionid = ?`, disc.DiscussionID)
-		err = row.Scan(&curOwner, &ownerIsVerified)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Getting info for owner of discussion %v: %v",
-				disc.DiscussionID, err)
+		err := row.Scan(&curOwner, &ownerIsVerified)
+		if err != nil {
+			return errOrRetry("Getting info for owner of discussion", err)
 		}
 
 		// NB: We don't check for number owned discussions. Only the
@@ -270,25 +222,17 @@ func DiscussionUpdate(disc *Discussion) error {
 		// latitude.
 
 		if disc.Owner != curOwner {
-			err := setInterestTx(tx, disc.Owner, disc.DiscussionID, InterestMax)
-			if shouldRetry(err) {
-				tx.Rollback()
-				continue
-			} else if err != nil {
-				return fmt.Errorf("Setting interest for new owner %v: %v",
-					disc.Owner, err)
+			err := setInterestTx(eq, disc.Owner, disc.DiscussionID, InterestMax)
+			if err != nil {
+				return errOrRetry("Setting interest for new owner", err)
 			}
 
 			// If we're changing owner, we need to see whether the new owner is verified
-			err = tx.Get(&ownerIsVerified,
+			err = sqlx.Get(eq, &ownerIsVerified,
 				`select isverified from event_users where userid = ?`,
 				disc.Owner)
-			if shouldRetry(err) {
-				tx.Rollback()
-				continue
-			} else if err != nil {
-				return fmt.Errorf("Getting IsVerified for new owner %v: %v",
-					disc.Owner, err)
+			if err != nil {
+				return errOrRetry("Getting IsVerified for new owner", err)
 			}
 		}
 
@@ -316,24 +260,9 @@ func DiscussionUpdate(disc *Discussion) error {
 		q += `where discussionid = ?`
 		args = append(args, disc.DiscussionID)
 
-		_, err = tx.Exec(q, args...)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		err = tx.Commit()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		return nil
-	}
+		_, err = eq.Exec(q, args...)
+		return err
+	})
 }
 
 // No entries at all means all entries are OK
