@@ -457,42 +457,24 @@ func DiscussionSetPublic(discussionid DiscussionID, public bool) error {
 func DeleteDiscussion(did DiscussionID) error {
 	log.Printf("Deleting discussion %s", did)
 
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
+	return txLoop(func(eq sqlx.Ext) error {
 		// Delete foreign key references first
-		_, err = tx.Exec(`
+		_, err := eq.Exec(`
            delete from event_interest
                where discussionid = ?`, did)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Deleting discussion from event_interest: %v", err)
+		if err != nil {
+			return errOrRetry("Deleting discussion from event_interest", err)
 		}
 
-		res, err := tx.Exec(`
+		res, err := eq.Exec(`
         delete from event_discussions
             where discussionid = ?`, did)
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Deleting discussion from event_discussions: %v", err)
+		if err != nil {
+			return errOrRetry("Deleting discussion from event_discussions", err)
 		}
 
 		rcount, err := res.RowsAffected()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
+		if err != nil {
 			log.Printf("ERROR Getting number of affected rows: %v; continuing", err)
 		}
 		switch {
@@ -503,16 +485,8 @@ func DeleteDiscussion(did DiscussionID) error {
 			return ErrInternal
 		}
 
-		err = tx.Commit()
-		if shouldRetry(err) {
-			tx.Rollback()
-			continue
-		} else if err != nil {
-			return err
-		}
 		return nil
-	}
-	return nil
+	})
 }
 
 func MakePossibleSlots(len int) []bool {
