@@ -79,6 +79,12 @@ func txLoop(txFunc func(eq sqlx.Ext) error) error {
 		}
 		defer tx.Rollback()
 
+		// Always defer foreign key checks until the end of the transaction
+		// _, err = tx.Exec(`pragma defer_foreign_keys=true`)
+		// if err != nil {
+		// 	return err
+		// }
+
 		err = txFunc(tx)
 		if shouldRetry(err) {
 			tx.Rollback()
