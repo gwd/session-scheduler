@@ -15,27 +15,29 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 		return
 	}
 
+	m := &mirrorData{}
+
 	//
 	// SETUP: Make some users, some discussions, a timetable, and some locations
 	//
 	t.Logf("Setting up users, discussion, timetable")
 	testUserCount := 10
-	users := make([]User, testUserCount)
-	for i := range users {
+	m.users = make([]User, testUserCount)
+	for i := range m.users {
 		subexit := false
-		users[i], subexit = testNewUser(t)
+		m.users[i], subexit = testNewUser(t)
 		if subexit {
 			return
 		}
 	}
 
 	testDiscussionCount := 12
-	discussions := make([]Discussion, testDiscussionCount)
+	m.discussions = make([]Discussion, testDiscussionCount)
 
-	for i := range discussions {
+	for i := range m.discussions {
 		subexit := false
-		uidx := rand.Int31n(int32(len(users)))
-		discussions[i], subexit = testNewDiscussion(t, users[uidx].UserID)
+		uidx := rand.Int31n(int32(len(m.users)))
+		m.discussions[i], subexit = testNewDiscussion(t, m.users[uidx].UserID)
 		if subexit {
 			return
 		}
@@ -77,19 +79,19 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 
 	// Make 50% interest.
 	interestMap := make(map[DiscussionID]map[UserID]int)
-	for i := range discussions {
-		did := discussions[i].DiscussionID
+	for i := range m.discussions {
+		did := m.discussions[i].DiscussionID
 		interestMap[did] = make(map[UserID]int)
-		interestMap[did][discussions[i].Owner] = 100
+		interestMap[did][m.discussions[i].Owner] = 100
 	}
 
-	for i := 0; i < (len(users)*len(discussions))/2; i++ {
-		uidx := rand.Int31n(int32(len(users)))
-		uid := users[uidx].UserID
-		didx := rand.Int31n(int32(len(discussions)))
-		did := discussions[didx].DiscussionID
+	for i := 0; i < (len(m.users)*len(m.discussions))/2; i++ {
+		uidx := rand.Int31n(int32(len(m.users)))
+		uid := m.users[uidx].UserID
+		didx := rand.Int31n(int32(len(m.discussions)))
+		did := m.discussions[didx].DiscussionID
 		interest := int(rand.Int31n(101))
-		err = users[uidx].SetInterest(&discussions[didx], interest)
+		err = m.users[uidx].SetInterest(&m.discussions[didx], interest)
 		if err != nil {
 			t.Errorf("Setting interest: %v", err)
 			return
@@ -103,13 +105,13 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 
 	// Restrict discussion 0 to Monday
 	{
-		t.Logf("Restricting Discussion[0] (did %v) to Tuesday", discussions[0].DiscussionID)
-		gotdisc, err := DiscussionFindByIdFull(discussions[0].DiscussionID)
+		t.Logf("Restricting Discussion[0] (did %v) to Tuesday", m.discussions[0].DiscussionID)
+		gotdisc, err := DiscussionFindByIdFull(m.discussions[0].DiscussionID)
 		if err != nil {
 			t.Errorf("Finding discussion 0 by id: %v", err)
 			return
 		}
-		err = DiscussionSetPossibleSlots(discussions[0].DiscussionID, CheckedToSlotList(gotdisc.PossibleSlots)[3:])
+		err = DiscussionSetPossibleSlots(m.discussions[0].DiscussionID, CheckedToSlotList(gotdisc.PossibleSlots)[3:])
 	}
 
 	//
@@ -119,7 +121,7 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 	//
 	// Set at least one discussion non-public and make sure it fails
 	//
-	err = DiscussionSetPublic(discussions[0].DiscussionID, false)
+	err = DiscussionSetPublic(m.discussions[0].DiscussionID, false)
 	if err != nil {
 		t.Errorf("Setting discussion 0 non-public: %v", err)
 		return
@@ -131,8 +133,8 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 	}
 
 	// Make all discussions public
-	for i := range discussions {
-		err = DiscussionSetPublic(discussions[i].DiscussionID, true)
+	for i := range m.discussions {
+		err = DiscussionSetPublic(m.discussions[i].DiscussionID, true)
 		if err != nil {
 			t.Errorf("Setting discussion public: %v", err)
 			return
@@ -154,13 +156,13 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 	}
 
 	// Account for admin user
-	if len(store.Users) != len(users)+1 {
-		t.Errorf("Snapshot: Wanted %d users, got %d", len(users)+1, len(store.Users))
+	if len(store.Users) != len(m.users)+1 {
+		t.Errorf("Snapshot: Wanted %d users, got %d", len(m.users)+1, len(store.Users))
 		return
 	}
 
-	if len(store.Discussions) != len(discussions) {
-		t.Errorf("Snapshot: Wanted %d discussions, got %d", len(discussions), len(store.Discussions))
+	if len(store.Discussions) != len(m.discussions) {
+		t.Errorf("Snapshot: Wanted %d discussions, got %d", len(m.discussions), len(store.Discussions))
 		return
 	}
 
@@ -168,7 +170,7 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 	for i := range store.Discussions {
 		sd := &store.Discussions[i]
 		expectedSlots := 6
-		if sd.DiscussionID == discussions[0].DiscussionID {
+		if sd.DiscussionID == m.discussions[0].DiscussionID {
 			expectedSlots = 3
 		}
 		if len(sd.PossibleSlots) != expectedSlots {
@@ -195,7 +197,7 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 	//
 	var sched schedule
 	// No restrictions on discussion 1, so this should get us all slots
-	gotdisc, err := DiscussionFindByIdFull(discussions[1].DiscussionID)
+	gotdisc, err := DiscussionFindByIdFull(m.discussions[1].DiscussionID)
 	if err != nil {
 		t.Errorf("Getting discussion 1: %v", err)
 		return
@@ -206,9 +208,9 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 
 	// NB this ignores possibleslots.
 	slotidx := 0
-	for didx := range discussions {
+	for didx := range m.discussions {
 		ss := &sched.Slots[slotidx]
-		ss.Discussions = append(ss.Discussions, &searchDiscussion{DiscussionID: discussions[didx].DiscussionID})
+		ss.Discussions = append(ss.Discussions, &searchDiscussion{DiscussionID: m.discussions[didx].DiscussionID})
 		slotidx = (slotidx + 1) % len(sched.Slots)
 	}
 
@@ -240,13 +242,13 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 	}
 
 	// Account for admin user
-	if len(store.Users) != len(users)+1 {
-		t.Errorf("Snapshot: Wanted %d users, got %d", len(users)+1, len(store.Users))
+	if len(store.Users) != len(m.users)+1 {
+		t.Errorf("Snapshot: Wanted %d users, got %d", len(m.users)+1, len(store.Users))
 		return
 	}
 
-	if len(store.Discussions) != len(discussions)-6 {
-		t.Errorf("Snapshot: Wanted %d discussions, got %d", len(discussions), len(store.Discussions))
+	if len(store.Discussions) != len(m.discussions)-6 {
+		t.Errorf("Snapshot: Wanted %d discussions, got %d", len(m.discussions), len(store.Discussions))
 		return
 	}
 

@@ -115,53 +115,53 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		return
 	}
 
+	m := &mirrorData{}
+
 	// Make 6 users for testing
 	testUserCount := 6
-	users := make([]User, testUserCount)
-	userMap := make(map[UserID]int)
+	m.users = make([]User, testUserCount)
+	m.userMap = make(map[UserID]int)
 
-	verified := 0
-	unverified := 0
-	for i := range users {
+	for i := range m.users {
 		subexit := false
-		users[i], subexit = testNewUser(t)
+		m.users[i], subexit = testNewUser(t)
 		if subexit {
 			return
 		}
-		userMap[users[i].UserID] = i
-		if users[i].IsVerified {
-			verified++
+		m.userMap[m.users[i].UserID] = i
+		if m.users[i].IsVerified {
+			m.verified++
 		} else {
-			unverified++
+			m.unverified++
 		}
 	}
-	if verified == 0 || unverified == 0 {
-		t.Errorf("Don't have a mix of verified / unverified (%d %d)", verified, unverified)
+	if m.verified == 0 || m.unverified == 0 {
+		t.Errorf("Don't have a mix of verified / unverified (%d %d)", m.verified, m.unverified)
 		return
 	}
 
 	// Try making an invalid discussion
 	t.Logf("Trying to make invalid discussions")
 	{
-		err := NewDiscussion(&Discussion{Title: "", Description: "foo", Owner: users[0].UserID})
+		err := NewDiscussion(&Discussion{Title: "", Description: "foo", Owner: m.users[0].UserID})
 		if err == nil {
 			t.Errorf("Created discussion with empty title")
 			return
 		}
 
-		err = NewDiscussion(&Discussion{Title: "    ", Description: "foo", Owner: users[0].UserID})
+		err = NewDiscussion(&Discussion{Title: "    ", Description: "foo", Owner: m.users[0].UserID})
 		if err == nil {
 			t.Errorf("Created discussion with whitespace title")
 			return
 		}
 
-		err = NewDiscussion(&Discussion{Title: "foo", Description: "", Owner: users[0].UserID})
+		err = NewDiscussion(&Discussion{Title: "foo", Description: "", Owner: m.users[0].UserID})
 		if err == nil {
 			t.Errorf("Created discussion with empty description")
 			return
 		}
 
-		err = NewDiscussion(&Discussion{Title: "foo", Description: "    ", Owner: users[0].UserID})
+		err = NewDiscussion(&Discussion{Title: "foo", Description: "    ", Owner: m.users[0].UserID})
 		if err == nil {
 			t.Errorf("Created discussion with whitespace description")
 			return
@@ -177,74 +177,74 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	}
 
 	// Enough discussions to max out one user, plus a few for others
-	testDiscussionCount := maxDiscussionsPerUser + testUserCount*2
-	discussions := make([]Discussion, testDiscussionCount)
+	testDiscussionCount := maxDiscussionsPerUser + len(m.users)*2
+	m.discussions = make([]Discussion, testDiscussionCount)
 
-	t.Logf("Trying to max out one users's discussions")
+	t.Logf("Trying to max out one m.users's m.discussions")
 	{
 		for i := 0; i < maxDiscussionsPerUser; i++ {
 			subexit := false
-			discussions[i], subexit = testNewDiscussion(t, users[0].UserID)
+			m.discussions[i], subexit = testNewDiscussion(t, m.users[0].UserID)
 			if subexit {
 				return
 			}
 		}
-		err := NewDiscussion(&Discussion{Title: "foo", Description: "bar", Owner: users[0].UserID})
+		err := NewDiscussion(&Discussion{Title: "foo", Description: "bar", Owner: m.users[0].UserID})
 		if err == nil {
-			t.Errorf("Created too many discussions for one user")
+			t.Errorf("Created too many m.discussions for one user")
 			return
 		}
 
 	}
 
-	t.Logf("Making some more discussions")
+	t.Logf("Making some more m.discussions")
 	public := 0
 	private := 0
-	for i := maxDiscussionsPerUser; i < len(discussions); i++ {
+	for i := maxDiscussionsPerUser; i < len(m.discussions); i++ {
 		subexit := false
-		discussions[i], subexit = testNewDiscussion(t, "")
+		m.discussions[i], subexit = testNewDiscussion(t, "")
 		if subexit {
 			return
 		}
 
-		owneridx, prs := userMap[discussions[i].Owner]
+		owneridx, prs := m.userMap[m.discussions[i].Owner]
 		if !prs {
-			t.Errorf("Unknown user %v!", discussions[i].Owner)
+			t.Errorf("Unknown user %v!", m.discussions[i].Owner)
 			return
 		}
-		owner := &users[owneridx] // Wish I had 'const'
+		owner := &m.users[owneridx] // Wish I had 'const'
 
 		// owner.IsVerified <=> new discussion.IsPublic
-		if owner.IsVerified != discussions[i].IsPublic {
+		if owner.IsVerified != m.discussions[i].IsPublic {
 			t.Errorf("Unexpected IsPublic: wanted %v got %v!",
-				owner.IsVerified, discussions[i].IsPublic)
+				owner.IsVerified, m.discussions[i].IsPublic)
 			return
 		}
 
-		if discussions[i].IsPublic {
+		if m.discussions[i].IsPublic {
 			public++
-			if discussions[i].ApprovedTitle != discussions[i].Title {
+			if m.discussions[i].ApprovedTitle != m.discussions[i].Title {
 				t.Errorf("Discusison public, but approved title doesn't match!")
 				return
 			}
-			if discussions[i].ApprovedDescription != discussions[i].Description {
+			if m.discussions[i].ApprovedDescription != m.discussions[i].Description {
 				t.Errorf("Discusison public, but approved description doesn't match!")
 				return
 			}
 		} else {
 			private++
-			if discussions[i].ApprovedTitle != "" {
+			if m.discussions[i].ApprovedTitle != "" {
 				t.Errorf("Discussion private, but ApprovedTitle not empty!")
 				return
 			}
-			if discussions[i].ApprovedDescription != "" {
+			if m.discussions[i].ApprovedDescription != "" {
 				t.Errorf("Discussion private, but ApprovedDescription not empty!")
 				return
 			}
 		}
 
 		// Try creating a new discussionw ith the same title
-		discCopy := discussions[i]
+		discCopy := m.discussions[i]
 		err := NewDiscussion(&discCopy)
 		if err == nil {
 			t.Errorf("Created discussion with duplicate title")
@@ -252,22 +252,22 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		}
 
 		// Look for that discussion by did
-		gotdisc, err := DiscussionFindByIdFull(discussions[i].DiscussionID)
+		gotdisc, err := DiscussionFindByIdFull(m.discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Finding the discussion we just created by ID: %v", err)
 			return
 		}
 		if gotdisc == nil {
-			t.Errorf("Couldn't find just-created discussion by id %s!", discussions[i].DiscussionID)
+			t.Errorf("Couldn't find just-created discussion by id %s!", m.discussions[i].DiscussionID)
 			return
 		}
-		if !compareDiscussions(&discussions[i], &gotdisc.Discussion, t) {
+		if !compareDiscussions(&m.discussions[i], &gotdisc.Discussion, t) {
 			t.Errorf("Discussion data mismatch")
 			return
 		}
 	}
 	if public == 0 || private == 0 {
-		t.Errorf("Didn't get both public and private discussions! (%d and %d)", public, private)
+		t.Errorf("Didn't get both public and private m.discussions! (%d and %d)", public, private)
 		return
 	}
 
@@ -288,20 +288,20 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	}
 
 	t.Logf("Testing DiscussionUpdate and SetPublic")
-	for i := range discussions {
-		owneridx, prs := userMap[discussions[i].Owner]
+	for i := range m.discussions {
+		owneridx, prs := m.userMap[m.discussions[i].Owner]
 		if !prs {
-			t.Errorf("Unknown user %v!", discussions[i].Owner)
+			t.Errorf("Unknown user %v!", m.discussions[i].Owner)
 			return
 		}
-		owner := &users[owneridx] // Wish I had 'const'
+		owner := &m.users[owneridx] // Wish I had 'const'
 
 		//
 		// "Normal" title / discussion update
 		//
 
 		// NB at this point Approved* will all be "", so this hasn't checked an important state change yet
-		copy := discussions[i]
+		copy := m.discussions[i]
 		copy.Title = fake.Title()
 		copy.Description = fake.Paragraphs()
 		err := DiscussionUpdate(&copy)
@@ -310,7 +310,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err := DiscussionFindByIdFull(discussions[i].DiscussionID)
+		gotdisc, err := DiscussionFindByIdFull(m.discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
@@ -328,25 +328,25 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
-		discussions[i] = gotdisc.Discussion
+		m.discussions[i] = gotdisc.Discussion
 
 		//
 		// Invert SetPublic
 		//
-		err = DiscussionSetPublic(discussions[i].DiscussionID, !discussions[i].IsPublic)
+		err = DiscussionSetPublic(m.discussions[i].DiscussionID, !m.discussions[i].IsPublic)
 		if err != nil {
 			t.Errorf("Fliping SetPublic: %v", err)
 			return
 		}
 
-		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(m.discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
 		}
 
-		copy = discussions[i]
-		copy.IsPublic = !discussions[i].IsPublic
+		copy = m.discussions[i]
+		copy.IsPublic = !m.discussions[i].IsPublic
 		if copy.IsPublic {
 			copy.ApprovedTitle = copy.Title
 			copy.ApprovedDescription = copy.Description
@@ -359,14 +359,14 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
-		discussions[i] = gotdisc.Discussion
+		m.discussions[i] = gotdisc.Discussion
 
 		//
 		// Second "Normal" title / discussion update
 		//
 
 		// NB at this point, some unverified owners will have a non-empty "approved" title
-		copy = discussions[i]
+		copy = m.discussions[i]
 		copy.Title = fake.Title()
 		copy.Description = fake.Paragraphs()
 		err = DiscussionUpdate(&copy)
@@ -375,7 +375,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(m.discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
@@ -393,12 +393,12 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
-		discussions[i] = gotdisc.Discussion
+		m.discussions[i] = gotdisc.Discussion
 
 		//
 		// Change owner
 		//
-		copy = discussions[i]
+		copy = m.discussions[i]
 		owner, err = UserFindRandom()
 		if err != nil {
 			t.Errorf("Finding a random user: %v", err)
@@ -411,7 +411,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(m.discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
@@ -429,13 +429,13 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
-		discussions[i] = gotdisc.Discussion
+		m.discussions[i] = gotdisc.Discussion
 
 		//
 		// Bad input: No title, no description
 		//
 		for _, newTitle := range []string{"", "   "} {
-			copy = discussions[i]
+			copy = m.discussions[i]
 			copy.Title = newTitle
 			err = DiscussionUpdate(&copy)
 			if err == nil {
@@ -445,7 +445,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		}
 
 		for _, newDesc := range []string{"", "   "} {
-			copy = discussions[i]
+			copy = m.discussions[i]
 			copy.Description = newDesc
 			err = DiscussionUpdate(&copy)
 			if err == nil {
@@ -454,14 +454,14 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			}
 		}
 
-		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(m.discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
 		}
 
 		// Nothing should have changed
-		if !compareDiscussions(&gotdisc.Discussion, &discussions[i], t) {
+		if !compareDiscussions(&gotdisc.Discussion, &m.discussions[i], t) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
@@ -469,7 +469,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		//
 		// Bad input: Things that shouldn't be changed
 		//
-		copy = discussions[i]
+		copy = m.discussions[i]
 		copy.ApprovedTitle = fake.Title()
 		copy.ApprovedDescription = fake.Paragraphs()
 		copy.IsPublic = true
@@ -479,29 +479,29 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotdisc, err = DiscussionFindByIdFull(discussions[i].DiscussionID)
+		gotdisc, err = DiscussionFindByIdFull(m.discussions[i].DiscussionID)
 		if err != nil {
 			t.Errorf("Unexpected error finding just-updated discussion: %v", err)
 			return
 		}
 
 		// Nothing should have changed
-		if !compareDiscussions(&gotdisc.Discussion, &discussions[i], t) {
+		if !compareDiscussions(&gotdisc.Discussion, &m.discussions[i], t) {
 			t.Errorf("Unexpected results after update")
 			return
 		}
 	}
 
 	// Sort the discussions by userid so they're in the same order as DiscussionIterate
-	sort.Slice(discussions, func(i, j int) bool {
-		return discussions[i].DiscussionID < discussions[j].DiscussionID
+	sort.Slice(m.discussions, func(i, j int) bool {
+		return m.discussions[i].DiscussionID < m.discussions[j].DiscussionID
 	})
 
 	t.Logf("Testing DiscussionIterate")
 	{
 		i := 0
 		err := DiscussionIterate(func(d *DiscussionFull) error {
-			if !compareDiscussions(&discussions[i], &d.Discussion, t) {
+			if !compareDiscussions(&m.discussions[i], &d.Discussion, t) {
 				return fmt.Errorf("DiscussionIterate mismatch")
 			}
 			i++
@@ -511,8 +511,8 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 			t.Errorf("DiscussionIterate error: %v", err)
 			return
 		}
-		if i != len(discussions) {
-			t.Errorf("DiscussionIterate: expected %d function calls, got %d!", len(users), i)
+		if i != len(m.discussions) {
+			t.Errorf("DiscussionIterate: expected %d function calls, got %d!", len(m.users), i)
 		}
 	}
 
@@ -520,7 +520,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	{
 		i := 0
 		err := DiscussionIterate(func(d *DiscussionFull) error {
-			if !compareDiscussions(&discussions[i], &d.Discussion, t) {
+			if !compareDiscussions(&m.discussions[i], &d.Discussion, t) {
 				return fmt.Errorf("DiscussionIterate mismatch")
 			}
 			i++
@@ -539,12 +539,12 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	t.Logf("Testing DiscussionIterateUser")
 	{
 		dcount := make(map[UserID]int)
-		for didx := range discussions {
-			dcount[discussions[didx].Owner]++
+		for didx := range m.discussions {
+			dcount[m.discussions[didx].Owner]++
 		}
 
-		for uidx := range users {
-			uid := users[uidx].UserID
+		for uidx := range m.users {
+			uid := m.users[uidx].UserID
 			i := 0
 			err := DiscussionIterateUser(uid, func(d *DiscussionFull) error {
 				if d.Owner != uid {
@@ -558,7 +558,7 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 				return
 			}
 			if i != dcount[uid] {
-				t.Errorf("DiscussionIterateUser(%v): expected %d function calls, got %d!", uid, len(users), i)
+				t.Errorf("DiscussionIterateUser(%v): expected %d function calls, got %d!", uid, len(m.users), i)
 			}
 		}
 	}
@@ -573,8 +573,8 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 	// Afterwards, iterate through our list of discussions and verify
 	// that they're all gone.  (And also run DiscussionIterate again
 	// for good measure.)
-	for uidx := range users {
-		uid := users[uidx].UserID
+	for uidx := range m.users {
+		uid := m.users[uidx].UserID
 
 		// First, find one discussion to delete from this user
 		var did DiscussionID
@@ -647,8 +647,8 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 		}
 	}
 
-	for didx := range discussions {
-		gotdisc, err := DiscussionFindByIdFull(discussions[didx].DiscussionID)
+	for didx := range m.discussions {
+		gotdisc, err := DiscussionFindByIdFull(m.discussions[didx].DiscussionID)
 		if err != nil {
 			t.Errorf("DiscussionFindById for (allegedly)-deleted discussion: %v", err)
 			return

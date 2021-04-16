@@ -7,6 +7,15 @@ import (
 	"testing"
 )
 
+// A common structure for holding "mirror data", such that different
+// sub-tests can share code
+type mirrorData struct {
+	users                []User
+	userMap              map[UserID]int
+	verified, unverified int
+	discussions          []Discussion
+}
+
 func TestVersion(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "event")
 	if err != nil {

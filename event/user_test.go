@@ -135,19 +135,21 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 	}
 
+	m := &mirrorData{}
+
 	// Make 5 users, and use them to unit-test various functions
 	testUserCount := 5
-	users := make([]User, testUserCount)
+	m.users = make([]User, testUserCount)
 
-	for i := range users {
+	for i := range m.users {
 		subexit := false
-		users[i], subexit = testNewUser(t)
+		m.users[i], subexit = testNewUser(t)
 		if subexit {
 			return
 		}
 
 		// Try creating a new user with the same userid
-		userCopy := users[i]
+		userCopy := m.users[i]
 		_, err := NewUser(TestPassword, &userCopy)
 		if err != errUsernameExists {
 			t.Errorf("Testing duplicate username: expected errUsernameExists, got %v!", err)
@@ -155,17 +157,17 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 
 		// Look for that user by uid
-		gotuser, err := UserFind(users[i].UserID)
+		gotuser, err := UserFind(m.users[i].UserID)
 		if err != nil {
 			t.Errorf("Finding the user we just created by ID: %v", err)
 			return
 		}
 		if gotuser == nil {
-			t.Errorf("Couldn't find just-created user by id %s!", users[i].UserID)
+			t.Errorf("Couldn't find just-created user by id %s!", m.users[i].UserID)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch")
 			return
 		}
@@ -176,25 +178,25 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 
 		// Look for that user by username
-		gotuser, err = UserFindByUsername(users[i].Username)
+		gotuser, err = UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding the user we just created by username: %v", err)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch")
 			return
 		}
 
 		// Look for that user by username, checking password
-		gotuser, err = UserFindByUsername(users[i].Username)
+		gotuser, err = UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding the user we just created by username: %v", err)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch")
 			return
 		}
@@ -206,7 +208,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 
 		// If this is our first user, there's only one possibility
-		if i == 0 && !compareUsers(&users[i], gotuser, t) {
+		if i == 0 && !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("Random user didn't return the only non-admin user!")
 			return
 		}
@@ -244,8 +246,8 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 	}
 
-	sort.Slice(users, func(i, j int) bool {
-		return users[i].UserID < users[j].UserID
+	sort.Slice(m.users, func(i, j int) bool {
+		return m.users[i].UserID < m.users[j].UserID
 	})
 
 	t.Logf("Testing UserGetAll")
@@ -270,7 +272,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 				j++
 				continue
 			}
-			if !compareUsers(&users[i], &gotusers[j], t) {
+			if !compareUsers(&m.users[i], &gotusers[j], t) {
 				t.Errorf("UserGetAll mismatch")
 				return
 			}
@@ -287,7 +289,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 			if u.Username == AdminUsername {
 				return nil
 			}
-			if !compareUsers(&users[i], u, t) {
+			if !compareUsers(&m.users[i], u, t) {
 				return fmt.Errorf("UserIterate mismatch")
 			}
 			i++
@@ -297,8 +299,8 @@ func testUnitUser(t *testing.T) (exit bool) {
 			t.Errorf("UserIterate error: %v", err)
 			return
 		}
-		if i != len(users) {
-			t.Errorf("UserIterate: expected %d function calls, got %d!", len(users), i)
+		if i != len(m.users) {
+			t.Errorf("UserIterate: expected %d function calls, got %d!", len(m.users), i)
 		}
 	}
 
@@ -309,7 +311,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 			if u.Username == AdminUsername {
 				return ErrInternal
 			}
-			if !compareUsers(&users[i], u, t) {
+			if !compareUsers(&m.users[i], u, t) {
 				return fmt.Errorf("UserIterate mismatch")
 			}
 			i++
@@ -328,27 +330,27 @@ func testUnitUser(t *testing.T) (exit bool) {
 	// - Changing username in field shouldn't actually change username
 	// - Invalid userid
 	t.Logf("Testing UserUpdate")
-	for i := range users {
+	for i := range m.users {
 		// Change some things but not everything
-		users[i].RealName = fake.FullName()
-		users[i].Description = fake.Paragraphs()
+		m.users[i].RealName = fake.FullName()
+		m.users[i].Description = fake.Paragraphs()
 		// Don't update password
-		err := UserUpdate(&users[i], nil, "", "")
+		err := UserUpdate(&m.users[i], nil, "", "")
 		if err != nil {
 			t.Errorf("Updating user: %v", err)
 			return
 		}
 
 		// Check to see that we still get the same result
-		gotuser, err := UserFindByUsername(users[i].Username)
+		gotuser, err := UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding the user we just created by username: %v", err)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch for user uid %s username %s",
-				users[i].UserID, users[i].Username)
+				m.users[i].UserID, m.users[i].Username)
 			return
 		}
 
@@ -358,33 +360,33 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 
 		// Try changing some different things
-		users[i].Company = fake.Company()
-		if users[i].Location.String() == TestAlternateLocation {
-			users[i].Location, err = LoadLocation(TestDefaultLocation)
+		m.users[i].Company = fake.Company()
+		if m.users[i].Location.String() == TestAlternateLocation {
+			m.users[i].Location, err = LoadLocation(TestDefaultLocation)
 		} else {
-			users[i].Location, err = LoadLocation(TestAlternateLocation)
+			m.users[i].Location, err = LoadLocation(TestAlternateLocation)
 		}
 		if err != nil {
 			t.Errorf("Loading location: %v", err)
 			return
 		}
 		// Don't update password
-		err = UserUpdate(&users[i], nil, "", "")
+		err = UserUpdate(&m.users[i], nil, "", "")
 		if err != nil {
 			t.Errorf("Updating user: %v", err)
 			return
 		}
 
 		// Check to see that we still get the same result
-		gotuser, err = UserFindByUsername(users[i].Username)
+		gotuser, err = UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding the user we just created by username: %v", err)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch for user uid %s username %s",
-				users[i].UserID, users[i].Username)
+				m.users[i].UserID, m.users[i].Username)
 			return
 		}
 
@@ -396,22 +398,22 @@ func testUnitUser(t *testing.T) (exit bool) {
 		// Try changing the password
 		pwd2 := TestPassword + "2"
 
-		err = UserUpdate(&users[i], &users[i], TestPassword, pwd2)
+		err = UserUpdate(&m.users[i], &m.users[i], TestPassword, pwd2)
 		if err != nil {
 			t.Errorf("Changing password: %v", err)
 			return
 		}
 
 		// Check that the change worked
-		gotuser, err = UserFindByUsername(users[i].Username)
+		gotuser, err = UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding the user we just created by username: %v", err)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch for user uid %s username %s",
-				users[i].UserID, users[i].Username)
+				m.users[i].UserID, m.users[i].Username)
 			return
 		}
 
@@ -421,28 +423,28 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 
 		// Try using the wrong password
-		err = UserUpdate(&users[i], &users[i], TestPassword, pwd2)
+		err = UserUpdate(&m.users[i], &m.users[i], TestPassword, pwd2)
 		if err == nil {
 			t.Errorf("Expected wrong password to fail, but succeeded!")
 			return
 		}
 
 		// Change it back
-		err = UserUpdate(&users[i], &users[i], pwd2, TestPassword)
+		err = UserUpdate(&m.users[i], &m.users[i], pwd2, TestPassword)
 		if err != nil {
 			t.Errorf("Changing password back: %v", err)
 			return
 		}
 
-		gotuser, err = UserFindByUsername(users[i].Username)
+		gotuser, err = UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding the user we just created by username: %v", err)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch for user uid %s username %s",
-				users[i].UserID, users[i].Username)
+				m.users[i].UserID, m.users[i].Username)
 			return
 		}
 
@@ -452,7 +454,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 
 		// Try changing the username, and make sure it didn't actually change
-		copy := users[i]
+		copy := m.users[i]
 		copy.Username = "invalid"
 		err = UserUpdate(&copy, nil, "", "")
 		if err != nil {
@@ -460,20 +462,20 @@ func testUnitUser(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotuser, err = UserFindByUsername(users[i].Username)
+		gotuser, err = UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding the attempted-to-change username old username: %v", err)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch for user uid %s username %s",
-				users[i].UserID, users[i].Username)
+				m.users[i].UserID, m.users[i].Username)
 			return
 		}
 
 		// Try changing IsAdmin and IsVerified
-		copy = users[i]
+		copy = m.users[i]
 		copy.IsAdmin = !copy.IsAdmin
 		copy.IsVerified = !copy.IsVerified
 		err = UserUpdate(&copy, nil, "", "")
@@ -482,15 +484,15 @@ func testUnitUser(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotuser, err = UserFindByUsername(users[i].Username)
+		gotuser, err = UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding fake-modified user: %v", err)
 			return
 		}
 
-		if !compareUsers(&users[i], gotuser, t) {
+		if !compareUsers(&m.users[i], gotuser, t) {
 			t.Errorf("User data mismatch for user uid %s username %s",
-				users[i].UserID, users[i].Username)
+				m.users[i].UserID, m.users[i].Username)
 			return
 		}
 
@@ -503,7 +505,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 		}
 
 		// Try modifying HashedPassword directly and make sure nothing changes
-		copy = users[i]
+		copy = m.users[i]
 		copy.HashedPassword, _ = passwordHash("Foo")
 		err = UserUpdate(&copy, nil, "", "")
 		if err != nil {
@@ -511,7 +513,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 			return
 		}
 
-		gotuser, err = UserFindByUsername(users[i].Username)
+		gotuser, err = UserFindByUsername(m.users[i].Username)
 		if err != nil {
 			t.Errorf("Finding fake-modified user: %v", err)
 			return
@@ -530,14 +532,14 @@ func testUnitUser(t *testing.T) (exit bool) {
 
 	// DeleteUser
 	t.Logf("Testing DeleteUser")
-	for i := range users {
-		err := DeleteUser(users[i].UserID)
+	for i := range m.users {
+		err := DeleteUser(m.users[i].UserID)
 		if err != nil {
-			t.Errorf("Deleting user %s: %v", users[i].UserID, err)
+			t.Errorf("Deleting user %s: %v", m.users[i].UserID, err)
 			return
 		}
 
-		gotuser, err := UserFind(users[i].UserID)
+		gotuser, err := UserFind(m.users[i].UserID)
 		if err != nil {
 			t.Errorf("Error getting deleted user: %v", err)
 			return
@@ -547,7 +549,7 @@ func testUnitUser(t *testing.T) (exit bool) {
 			return
 		}
 
-		err = DeleteUser(users[i].UserID)
+		err = DeleteUser(m.users[i].UserID)
 		if err != ErrUserNotFound {
 			t.Errorf("Deleting non-existent user: wanted ErrUserNotfound, got %v", err)
 			return

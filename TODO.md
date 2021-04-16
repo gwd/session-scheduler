@@ -46,3 +46,6 @@ session
 * Make code structure more rational
 
 * Use "embed" to package up the templates &c
+
+* Use mirrorData in `heuristic_test.go`, `interest_test.go`,
+  `possibleslot_test.go`, and `transaction_test.go`
