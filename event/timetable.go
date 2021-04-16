@@ -240,37 +240,16 @@ func NewDay(d *Day) (DayID, error) {
 		return d.DayID, err
 	}
 
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return d.DayID, fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
-		maxdayid, err := getMaxDay(tx)
+	return d.DayID, txLoop(func(eq sqlx.Ext) error {
+		maxdayid, err := getMaxDay(eq)
 		if err != nil {
-			return d.DayID, errOrRetry("Getting  max dayid", err)
+			return errOrRetry("Getting  max dayid", err)
 		}
 
 		d.DayID = DayID(maxdayid + 1)
 
-		err = dayAddTx(tx, d)
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return d.DayID, err
-		}
-
-		err = tx.Commit()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			err = fmt.Errorf("Commiting transaction: %v", err)
-		}
-		return d.DayID, err
-	}
+		return dayAddTx(eq, d)
+	})
 }
 
 /// DayFindById
@@ -367,30 +346,9 @@ func deleteDayTx(eq sqlx.Ext, did DayID) error {
 
 // DeleteDay
 func DeleteDay(did DayID) error {
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
-		err = deleteDayTx(tx, did)
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		err = tx.Commit()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
-		return nil
-	}
+	return txLoop(func(eq sqlx.Ext) error {
+		return deleteDayTx(eq, did)
+	})
 }
 
 func dayUpdateTx(e sqlx.Execer, d *Day) error {
@@ -408,32 +366,9 @@ func DayUpdate(d *Day) error {
 		return err
 	}
 
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
-		err = dayUpdateTx(tx, d)
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		err = tx.Commit()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
+	return txLoop(func(eq sqlx.Ext) error {
+		return dayUpdateTx(eq, d)
+	})
 }
 
 func timetableSlotAddTx(eq sqlx.Ext, dayid DayID, slotIdx int, slot *TimetableSlot) error {
@@ -603,30 +538,7 @@ func timetableSetTx(eq sqlx.Ext, tt *Timetable) error {
 //
 // Dealing with time zones and so on is the concern of the caller.
 func TimetableSet(tt *Timetable) error {
-	for {
-		tx, err := event.Beginx()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return fmt.Errorf("Starting transaction: %v", err)
-		}
-		defer tx.Rollback()
-
-		err = timetableSetTx(tx, tt)
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		err = tx.Commit()
-		if shouldRetry(err) {
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
+	return txLoop(func(eq sqlx.Ext) error {
+		return timetableSetTx(eq, tt)
+	})
 }
