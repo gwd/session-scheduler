@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 
@@ -71,7 +72,7 @@ func SlotsSetTimeDisplay(slots []event.DisplaySlot, fmt string) {
 	}
 }
 
-const slotTimeFormat = "Mon 3:04 PM 2 Jan"
+const slotTimeFormat = "Mon 3:04 PM 2 Jan -0700"
 
 // DiscussionGetDisplayRetry returns a DiscussionDisplay suitable for
 // passing back into a new discussion template after a validation
@@ -130,7 +131,15 @@ func DiscussionGetDisplay(d *event.DiscussionFull, cur *event.User) *DiscussionD
 	dd.DescriptionHTML = ProcessText(dd.DescriptionRaw)
 
 	if !dd.Time.IsZero() {
-		dd.TimeDisplay = dd.Time.Format(slotTimeFormat)
+		t := dd.Time
+		l := DefaultLocationTZ
+		if cur != nil {
+			l = cur.Location
+			t = event.Time{t.In(l.Location)}
+		}
+		dd.TimeDisplay = fmt.Sprintf("%s (%s)",
+			t.Format(slotTimeFormat),
+			l)
 	}
 
 	if cur != nil {

@@ -1,6 +1,14 @@
 # Changes before final websete
 
-* Use "embed" to package up the templates &c
+- Display the timezone on the individual discussion website
+
+- Use the user's default timezone on the individual discussion website
+
+- Make "break" a  more obviously different color
+
+- Add "lockfile" functionality to session-scheduler?
+
+- Use "embed" to package up the templates &c
 
 - Timetable slots cannot be removed if they contain an assigned
 session
