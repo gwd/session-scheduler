@@ -105,7 +105,7 @@ func txLoop(txFunc func(eq sqlx.Ext) error) error {
 }
 
 func openDb(filename string) (*sqlx.DB, error) {
-	db, err := sqlx.Open("sqlite3", fmt.Sprintf("file:%s?cache=shared&_foreign_keys=on", filename))
+	db, err := sqlx.Open("sqlite3", fmt.Sprintf("file:%s?cache=shared&_foreign_keys=on&_journal_mode=wal", filename))
 	if err != nil {
 		return nil, err
 	}
