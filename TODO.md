@@ -1,14 +1,12 @@
 # Changes before final websete
 
-- Display the timezone on the individual discussion website
-
-- Use the user's default timezone on the individual discussion website
-
 - Make "break" a  more obviously different color
 
 - Add "lockfile" functionality to session-scheduler?
 
 - Use "embed" to package up the templates &c
+ XXX debian-testing is in freeze, stuck on golang 1.15; embed is only
+ available in 1.16.
 
 - Timetable slots cannot be removed if they contain an assigned
 session
