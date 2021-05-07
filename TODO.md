@@ -2,7 +2,8 @@
 
 - Make "break" a  more obviously different color
 
-- Add "lockfile" functionality to session-scheduler?
+- Highlight schedule according to interest, to make it easier to find
+  out what your own schedule is
 
 - Use "embed" to package up the templates &c
  XXX debian-testing is in freeze, stuck on golang 1.15; embed is only
@@ -27,15 +28,13 @@ scheduled in them
 
 # Short-term usability improvements
 
-* Document `deploy.sh` and `run.sh` expected use case
+* Document `deploy.sh` expected use case
 * Add editTimetable to command-line help
 * Document editTimetable
 * Document inactive mode, &c
 
 # Priority improvements
 
-* Deal with account creation restriction
- - Have session 'moderation' for 'unverified' accounts
 * Having a place to take notes during the session
     * Integration of etherpad-like functionality?
     * Automatically creating an etherpad (with a link)?
@@ -48,7 +47,7 @@ scheduled in them
 
 * Automated backup
 
-* Creating / editing schedule in webapp
+* Creating / editing timetable in webapp
 
 # Clean-up
 
