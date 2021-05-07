@@ -28,7 +28,6 @@ scheduled in them
 
 # Short-term usability improvements
 
-* Document `deploy.sh` expected use case
 * Add editTimetable to command-line help
 * Document editTimetable
 * Document inactive mode, &c
