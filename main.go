@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"runtime/pprof"
 	"time"
 
@@ -32,6 +33,25 @@ var DefaultLocationTZ event.TZLocation
 
 var TimezoneList []string
 
+// Template and data code expect CWD to be in the same directory as
+// the binary; make this so.
+func cwd() {
+	execpath, err := os.Executable()
+	if err != nil {
+		log.Printf("WARNING: Error getting executable path (%v), cannot cd to root", err)
+		return
+	}
+
+	execdir := path.Dir(execpath)
+	log.Printf("Changing to directory %s", execdir)
+
+	err = os.Chdir(execdir)
+	if err != nil {
+		log.Printf("WARNING: Chdir to %s failed: %v", execdir, err)
+		return
+	}
+}
+
 func main() {
 	var err error
 
@@ -39,6 +59,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Getting timezone list: %v", err)
 	}
+
+	cwd()
+
+	templatesInit()
 
 	kvs, err = keyvalue.OpenFile("data/serverconfig.sqlite")
 	if err != nil {

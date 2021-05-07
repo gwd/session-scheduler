@@ -17,12 +17,6 @@ var layoutFuncs = template.FuncMap{
 		return "", fmt.Errorf("yield called inappropriately")
 	},
 }
-var layout = template.Must(
-	template.
-		New("layout.html").
-		Funcs(layoutFuncs).
-		ParseFiles("templates/layout.html"),
-)
 
 var utilFuncs = template.FuncMap{
 	"dict": func(values ...interface{}) (map[string]interface{}, error) {
@@ -40,10 +34,21 @@ var utilFuncs = template.FuncMap{
 		return dict, nil
 	},
 }
-var templates = template.Must(
-	template.New("t").
-		Funcs(utilFuncs).
-		ParseGlob("templates/**/*.html"))
+var templates, layout *template.Template
+
+func templatesInit() {
+	layout = template.Must(
+		template.
+			New("layout.html").
+			Funcs(layoutFuncs).
+			ParseFiles("templates/layout.html"),
+	)
+
+	templates = template.Must(
+		template.New("t").
+			Funcs(utilFuncs).
+			ParseGlob("templates/**/*.html"))
+}
 
 var errorTemplate = `
 <html>
