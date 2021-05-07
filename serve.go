@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/gofrs/flock"
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/gwd/session-scheduler/keyvalue"
@@ -56,9 +57,50 @@ func LogRequest(w http.ResponseWriter, r *http.Request) {
 
 const (
 	KeyServeAddress = "ServeAddress"
+	LockingMethod   = "ServeLockMethod"
 )
 
+var lockfilename = "data/serve.lock"
+
+func handleServeLock() {
+	method, err := kvs.Get(LockingMethod)
+	if err == keyvalue.ErrNoRows || method == "none" {
+		log.Printf("No locking value or value none")
+		return
+	}
+	if err != nil {
+		log.Fatalf("Error getting LockingMethod key: %v", err)
+	}
+
+	servelock := flock.New(lockfilename)
+
+	switch method {
+	case "quit", "error":
+		locked, err := servelock.TryLock()
+		if err != nil {
+			log.Fatalf("Error locking file %s: %v", lockfilename, err)
+		}
+		if !locked {
+			if method == "quit" {
+				log.Printf("File %s locked, exiting", lockfilename)
+				os.Exit(0)
+			} else {
+				log.Printf("ERROR: File %s locked, lockmethod error specified", lockfilename)
+			}
+		}
+	case "wait":
+		err := servelock.Lock()
+		if err != nil {
+			log.Fatalf("Error locking file %s: %v", lockfilename, err)
+		}
+	default:
+		log.Fatalf("Invalid lockmethod %s", method)
+	}
+}
+
 func serve() {
+	handleServeLock()
+
 	go handleSigs()
 
 	always := NewRouter()

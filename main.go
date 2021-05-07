@@ -77,6 +77,7 @@ func main() {
 	flag.Var(kvs.GetFlagValue(SearchDuration), "searchtime", "Duration to run search")
 	flag.Var(kvs.GetFlagValue(Validate), "validate", "Extra validation of schedule consistency")
 	flag.Var(kvs.GetFlagValue(KeyDefaultLocation), "default-location", "Default location to use for times")
+	flag.Var(kvs.GetFlagValue(LockingMethod), "servelock", "Server locking method.  Valid options are none, quit, wait, and error")
 
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to `file`")
 
