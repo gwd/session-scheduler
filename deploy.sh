@@ -5,5 +5,5 @@ if [[ -n "$1" ]] ; then
     SESSIONSDIR="$1"
 fi
 
-rsync -rvz assets templates session-scheduler run.sh xensched@xenbits:$SESSIONSDIR/
+rsync -rvz assets templates session-scheduler xensched@xenbits:$SESSIONSDIR/
 ssh xensched@xenbits "mkdir -p $SESSIONSDIR/data"
