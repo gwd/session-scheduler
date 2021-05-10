@@ -116,18 +116,18 @@
 	{{end}}
 	{{if or .CurrentUser.IsAdmin (eq .Discussion.Owner .CurrentUser.UserID)}}
 	  {{if .Discussion.IsPublic}}
-	  <span class="badge badge-primary">Public</span>
+	  <span class="badge bg-primary">Public</span>
 	  {{else}}
-	  <span class="badge badge-warning">Not Public</span>
+	  <span class="badge bg-warning">Not Public</span>
 	  {{end}}
 	{{else}}
 	  {{if not .Discussion.IsPublic}}
-	    <span class="badge badge-warning">Moderated</span>
+	    <span class="badge bg-warning">Moderated</span>
           {{end}}
 	    {{end}}
       {{else}}
 	  {{if not .Discussion.IsPublic}}
-	    <span class="badge badge-warning">Moderated</span>
+	    <span class="badge bg-warning">Moderated</span>
           {{end}}
       {{end}}
 
