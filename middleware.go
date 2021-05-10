@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -14,8 +15,10 @@ import (
 // This has to be global because ServeHTTP cannot have a pointer receiver.
 var lock sync.Mutex
 
-func init() {
-	sessions.OpenSessionStore("./data/sessions.sqlite")
+func initMiddleware() {
+	if err := sessions.OpenSessionStore("./data/sessions.sqlite"); err != nil {
+		log.Fatalf("Opening sessions store: %v", err)
+	}
 }
 
 func RequestUser(r *http.Request) *event.User {

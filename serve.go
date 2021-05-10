@@ -101,6 +101,8 @@ func handleServeLock() {
 func serve() {
 	handleServeLock()
 
+	initMiddleware()
+
 	go handleSigs()
 
 	always := NewRouter()
