@@ -12,7 +12,9 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/gwd/session-scheduler/event"
 	"github.com/gwd/session-scheduler/keyvalue"
+	"github.com/gwd/session-scheduler/sessions"
 )
 
 // URL scheme
@@ -35,6 +37,13 @@ func handleSigs() {
 
 	log.Printf("Got signal %v, shutting down...", s)
 	lock.Lock()
+
+	// FIXME: It would be good to have a way of registering a shutdown
+	// hook, rather than hard-coding these here.  Something for later.
+	event.Close()
+	kvs.Close()
+	sessions.CloseSessionStore()
+
 	os.Exit(0)
 }
 
