@@ -36,6 +36,9 @@ func handleSigs() {
 	s := <-c
 
 	log.Printf("Got signal %v, shutting down...", s)
+
+	// Grabbing the write version of the rwlock will prevent new connections
+	// from starting, and wait until currently-being-handled connections finish
 	lock.Lock()
 
 	// FIXME: It would be good to have a way of registering a shutdown

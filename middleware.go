@@ -13,7 +13,7 @@ import (
 )
 
 // This has to be global because ServeHTTP cannot have a pointer receiver.
-var lock sync.Mutex
+var lock sync.RWMutex
 
 func initMiddleware() {
 	if err := sessions.OpenSessionStore("./data/sessions.sqlite"); err != nil {
@@ -59,9 +59,10 @@ type Middleware struct {
 func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mw := NewMiddlewareResponseWriter(w)
 
-	// HACK: Only allow a single access at a time for now
-	lock.Lock()
-	defer lock.Unlock()
+	// Allow multiple concurrent requests, but allow some operations
+	// (like shutting down) to stop incoming requests
+	lock.RLock()
+	defer lock.RUnlock()
 
 	if m.Logger != nil {
 		m.Logger(w, r)
