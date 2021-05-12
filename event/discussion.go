@@ -115,11 +115,21 @@ func NewDiscussion(disc *Discussion) error {
 			`select count(*) from event_discussions where owner=?`,
 			disc.Owner)
 		if err != nil {
-			return errOrRetry("Getting discussion count for user: %v", err)
+			return errOrRetry("Getting discussion count for user", err)
 		}
 
 		if count >= maxDiscussionsPerUser {
-			return errTooManyDiscussions
+			// Admins aren't affected by the discussion limit.
+			isAdmin := false
+			err := sqlx.Get(eq, &isAdmin,
+				`select isadmin from event_users where userid=?`,
+				owner)
+			if err != nil {
+				return errOrRetry("Getting isadmin for user", err)
+			}
+			if !isAdmin {
+				return errTooManyDiscussions
+			}
 		}
 
 		disc.DiscussionID.generate()

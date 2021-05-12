@@ -290,6 +290,38 @@ func testUnitDiscussion(t *testing.T) (exit bool) {
 
 	}
 
+	t.Logf("Trying to max out the admin's discussions (should succeed)")
+	{
+		discussions := make([]Discussion, maxDiscussionsPerUser+1)
+
+		admin, err := UserFindByUsername(AdminUsername)
+		if err != nil {
+			t.Errorf("Getting admin user: %v", err)
+			return
+		}
+		for i := 0; i < maxDiscussionsPerUser; i++ {
+			subexit := false
+			discussions[i], subexit = testNewDiscussion(t, admin.UserID)
+			if subexit {
+				return
+			}
+		}
+		discussions[maxDiscussionsPerUser] = Discussion{Title: "foo", Description: "bar", Owner: admin.UserID}
+		err = NewDiscussion(&discussions[maxDiscussionsPerUser])
+		if err != nil {
+			t.Errorf("Error creating surplus discussions w/ admin permissions: %v", err)
+			return
+		}
+		// Delete all these discussions
+		for i := range discussions {
+			err := DeleteDiscussion(discussions[i].DiscussionID)
+			if err != nil {
+				t.Errorf("Deleting temporary admin discussion: %v", err)
+				return
+			}
+		}
+	}
+
 	t.Logf("Making some more m.discussions")
 	public := 0
 	private := 0
