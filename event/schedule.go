@@ -363,7 +363,20 @@ func makeScheduleHeuristic(ss *searchStore) (*schedule, error) {
 
 			// OK, how much will we increase the score by putting this discussion here?
 			score := scoreSlotDelta(sched.Slots[i].Discussions, disc)
+
+			// All things being equal, favor a slot with fewer
+			// discussions.  NB we know this is > 0 because we've
+			// checked for the alternative above.
+			score += len(ss.Locations) - len(sched.Slots[i].Discussions)
+
 			log.Printf("  Total value: %d", score)
+
+			if score == 0 {
+				log.Printf("  INTERNAL ERROR: Score zero!")
+			}
+
+			// NB we don't need to check index < 0 here; score will
+			// always be > 0 due to the empty location "tiebreaker"
 			if score > best.score {
 				best.score = score
 				best.index = i
