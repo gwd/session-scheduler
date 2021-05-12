@@ -100,6 +100,19 @@ And then add a crontab like the following:
 @reboot /home/xensched/session-scheduler/session-scheduler -servelock quit >> /home/xensched/session-scheduler/session-scheduler.log
 ```
 
+# Backups
+
+The most robust way to create automatic backups is to use the
+`sqlite3` tool with the `VACUUM` command, and put it in your crontab.
+Below is an example crontab entry:
+
+```
+0 4 * * * sqlite3 session-scheduler/data/event.db "vacuum into \"backup/event-$(date -Iminutes).sqlite\""
+```
+
+This is also handy for getting a copy of the "live" database to do
+debugging.
+
 # Miscellaneous notes
 
 Registration requires a verification code.  This will be generated randomly the first time session-scheduler
