@@ -76,12 +76,16 @@ var lockfilename = "data/serve.lock"
 
 func handleServeLock() {
 	method, err := kvs.Get(LockingMethod)
-	if err == keyvalue.ErrNoRows || method == "none" {
-		log.Printf("No locking value or value none")
-		return
-	}
-	if err != nil {
+	if err == keyvalue.ErrNoRows {
+		log.Print("No locking method specified, using 'quit'")
+		method = "quit"
+	} else if err != nil {
 		log.Fatalf("Error getting LockingMethod key: %v", err)
+	}
+
+	if method == "none" {
+		log.Printf("Specified no locking")
+		return
 	}
 
 	servelock := flock.New(lockfilename)
