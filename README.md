@@ -107,7 +107,7 @@ The most robust way to create automatic backups is to use the
 Below is an example crontab entry:
 
 ```
-0 4 * * * sqlite3 session-scheduler/data/event.db "vacuum into \"backup/event-$(date -Iminutes).sqlite\""
+0 4 * * * sqlite3 session-scheduler/data/event.sqlite "vacuum into \"backup/event-$(date -Iminutes).sqlite\""
 ```
 
 This is also handy for getting a copy of the "live" database to do
