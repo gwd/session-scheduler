@@ -3,9 +3,8 @@
   <div class="col-sm">
     <h1>Welcome to the XenSummit 2023 Design Session Scheduler</h1>
 
-<p>Design sessions are one of the most fruitful aspects of XenSummit.
-Anyone can propose a topic, even as the conference is going on, and
-interested people can get together to discuss it and hash out solutions.</p>
+    <p>Design sessions are a valuable part of XenSummit, allowing anyone
+to propose topics and discuss them with other interested attendees.</p>
 
 {{if .IsWebsiteActive}}
   {{template "index/home-active" .}}
@@ -13,37 +12,35 @@ interested people can get together to discuss it and hash out solutions.</p>
   {{template "index/home-inactive" .}}
 {{end}}
     
-</div>
+  </div>
 </div></div>
 {{end}}
 
 {{define "index/home-inactive"}}
 
 <p>The session scheduler is still in progress, but will be up and running
-  in plenty of time for this year's XenSummit.  Watch this space!
-  </p>
+in plenty of time for this year's XenSummit.  Watch this space!</p>
 
 {{end}}
 
 {{define "index/home-active"}}
-<p>However, scheduling them so that everyone has the opportunity to go
-to the sessions they'd like to is difficult.  In the past this was
-done with post-it notes on a whiteboard.  But for the last few years,
-we've decided to have a computer do the work for us.</p>
+<p>However, scheduling these sessions can be challenging, as everyone
+wants the opportunity to attend their preferred sessions. Previously,
+this was done using post-it notes on a whiteboard, but now a
+computerized system is used.</p>
 
-<p>The basic idea is:
+<p>The process involves the following steps:</p>
+
 <ul>
-  <li>Anyone who wants to <a href="discussion/new">proposes</a> a
-  topic</li>
-  <li>Everyone goes through the <a href="list/discussion">list of
-  sessions</a> and says how much they would like to attend</li>
-  <li>The session scheduler looks for a <a href="schedule">schedule</a> which maximizes
-  people's preferences</li>
+  <li>Anyone interested can <a href="/discussion/new">propose</a> a topic.</li>
+  <li>All participants review the <a hrfer="/list/discussion">list of sessions</a>, indicating their interest in attending each one.</li>
+  <li>The session scheduler optimizes the <a href="/schedule">schedule</a> to accommodate as many preferences as possible.</li>
 </ul>
-</p>
 
-<p>Furthermore, people are encouraged to submit new
-long-form talks by adding the [TALK] to the title of the session</p>
+<p>Participants can also propose long-form talks by adding [TALK] to
+the session title.</p>
+
+
 {{if .CurrentUser}}
 <h3>More information</h3>
 <ul>
@@ -70,12 +67,13 @@ long-form talks by adding the [TALK] to the title of the session</p>
     {{end}}
 </ul>
 {{else}}
-<p>To get started, register your account by click the button below.
+<p>To participate, simply register your account by clicking the button below.
 {{if .RequireVerification}}
 You'll need the <strong>verification code</strong> to register.
-Contact George Dunlap for more information.</p>
-{{end}}
+Contact George Dunlap for more information.
+  {{end}}
+  </p>
 <p><a href="register" class="btn btn-primary" role="button">Register
-now</a>
+now</a></p>
 {{end}}
 {{end}}
