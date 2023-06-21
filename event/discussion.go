@@ -77,7 +77,7 @@ func (d *Discussion) GetURL() string {
 }
 
 // FIXME
-const maxDiscussionsPerUser = 5
+const maxDiscussionsPerUser = 12
 
 func checkDiscussionParams(disc *Discussion) error {
 	if disc.Title == "" || AllWhitespace(disc.Title) {
