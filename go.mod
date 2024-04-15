@@ -12,7 +12,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.23
 	github.com/russross/blackfriday/v2 v2.1.0
 	github.com/stretchr/testify v1.4.0 // indirect
-	golang.org/x/crypto v0.8.0
+	golang.org/x/crypto v0.17.0
 	gopkg.in/yaml.v2 v2.2.4 // indirect
 )
 
