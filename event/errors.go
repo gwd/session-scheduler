@@ -12,12 +12,10 @@ var (
 	ErrInternal                 = ValidationError(errors.New("Internal server error"))
 	errNoUsername               = ValidationError(errors.New("You must supply a username"))
 	errUsernameIsEmail          = ValidationError(errors.New("Username cannot be an email address"))
-	errNoEmail                  = ValidationError(errors.New("You must supply an email"))
 	errNoPassword               = ValidationError(errors.New("You must supply a password"))
 	errPasswordTooShort         = ValidationError(errors.New("Your password is too short"))
 	errPasswordIncorrect        = ValidationError(errors.New("Password did not match"))
 	errUsernameExists           = ValidationError(errors.New("That username is taken"))
-	errEmailExists              = ValidationError(errors.New("That email address has an account"))
 	ErrCredentialsIncorrect     = ValidationError(errors.New("We couldn’t find a user with the supplied username and password combination"))
 	errNoTitle                  = ValidationError(errors.New("You must provide a title"))
 	errTitleExists              = ValidationError(errors.New("That title exists"))
@@ -35,6 +33,8 @@ var (
 	errLocationNoName           = ValidationError(errors.New("Location must have a name"))
 	errLocationInvalidCapacity  = ValidationError(errors.New("Invalid capacity"))
 	errDayNoName                = ValidationError(errors.New("Day must have a name"))
+	//errNoEmail                  = ValidationError(errors.New("You must supply an email"))
+	//errEmailExists              = ValidationError(errors.New("That email address has an account"))
 )
 
 func IsValidationError(err error) bool {
@@ -51,7 +51,7 @@ func AllWhitespace(s string) bool {
 	return true
 }
 
-var emailRE = regexp.MustCompile("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$")
+var emailRE = regexp.MustCompile(`^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$`)
 
 func IsEmailAddress(s string) bool {
 	return emailRE.MatchString(s)

@@ -53,6 +53,7 @@ func TestVersion(t *testing.T) {
 	db, err = openDb(sfname)
 	if err == nil {
 		t.Errorf("Opening database with wrong version succeeded!")
+		db.Close()
 		return
 	}
 
@@ -83,10 +84,6 @@ func dataInit(t *testing.T) *testContext {
 	os.Remove(tc.dbfname)
 
 	evopt := EventOptions{dbFilename: tc.dbfname, DefaultLocation: TestDefaultLocation}
-	if err != nil {
-		t.Errorf("Getting default test location %s: %v", TestDefaultLocation, err)
-		return nil
-	}
 
 	// Test simple open / close
 	err = Load(evopt)

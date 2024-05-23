@@ -314,6 +314,10 @@ func testUnitInterest(t *testing.T) (exit bool) {
 			toDelete = append(toDelete, df.Discussion)
 			return nil
 		})
+		if err != nil {
+			t.Errorf("ERROR iterating: %v", err)
+			return
+		}
 		for i := range toDelete {
 			toDelete[i].Owner = users[0].UserID
 			err = DiscussionUpdate(&toDelete[i])
@@ -352,6 +356,7 @@ func testUnitInterest(t *testing.T) (exit bool) {
 			t.Errorf("Expected interest 0 from deleted user, got %d!", interest)
 			return
 		}
+		//lint:ignore SA4006 This is for if we add tests in the future
 		users = users[:uidx]
 	}
 

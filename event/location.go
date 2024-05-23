@@ -19,10 +19,6 @@ type Location struct {
 	Capacity     int
 }
 
-const (
-	locationIDLength = 16
-)
-
 func checkLocationParams(l *Location) error {
 	if l.LocationName == "" {
 		return errLocationNoName
@@ -35,7 +31,6 @@ func checkLocationParams(l *Location) error {
 	return nil
 }
 
-//
 func NewLocation(l *Location) (LocationID, error) {
 	err := checkLocationParams(l)
 	if err != nil {
@@ -70,7 +65,7 @@ func NewLocation(l *Location) (LocationID, error) {
 	return l.LocationID, err
 }
 
-/// LocationFindById
+// / LocationFindById
 func LocationFindById(lid LocationID) (*Location, error) {
 	loc := &Location{}
 	for {

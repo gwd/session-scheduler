@@ -27,8 +27,6 @@ type SearchOptions struct {
 	Debug          *log.Logger
 }
 
-var opt SearchOptions
-
 func SchedLastUpdate() string {
 	lastUpdate := "Never"
 	// if event.ScheduleV2 != nil {

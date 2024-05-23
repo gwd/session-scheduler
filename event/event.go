@@ -11,7 +11,6 @@ import (
 )
 
 type EventStore struct {
-	filename string
 	*sqlx.DB
 	defaultLocation *time.Location
 }
@@ -30,8 +29,8 @@ const (
 )
 
 // handleAdminPwd: If there is no admin user, create it.
-//  - If opt.AdminPwd is non-empty, use it; otherwise generate one.
-//  - Generate one.  Either way, print the password.
+//   - If opt.AdminPwd is non-empty, use it; otherwise generate one.
+//   - Generate one.  Either way, print the password.
 //
 // If there is no admin user, but opt.AdminPwd is non-zero, set the password.
 func handleAdminPwd(adminPwd string) {
@@ -43,9 +42,6 @@ func handleAdminPwd(adminPwd string) {
 
 	if admin != nil {
 		if adminPwd != "" {
-			if admin == nil {
-				log.Fatalf("Cannot set admin password: No such user")
-			}
 			log.Printf("Resetting admin password")
 			err = admin.setPassword(adminPwd)
 			if err != nil {

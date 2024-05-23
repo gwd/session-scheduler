@@ -66,9 +66,9 @@ func txLoop(txFunc func(eq sqlx.Ext) error) error {
 	count := 0
 	for {
 		count++
-		if count > minTxRetries && time.Now().Sub(start) > maxTxTime {
+		if count > minTxRetries && time.Since(start) > maxTxTime {
 			return fmt.Errorf("Internal error: Transaction taking too long (reps %v time %v)",
-				count, time.Now().Sub(start))
+				count, time.Since(start))
 		}
 
 		tx, err := event.Beginx()

@@ -110,6 +110,11 @@ func testScheduleHeuristic(t *testing.T) (exit bool) {
 			return
 		}
 		err = DiscussionSetPossibleSlots(discussions[0].DiscussionID, CheckedToSlotList(gotdisc.PossibleSlots)[3:])
+		if err != nil {
+			t.Errorf("ERROR Setting possible slots: %v", err)
+			return
+		}
+
 	}
 
 	// Make all discussions public

@@ -106,6 +106,10 @@ func testUnitSchedule(t *testing.T) (exit bool) {
 			return
 		}
 		err = DiscussionSetPossibleSlots(m.discussions[0].DiscussionID, CheckedToSlotList(gotdisc.PossibleSlots)[3:])
+		if err != nil {
+			t.Errorf("Setting discussion possible slots: %v", err)
+			return
+		}
 	}
 
 	//

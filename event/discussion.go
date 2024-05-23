@@ -323,17 +323,11 @@ func DiscussionSetPossibleSlots(discussionid DiscussionID, pslots []SlotID) erro
 
 		// Only need to add any back if there are negative values
 		if len(checked) < nslots {
-			res, err := sqlx.NamedExec(eq, `
+			_, err = sqlx.NamedExec(eq, `
                 insert into event_discussions_possible_slots (discussionid, slotid)
                     values(:discussionid, :slotid)`, checked)
 			if err != nil {
 				return errOrRetry("Adding new slots", err)
-			}
-			if n, err := res.RowsAffected(); err != nil {
-				return errOrRetry("Getting rows affected by insert event_discussions_possible_slots", err)
-			} else if int(n) != len(checked) {
-				return fmt.Errorf("Inserting possible slots: Expected %d rows affected, got %d!",
-					len(checked), int(n))
 			}
 		}
 
@@ -511,7 +505,7 @@ func discussionFindByIdFullTx(q sqlx.Queryer, did DiscussionID) (*DiscussionFull
 
 		err = userGetTx(eq, disc.Owner, &disc.OwnerInfo)
 		if err == sql.ErrNoRows {
-			return fmt.Errorf("INTERNAL ERROR: Could not get info for owner %v!", disc.Owner)
+			return fmt.Errorf("INTERNAL ERROR: Could not get info for owner %v", disc.Owner)
 		} else if err != nil {
 			return errOrRetry("Getting discussion owner info", err)
 		}
