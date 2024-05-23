@@ -6,9 +6,9 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/hjson/hjson-go v3.3.0+incompatible
 	github.com/icrowley/fake v0.0.0-20180203215853-4178557ae428
-	github.com/jmoiron/sqlx v1.3.5
+	github.com/jmoiron/sqlx v1.3.1 // WARNING: sqlx 1.3.2+ have a bug
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/microcosm-cc/bluemonday v1.0.23
 	github.com/russross/blackfriday/v2 v2.1.0
 	github.com/stretchr/testify v1.4.0 // indirect

@@ -276,13 +276,22 @@ func scheduleSet(s *schedule) error {
 
 			// Add new schedule entries
 			if len(ss.Discussions) > 0 {
-				_, err = sqlx.NamedExec(eq, `
-                insert into event_schedule
-                    values(:discussionid, :slotid, :locationid)`,
+				res, err := sqlx.NamedExec(eq, `
+                INSERT INTO event_schedule (discussionid, slotid, locationid)
+                    VALUES (:discussionid, :slotid, :locationid)`,
 					ss.Discussions)
 				if err != nil {
 					log.Printf("Failed inserting schedule entries %v", ss.Discussions)
 					return errOrRetry("Adding new schedule entries", err)
+				}
+				if n, err := res.RowsAffected(); err != nil {
+					log.Printf("Error getting rows affected by inserting scheduling entries: %v", err)
+					return errOrRetry("Getting rows affected by inserting schedule entries", err)
+				} else if int(n) != len(ss.Discussions) {
+					log.Printf("Error inserting scheduling entries: Expected %d rows affected, got %d!",
+						len(ss.Discussions), int(n))
+					return fmt.Errorf("Inserting scheduling entries: Expected %d rows affected, got %d!",
+						len(ss.Discussions), int(n))
 				}
 			}
 		}
