@@ -1,3 +1,11 @@
+# PROJECT HAS MOVED
+
+Note that the project has moved to the Gitlab Xen Project space, here:
+
+https://gitlab.com/xen-project/misc/session-scheduler
+
+# Intro
+
 session-scheduler is a tool for scheduling [Unconference-style](https://en.wikipedia.org/wiki/Unconference) discussion sections to maximize participation.  The basic idea is:
 
  1. The event creators define the "slots" available for sessions
